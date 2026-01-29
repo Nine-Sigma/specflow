@@ -1,0 +1,28 @@
+# SpecFlow Security Gates
+# Three-layer defense: Gitleaks (fast patterns) + TruffleHog (verified) + Semgrep (SAST)
+
+repos:
+  # Layer 1: Gitleaks - fast pattern-based secret detection
+  - repo: https://github.com/gitleaks/gitleaks
+    rev: v8.24.2
+    hooks:
+      - id: gitleaks
+        name: Detect hardcoded secrets (Gitleaks)
+
+  # Layer 2: TruffleHog - verified secret detection (slower but fewer false positives)
+  - repo: local
+    hooks:
+      - id: trufflehog
+        name: Verify secrets (TruffleHog)
+        description: Detect and verify secrets in code
+        entry: bash -c 'trufflehog git file://. --since-commit HEAD --results=verified,unknown --fail'
+        language: system
+        stages: ["pre-commit", "pre-push"]
+
+  # Layer 3: Semgrep - SAST code scanning for security issues
+  - repo: https://github.com/semgrep/pre-commit
+    rev: 'v1.149.0'
+    hooks:
+      - id: semgrep
+        name: SAST scan (Semgrep)
+        args: ['--config', 'auto', '--error', '--skip-unknown-extensions']
