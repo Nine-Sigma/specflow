@@ -34,12 +34,56 @@ echo "2. Detecting test framework..."
 run_tests() {
     # Check for Node.js project with test script
     if [ -f "package.json" ] && grep -q '"test"' package.json 2>/dev/null; then
-        echo "   Found: npm test script"
-        if npm test; then
-            echo -e "${GREEN}   [PASS] npm test passed${NC}"
+        # Detect package manager by lockfile (first match wins)
+        if [ -f "bun.lockb" ]; then
+            echo "   Found: bun project (bun.lockb)"
+            if command -v bun &> /dev/null; then
+                if bun test; then
+                    echo -e "${GREEN}   [PASS] bun test passed${NC}"
+                else
+                    echo -e "${RED}   [FAIL] bun test failed${NC}"
+                    return 1
+                fi
+            else
+                echo -e "${YELLOW}   [SKIP] bun.lockb found but bun not installed${NC}"
+            fi
+        elif [ -f "pnpm-lock.yaml" ]; then
+            echo "   Found: pnpm project (pnpm-lock.yaml)"
+            if command -v pnpm &> /dev/null; then
+                if pnpm test; then
+                    echo -e "${GREEN}   [PASS] pnpm test passed${NC}"
+                else
+                    echo -e "${RED}   [FAIL] pnpm test failed${NC}"
+                    return 1
+                fi
+            else
+                echo -e "${YELLOW}   [SKIP] pnpm-lock.yaml found but pnpm not installed${NC}"
+            fi
+        elif [ -f "yarn.lock" ]; then
+            echo "   Found: yarn project (yarn.lock)"
+            if command -v yarn &> /dev/null; then
+                if yarn test; then
+                    echo -e "${GREEN}   [PASS] yarn test passed${NC}"
+                else
+                    echo -e "${RED}   [FAIL] yarn test failed${NC}"
+                    return 1
+                fi
+            else
+                echo -e "${YELLOW}   [SKIP] yarn.lock found but yarn not installed${NC}"
+            fi
         else
-            echo -e "${RED}   [FAIL] npm test failed${NC}"
-            return 1
+            # package-lock.json or no lockfile -> use npm
+            echo "   Found: npm project"
+            if command -v npm &> /dev/null; then
+                if npm test; then
+                    echo -e "${GREEN}   [PASS] npm test passed${NC}"
+                else
+                    echo -e "${RED}   [FAIL] npm test failed${NC}"
+                    return 1
+                fi
+            else
+                echo -e "${YELLOW}   [SKIP] package.json found but npm not installed${NC}"
+            fi
         fi
     # Check for Python project with pytest
     elif [ -f "pytest.ini" ] || [ -f "pyproject.toml" ] || [ -f "conftest.py" ] || [ -d "tests" ]; then
