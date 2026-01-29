@@ -1,0 +1,11 @@
+# SpecFlow planning docs (local only)
+.planning/
+plan-docs/
+
+# CLAUDE.md symlink (create locally with: ln -sf AGENTS.md CLAUDE.md)
+CLAUDE.md
+**/CLAUDE.md
+
+# OS files
+.DS_Store
+**/DS_Store
