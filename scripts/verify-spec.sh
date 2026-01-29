@@ -101,11 +101,86 @@ run_tests() {
     # Check for Go project
     elif [ -f "go.mod" ]; then
         echo "   Found: Go module"
-        if go test ./...; then
-            echo -e "${GREEN}   [PASS] go test passed${NC}"
+        if command -v go &> /dev/null; then
+            if go test ./...; then
+                echo -e "${GREEN}   [PASS] go test passed${NC}"
+            else
+                echo -e "${RED}   [FAIL] go test failed${NC}"
+                return 1
+            fi
         else
-            echo -e "${RED}   [FAIL] go test failed${NC}"
-            return 1
+            echo -e "${YELLOW}   [SKIP] go.mod found but go not installed${NC}"
+        fi
+    # Check for Rust project
+    elif [ -f "Cargo.toml" ]; then
+        echo "   Found: Rust project (Cargo.toml)"
+        if command -v cargo &> /dev/null; then
+            if cargo test; then
+                echo -e "${GREEN}   [PASS] cargo test passed${NC}"
+            else
+                echo -e "${RED}   [FAIL] cargo test failed${NC}"
+                return 1
+            fi
+        else
+            echo -e "${YELLOW}   [SKIP] Cargo.toml found but cargo not installed${NC}"
+        fi
+    # Check for Java Maven project
+    elif [ -f "pom.xml" ]; then
+        echo "   Found: Java Maven project (pom.xml)"
+        if command -v mvn &> /dev/null; then
+            if mvn test -q; then
+                echo -e "${GREEN}   [PASS] mvn test passed${NC}"
+            else
+                echo -e "${RED}   [FAIL] mvn test failed${NC}"
+                return 1
+            fi
+        else
+            echo -e "${YELLOW}   [SKIP] pom.xml found but mvn not installed${NC}"
+        fi
+    # Check for Java Gradle project
+    elif [ -f "build.gradle" ] || [ -f "build.gradle.kts" ]; then
+        echo "   Found: Java Gradle project"
+        if [ -f "./gradlew" ]; then
+            echo "   Using Gradle wrapper"
+            if ./gradlew test; then
+                echo -e "${GREEN}   [PASS] gradlew test passed${NC}"
+            else
+                echo -e "${RED}   [FAIL] gradlew test failed${NC}"
+                return 1
+            fi
+        elif command -v gradle &> /dev/null; then
+            if gradle test; then
+                echo -e "${GREEN}   [PASS] gradle test passed${NC}"
+            else
+                echo -e "${RED}   [FAIL] gradle test failed${NC}"
+                return 1
+            fi
+        else
+            echo -e "${YELLOW}   [SKIP] build.gradle found but gradle not installed and no wrapper${NC}"
+        fi
+    # Check for Ruby project
+    elif [ -f "Gemfile" ]; then
+        echo "   Found: Ruby project (Gemfile)"
+        if command -v bundle &> /dev/null; then
+            if [ -d "spec" ]; then
+                echo "   Using RSpec (spec/ directory found)"
+                if bundle exec rspec; then
+                    echo -e "${GREEN}   [PASS] bundle exec rspec passed${NC}"
+                else
+                    echo -e "${RED}   [FAIL] bundle exec rspec failed${NC}"
+                    return 1
+                fi
+            else
+                echo "   Using Rake test"
+                if bundle exec rake test; then
+                    echo -e "${GREEN}   [PASS] bundle exec rake test passed${NC}"
+                else
+                    echo -e "${RED}   [FAIL] bundle exec rake test failed${NC}"
+                    return 1
+                fi
+            fi
+        else
+            echo -e "${YELLOW}   [SKIP] Gemfile found but bundle not installed${NC}"
         fi
     else
         echo -e "${YELLOW}   [SKIP] No test framework detected (this is OK for spec-only repos)${NC}"
