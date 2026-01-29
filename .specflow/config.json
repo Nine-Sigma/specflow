@@ -1,0 +1,11 @@
+{
+  "version": "1.0",
+  "swarms": {
+    "spec": { "enabled": true, "skip_research": false },
+    "review": { "enabled": true },
+    "execution": { "enabled": true, "mode": "adaptive" },
+    "release": { "enabled": true }
+  },
+  "handoff_archive": true,
+  "pause_before_execution": true
+}
