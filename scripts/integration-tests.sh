@@ -94,11 +94,15 @@ echo "$TEST_OUTPUT"
 echo ""
 
 # Parse output for severity (look for [critical] or [minor] tags in test names)
-# Count tests based on output patterns
-TOTAL=$(echo "$TEST_OUTPUT" | grep -cE "(PASS|FAIL|passed|failed)" || echo "0")
-PASSED=$(echo "$TEST_OUTPUT" | grep -cE "(PASS|passed)" || echo "0")
-FAILED_CRITICAL=$(echo "$TEST_OUTPUT" | grep -cE "\[critical\].*(FAIL|failed)" || echo "0")
-FAILED_MINOR=$(echo "$TEST_OUTPUT" | grep -cE "\[minor\].*(FAIL|failed)" || echo "0")
+# Count tests based on output patterns (use subshell to handle empty output)
+TOTAL=$(echo "$TEST_OUTPUT" | grep -cE "(PASS|FAIL|passed|failed)" 2>/dev/null || true)
+TOTAL=${TOTAL:-0}
+PASSED=$(echo "$TEST_OUTPUT" | grep -cE "(PASS|passed)" 2>/dev/null || true)
+PASSED=${PASSED:-0}
+FAILED_CRITICAL=$(echo "$TEST_OUTPUT" | grep -cE "\[critical\].*(FAIL|failed)" 2>/dev/null || true)
+FAILED_CRITICAL=${FAILED_CRITICAL:-0}
+FAILED_MINOR=$(echo "$TEST_OUTPUT" | grep -cE "\[minor\].*(FAIL|failed)" 2>/dev/null || true)
+FAILED_MINOR=${FAILED_MINOR:-0}
 
 # Summary
 echo "=== Integration Test Summary ==="
