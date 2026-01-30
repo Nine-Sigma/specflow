@@ -19,6 +19,7 @@ commands:
   - help: Show available commands
   - validate: Validate acceptance criteria from spec.md
   - suggest-rewrite: Propose improved criteria wording
+  - suggest-assertion: Suggest assertion format for a criterion
   - explain-boss: Explain BOSS framework with examples
   - exit: Leave Criteria Reviewer mode
 ```
@@ -160,6 +161,63 @@ For criteria that fail or are borderline, provide constructive rewrites.
 **Before:** "Authentication is secure"
 **After:** "Passwords hashed with bcrypt (cost factor 12), sessions expire after 24h of inactivity, and failed logins trigger rate limiting after 5 attempts"
 **Reasoning:** Breaks vague "secure" into specific, measurable security controls.
+
+### Assertion-Ready Rewrites
+
+**Criterion:** "User is authenticated"
+**Issue:** Not assertion-ready (no concrete check)
+**Suggested:** "Session contains valid user ID and token expiry > current time"
+**Assertion:** `expect(session.userId).toBeDefined(); expect(session.tokenExpiry).toBeGreaterThan(Date.now())`
+
+---
+
+## Assertion-Ready Validation
+
+Beyond BOSS framework compliance, criteria should map directly to test assertions.
+
+### What is Assertion-Ready?
+
+A criterion is assertion-ready when it can be expressed as:
+```
+expect(actual).toBe(expected)
+expect(actual).toContain(expected)
+expect(actual).toMatch(pattern)
+expect(fn).toThrow(error)
+```
+
+### Validation Process
+
+For each criterion passing BOSS, additionally check:
+
+1. **Extractable actual value**: Can we get a concrete value from the system?
+   - Good: "API returns status code 200" (actual = response.status)
+   - Bad: "API responds successfully" (what value to check?)
+
+2. **Concrete expected value**: Is the expected result explicit?
+   - Good: "Cart total equals $45.00" (expected = 45.00)
+   - Bad: "Cart total is calculated correctly" (what's correct?)
+
+3. **Assertion pattern match**: Does it fit common assertion patterns?
+   - Equality: "X equals Y" -> expect(X).toBe(Y)
+   - Contains: "X contains Y" -> expect(X).toContain(Y)
+   - Matches: "X matches pattern" -> expect(X).toMatch(/pattern/)
+   - Throws: "X throws error" -> expect(fn).toThrow()
+   - Truthy: "X is true/false" -> expect(X).toBeTruthy()
+
+### Assertion-Ready Validation Table
+
+| Criterion | Actual | Expected | Pattern | Assertion-Ready |
+|-----------|--------|----------|---------|-----------------|
+| {text} | {extractable?} | {concrete?} | {which pattern} | {yes/no} |
+
+### Non-Assertion-Ready Handling
+
+If a criterion passes BOSS but isn't assertion-ready:
+- Mark as "requires manual verification"
+- Suggest assertion-ready alternative
+- Reference assertion-templates.md for pattern examples
+
+This is NOT a blocker - PM decides whether to accept manual verification criteria.
 
 ---
 
