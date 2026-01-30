@@ -113,6 +113,122 @@ classify_type() {
 }
 
 # ============================================================================
+# Size Classification
+# ============================================================================
+# Two-pass classifier:
+# 1. Label-based size from config mapping (confidence: 100)
+# 2. Content-based heuristics (confidence: 60-70)
+# 3. Default to standard when no strong signals
+# ============================================================================
+
+classify_size() {
+    local title="${1:-}"
+    local body="${2:-}"
+    local labels="${3:-[]}"
+
+    # Ensure labels is valid JSON array
+    if ! echo "$labels" | jq -e 'type == "array"' >/dev/null 2>&1; then
+        labels="[]"
+    fi
+
+    # Get confidence threshold from config (default 70)
+    local confidence_threshold="$DEFAULT_CONFIDENCE_THRESHOLD"
+    if [ -f "$CONFIG_FILE" ]; then
+        local config_threshold
+        config_threshold=$(jq -r '.classification.confidence_threshold // empty' "$CONFIG_FILE" 2>/dev/null)
+        if [ -n "$config_threshold" ]; then
+            confidence_threshold="$config_threshold"
+        fi
+    fi
+
+    # --- First pass: Label-based size from config mapping (confidence: 100) ---
+    if [ -f "$CONFIG_FILE" ]; then
+        # Check each issue label against size mappings using jq for case-insensitive matching
+        local label_lower size_match
+        while IFS= read -r label; do
+            [ -z "$label" ] && continue
+            label_lower=$(echo "$label" | tr '[:upper:]' '[:lower:]')
+
+            # Check quick labels
+            size_match=$(jq -r --arg lbl "$label_lower" \
+                '.size_mapping.quick // [] | map(ascii_downcase) | if any(. == $lbl) then "quick" else "" end' \
+                "$CONFIG_FILE" 2>/dev/null)
+            if [ "$size_match" = "quick" ]; then
+                jq -n '{size: "quick", confidence: 100, source: "label", needs_llm: false}'
+                return 0
+            fi
+
+            # Check standard labels
+            size_match=$(jq -r --arg lbl "$label_lower" \
+                '.size_mapping.standard // [] | map(ascii_downcase) | if any(. == $lbl) then "standard" else "" end' \
+                "$CONFIG_FILE" 2>/dev/null)
+            if [ "$size_match" = "standard" ]; then
+                jq -n '{size: "standard", confidence: 100, source: "label", needs_llm: false}'
+                return 0
+            fi
+
+            # Check complex labels
+            size_match=$(jq -r --arg lbl "$label_lower" \
+                '.size_mapping.complex // [] | map(ascii_downcase) | if any(. == $lbl) then "complex" else "" end' \
+                "$CONFIG_FILE" 2>/dev/null)
+            if [ "$size_match" = "complex" ]; then
+                jq -n '{size: "complex", confidence: 100, source: "label", needs_llm: false}'
+                return 0
+            fi
+        done < <(echo "$labels" | jq -r '.[]' 2>/dev/null)
+    fi
+
+    # --- Second pass: Content-based heuristics (confidence: 60-70) ---
+    local text_lower text_combined word_count
+    text_combined="$title $body"
+    text_lower=$(echo "$text_combined" | tr '[:upper:]' '[:lower:]')
+    word_count=$(echo "$text_combined" | wc -w | tr -d ' ')
+
+    # Quick indicators (70% confidence)
+    if echo "$text_lower" | grep -qE '\b(small|trivial|quick|minor|typo|simple|tiny)\b'; then
+        local needs_llm=false
+        [ 70 -lt "$confidence_threshold" ] && needs_llm=true
+        jq -n --argjson needs_llm "$needs_llm" \
+            '{size: "quick", confidence: 70, source: "heuristic", needs_llm: $needs_llm}'
+        return 0
+    fi
+
+    # Word count < 50 suggests quick (65% confidence)
+    if [ "$word_count" -lt 50 ]; then
+        local needs_llm=false
+        [ 65 -lt "$confidence_threshold" ] && needs_llm=true
+        jq -n --argjson needs_llm "$needs_llm" \
+            '{size: "quick", confidence: 65, source: "heuristic", needs_llm: $needs_llm}'
+        return 0
+    fi
+
+    # Complex indicators (70% confidence)
+    if echo "$text_lower" | grep -qE '\b(large|major|significant|architecture|redesign|rewrite|complex|extensive)\b'; then
+        local needs_llm=false
+        [ 70 -lt "$confidence_threshold" ] && needs_llm=true
+        jq -n --argjson needs_llm "$needs_llm" \
+            '{size: "complex", confidence: 70, source: "heuristic", needs_llm: $needs_llm}'
+        return 0
+    fi
+
+    # Word count > 500 suggests complex (65% confidence)
+    if [ "$word_count" -gt 500 ]; then
+        local needs_llm=false
+        [ 65 -lt "$confidence_threshold" ] && needs_llm=true
+        jq -n --argjson needs_llm "$needs_llm" \
+            '{size: "complex", confidence: 65, source: "heuristic", needs_llm: $needs_llm}'
+        return 0
+    fi
+
+    # Default: standard (60% confidence - below threshold, needs LLM)
+    local needs_llm=false
+    [ 60 -lt "$confidence_threshold" ] && needs_llm=true
+    jq -n --argjson needs_llm "$needs_llm" \
+        '{size: "standard", confidence: 60, source: "heuristic", needs_llm: $needs_llm}'
+    return 0
+}
+
+# ============================================================================
 # Usage Help (when run directly)
 # ============================================================================
 
