@@ -1,0 +1,15 @@
+{
+  "feature": "",
+  "checkpoint": "",
+  "timestamp": "",
+  "criteria": [],
+  "has_invalid_drift": false,
+  "has_valid_drift": false,
+  "summary": {
+    "aligned": 0,
+    "missing": 0,
+    "exceeds_spec": 0,
+    "contradicts": 0
+  },
+  "ticket_updated": false
+}
