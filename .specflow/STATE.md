@@ -1,6 +1,6 @@
 ---
 version: 1.0
-updated: 2026-01-30T00:00:00Z
+updated: 2026-01-30T18:00:00Z
 ---
 
 # SpecFlow Session State
@@ -9,21 +9,21 @@ updated: 2026-01-30T00:00:00Z
 
 | Field | Value |
 |-------|-------|
-| slug | (none) |
-| started | (not started) |
-| status | idle |
+| slug | test-logout |
+| started | 2026-01-30T18:00:00Z |
+| status | in-progress |
 
 ## Position
 
 | Field | Value |
 |-------|-------|
-| last-agent | none |
-| next-agent | pm |
-| phase | idle |
+| last-agent | pm |
+| next-agent | analyst |
+| phase | triage |
 
 ## Decisions Made
 
-(none yet)
+- Work type: feature (requires security, cost, testing pillars)
 
 ## Blockers
 
@@ -31,4 +31,4 @@ updated: 2026-01-30T00:00:00Z
 
 ## Context Notes
 
-Session initialized. Use `/sf:pm "feature description"` to start a new feature.
+Test feature for validating file protocol integration.
