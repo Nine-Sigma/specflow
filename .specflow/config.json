@@ -7,6 +7,26 @@
       "auto": true,
       "notify": true,
       "checkpoints": ["starting", "before_spec", "after_completion", "scope_change"]
+    },
+    "github": {
+      "use_sub_issues": true,
+      "fallback_to_task_list": true,
+      "project_id": null,
+      "story_points_field_id": null
+    }
+  },
+  "ticket_management": {
+    "auto_create_tickets": true,
+    "embed_full_spec": true,
+    "story_point_calculation": "criteria_count",
+    "story_point_cap": 8,
+    "auto_complete_on_close": true,
+    "labels": {
+      "epic": "specflow:epic",
+      "story": "specflow:story",
+      "pillar_security": "security",
+      "pillar_cost": "cost",
+      "pillar_testing": "testing"
     }
   },
   "classification": {
