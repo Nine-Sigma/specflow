@@ -1,6 +1,6 @@
 # /sf:analyst - Requirements Analysis
 
-Wraps BMAD `/analyst` with SpecFlow requirements format.
+Wraps BMAD `/analyst` with SpecFlow file protocol.
 
 ## Usage
 
@@ -9,20 +9,70 @@ Wraps BMAD `/analyst` with SpecFlow requirements format.
 /sf:analyst <feature-description>
 ```
 
-## SpecFlow Context
+## File Protocol
 
-This command invokes BMAD's analyst with additional context:
-- Output in SpecFlow requirements format
-- User stories with BOSS-ready acceptance criteria
-- Integration with three-pillar workflow
+<required_reading>
+Before starting work, read:
 
-## Output Format
+1. `.specflow/STATE.md` - Get current feature slug and context
+</required_reading>
 
-Analysis produces:
-- User stories in standard format
-- Acceptance criteria (BOSS: Binary, Observable, Specific, Scope-bound)
-- Success metrics
-- Out of scope items
+<output>
+After completing analysis:
+
+1. Write output to `.specflow/features/{slug}/1-spec.md`
+2. Append to `.specflow/features/{slug}/PROGRESS.md`:
+   ```
+   ## {timestamp} - Analyst (/sf:analyst)
+
+   **Work Done:**
+   - [Summary of requirements analysis]
+
+   **Output:** `1-spec.md`
+
+   **Constraints Honored:** N/A (first agent)
+
+   ---
+   ```
+3. Update `.specflow/STATE.md`:
+   - last-agent: analyst
+   - next-agent: architect
+   - phase: pillars
+</output>
+
+## Output Format (1-spec.md)
+
+```markdown
+---
+agent: analyst
+created: {iso-timestamp}
+depends_on: []
+status: draft
+---
+
+# {Feature Name} Spec
+
+## Summary
+
+{2-3 sentence summary}
+
+## User Stories
+
+- As a {role}, I want to {action}, so that {benefit}
+
+## Acceptance Criteria
+
+- [ ] AC-01: {BOSS-compliant criterion}
+- [ ] AC-02: {BOSS-compliant criterion}
+
+## Constraints for Downstream
+
+- {Constraints architect/security/cost must honor}
+
+## Open Questions
+
+- {Any unresolved items for PM review}
+```
 
 ## BOSS Criteria
 
@@ -32,19 +82,8 @@ All acceptance criteria must be:
 - **S**pecific: Exact values, thresholds, counts
 - **S**cope-bound: This feature only
 
-## Example
-
-```
-/sf:analyst "user authentication with social login"
-```
-
-Produces:
-- User story: "As a user, I want to log in with Google..."
-- Acceptance criteria: "Login completes in <3 seconds"
-- Success metrics: "99.9% uptime for auth service"
-
 ## Related
 
 - `/analyst` - Original BMAD analyst
 - `/sf:pm` - PM orchestrator (routes to analyst)
-- `/sf:create-prd` - Next step in planning path
+- `/sf:architect` - Next in pillar sequence
