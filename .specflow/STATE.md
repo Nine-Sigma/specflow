@@ -1,6 +1,6 @@
 ---
 version: 1.0
-updated: 2026-01-30T18:00:00Z
+updated: 2026-01-30T18:02:00Z
 ---
 
 # SpecFlow Session State
@@ -17,9 +17,9 @@ updated: 2026-01-30T18:00:00Z
 
 | Field | Value |
 |-------|-------|
-| last-agent | pm |
-| next-agent | analyst |
-| phase | triage |
+| last-agent | architect |
+| next-agent | pm-review |
+| phase | review |
 
 ## Decisions Made
 
