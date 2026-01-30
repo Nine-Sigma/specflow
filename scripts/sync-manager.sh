@@ -611,6 +611,322 @@ sync_all() {
 }
 
 # =============================================================================
+# Ticket Mapping Sync Functions
+# =============================================================================
+
+TICKETS_DIR="$SPECFLOW_DIR/tickets"
+
+_find_mapping_for_ticket() {
+    # Search all mapping files for a ticket number
+    # Arguments: ticket_id
+    # Returns: mapping file path or empty string
+
+    local ticket_id="$1"
+    local mapping_file=""
+
+    if [ ! -d "$TICKETS_DIR" ]; then
+        echo ""
+        return 0
+    fi
+
+    while IFS= read -r file; do
+        if [ -f "$file" ]; then
+            # Check if this ticket is the epic or a story
+            local epic_number story_numbers
+            epic_number=$(jq -r '.epic.number // 0' "$file" 2>/dev/null)
+            story_numbers=$(jq -r '.stories[].number' "$file" 2>/dev/null)
+
+            if [ "$epic_number" = "$ticket_id" ]; then
+                mapping_file="$file"
+                break
+            fi
+
+            for num in $story_numbers; do
+                if [ "$num" = "$ticket_id" ]; then
+                    mapping_file="$file"
+                    break 2
+                fi
+            done
+        fi
+    done < <(find "$TICKETS_DIR" -maxdepth 1 -name "*.json" 2>/dev/null || true)
+
+    echo "$mapping_file"
+}
+
+sync_ticket_status() {
+    # Sync a single ticket's status and auto-complete tasks if closed
+    # Arguments: ticket_id
+    # Returns: JSON with sync result
+
+    local ticket_id="$1"
+
+    # Find mapping file containing this ticket
+    local mapping_file
+    mapping_file=$(_find_mapping_for_ticket "$ticket_id")
+
+    if [ -z "$mapping_file" ]; then
+        # No mapping found, nothing to sync
+        echo '{"synced": false, "no_mapping": true, "ticket_id": "'"$ticket_id"'"}'
+        return 0
+    fi
+
+    # Check if online
+    local online
+    online=$(_check_online)
+
+    if [ "$online" = "false" ]; then
+        echo '{"synced": false, "offline": true, "ticket_id": "'"$ticket_id"'"}'
+        return 0
+    fi
+
+    # Fetch current ticket state
+    local remote
+    remote=$(tracker_get_issue "$ticket_id" 2>/dev/null) || {
+        _log_sync "ERROR" "Failed to fetch ticket #$ticket_id from tracker"
+        echo '{"synced": false, "error": "Failed to fetch from tracker", "ticket_id": "'"$ticket_id"'"}'
+        return 1
+    }
+
+    local ticket_state
+    ticket_state=$(echo "$remote" | jq -r '.state // "open"')
+
+    # Check auto_complete_on_close config
+    local auto_complete
+    auto_complete=$(_get_config_value '.ticket_management.auto_complete_on_close' 'true')
+
+    # Load current mapping
+    local mapping
+    mapping=$(cat "$mapping_file")
+
+    local changes_made=false
+    local feature_name
+    feature_name=$(basename "$mapping_file" .json)
+
+    if [ "$ticket_state" = "closed" ]; then
+        # Check if this is an epic or story
+        local epic_number
+        epic_number=$(echo "$mapping" | jq -r '.epic.number // 0')
+
+        if [ "$epic_number" = "$ticket_id" ]; then
+            # Epic closed - update epic status in mapping
+            local current_status
+            current_status=$(echo "$mapping" | jq -r '.epic.status // "open"')
+
+            if [ "$current_status" != "closed" ]; then
+                mapping=$(echo "$mapping" | jq '.epic.status = "closed"')
+                changes_made=true
+                _log_sync "INFO" "Updated epic #$ticket_id status to closed"
+            fi
+        else
+            # Story closed - find and update
+            local story_index
+            story_index=$(echo "$mapping" | jq --arg num "$ticket_id" \
+                '.stories | to_entries | map(select(.value.number == ($num | tonumber))) | .[0].key // -1')
+
+            if [ "$story_index" != "-1" ] && [ "$story_index" != "null" ]; then
+                local current_status
+                current_status=$(echo "$mapping" | jq -r ".stories[$story_index].status // \"open\"")
+
+                if [ "$current_status" != "closed" ]; then
+                    if [ "$auto_complete" = "true" ]; then
+                        # Update story status and all tasks
+                        mapping=$(echo "$mapping" | jq --argjson idx "$story_index" '
+                            .stories[$idx].status = "closed" |
+                            .stories[$idx].tasks = (.stories[$idx].tasks // [] | map(
+                                if .status != "complete" then
+                                    .status = "complete" | .auto_completed = true
+                                else
+                                    .
+                                end
+                            ))
+                        ')
+                        changes_made=true
+                        _log_sync "INFO" "Auto-completed tasks for closed ticket #$ticket_id"
+                    else
+                        # Just update story status, not tasks
+                        mapping=$(echo "$mapping" | jq --argjson idx "$story_index" '
+                            .stories[$idx].status = "closed"
+                        ')
+                        changes_made=true
+                        _log_sync "INFO" "Ticket #$ticket_id closed (auto-complete disabled)"
+                    fi
+                fi
+            fi
+        fi
+    else
+        # Ticket is open - check for reverts needed
+        local story_index
+        story_index=$(echo "$mapping" | jq --arg num "$ticket_id" \
+            '.stories | to_entries | map(select(.value.number == ($num | tonumber))) | .[0].key // -1')
+
+        if [ "$story_index" != "-1" ] && [ "$story_index" != "null" ]; then
+            # Check if any tasks were auto-completed
+            local auto_completed_count
+            auto_completed_count=$(echo "$mapping" | jq --argjson idx "$story_index" \
+                '[.stories[$idx].tasks // [] | .[] | select(.auto_completed == true)] | length')
+
+            if [ "$auto_completed_count" -gt 0 ]; then
+                # Revert auto-completed tasks
+                mapping=$(echo "$mapping" | jq --argjson idx "$story_index" '
+                    .stories[$idx].status = "open" |
+                    .stories[$idx].tasks = (.stories[$idx].tasks // [] | map(
+                        if .auto_completed == true then
+                            .status = "pending" | del(.auto_completed)
+                        else
+                            .
+                        end
+                    ))
+                ')
+                changes_made=true
+                _log_sync "INFO" "Reverted tasks for reopened ticket #$ticket_id"
+            fi
+        fi
+
+        # Check epic status if it's an epic
+        local epic_number
+        epic_number=$(echo "$mapping" | jq -r '.epic.number // 0')
+
+        if [ "$epic_number" = "$ticket_id" ]; then
+            local current_status
+            current_status=$(echo "$mapping" | jq -r '.epic.status // "open"')
+
+            if [ "$current_status" = "closed" ]; then
+                mapping=$(echo "$mapping" | jq '.epic.status = "open"')
+                changes_made=true
+                _log_sync "INFO" "Reverted epic #$ticket_id status to open"
+            fi
+        fi
+    fi
+
+    # Save changes if any
+    if [ "$changes_made" = "true" ]; then
+        local timestamp
+        timestamp=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+        mapping=$(echo "$mapping" | jq --arg ts "$timestamp" '.last_sync = $ts')
+        echo "$mapping" > "$mapping_file"
+        echo '{"synced": true, "changes": true, "ticket_id": "'"$ticket_id"'", "state": "'"$ticket_state"'"}'
+    else
+        echo '{"synced": true, "changes": false, "ticket_id": "'"$ticket_id"'", "state": "'"$ticket_state"'"}'
+    fi
+}
+
+sync_mapping_file() {
+    # Sync all tickets in a feature's mapping file
+    # Arguments: feature_name [--comments]
+    # Returns: JSON summary of changes
+
+    local feature_name="$1"
+    local sync_comments=false
+
+    if [ "${2:-}" = "--comments" ]; then
+        sync_comments=true
+    fi
+
+    local mapping_file="$TICKETS_DIR/${feature_name}.json"
+
+    if [ ! -f "$mapping_file" ]; then
+        echo '{"error": "Mapping file not found", "feature": "'"$feature_name"'"}'
+        return 1
+    fi
+
+    # Check if online
+    local online
+    online=$(_check_online)
+
+    if [ "$online" = "false" ]; then
+        echo '{"synced": false, "offline": true, "feature": "'"$feature_name"'"}'
+        return 0
+    fi
+
+    local mapping
+    mapping=$(cat "$mapping_file")
+
+    local epic_number stories_changed=0 total_stories
+    epic_number=$(echo "$mapping" | jq -r '.epic.number // 0')
+    total_stories=$(echo "$mapping" | jq '.stories | length')
+
+    # Sync epic status
+    local epic_result
+    if [ "$epic_number" != "0" ]; then
+        epic_result=$(sync_ticket_status "$epic_number")
+    fi
+
+    # Sync each story
+    local story_numbers
+    story_numbers=$(echo "$mapping" | jq -r '.stories[].number')
+
+    for num in $story_numbers; do
+        local result
+        result=$(sync_ticket_status "$num")
+
+        if echo "$result" | jq -e '.changes == true' >/dev/null 2>&1; then
+            stories_changed=$((stories_changed + 1))
+        fi
+
+        # Sync comments if requested
+        if [ "$sync_comments" = "true" ]; then
+            sync_ticket_comments "$num" "$mapping_file"
+        fi
+    done
+
+    echo '{
+        "synced": true,
+        "feature": "'"$feature_name"'",
+        "epic": '"$epic_number"',
+        "stories_synced": '"$total_stories"',
+        "stories_changed": '"$stories_changed"'
+    }'
+}
+
+sync_all_mappings() {
+    # Sync all mapping files
+    # Arguments: [--comments]
+    # Returns: JSON summary of all changes
+
+    local sync_comments=""
+    if [ "${1:-}" = "--comments" ]; then
+        sync_comments="--comments"
+    fi
+
+    if [ ! -d "$TICKETS_DIR" ]; then
+        echo '{"synced": false, "error": "No tickets directory", "mappings_synced": 0}'
+        return 0
+    fi
+
+    local total_mappings=0
+    local total_changes=0
+    local features_changed="[]"
+
+    while IFS= read -r file; do
+        if [ -f "$file" ]; then
+            local feature_name
+            feature_name=$(basename "$file" .json)
+            total_mappings=$((total_mappings + 1))
+
+            local result
+            result=$(sync_mapping_file "$feature_name" $sync_comments)
+
+            local changes
+            changes=$(echo "$result" | jq '.stories_changed // 0')
+
+            if [ "$changes" -gt 0 ]; then
+                total_changes=$((total_changes + changes))
+                features_changed=$(echo "$features_changed" | jq --arg f "$feature_name" '. + [$f]')
+            fi
+        fi
+    done < <(find "$TICKETS_DIR" -maxdepth 1 -name "*.json" 2>/dev/null || true)
+
+    _log_sync "INFO" "sync_all_mappings complete: mappings=$total_mappings, changes=$total_changes"
+
+    echo '{
+        "synced": true,
+        "mappings_synced": '"$total_mappings"',
+        "total_changes": '"$total_changes"',
+        "features_changed": '"$features_changed"'
+    }'
+}
+
+# =============================================================================
 # Pending Changes (Offline Mode)
 # =============================================================================
 
