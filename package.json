@@ -15,7 +15,7 @@
     "agents"
   ],
   "scripts": {
-    "build": "esbuild src/cli.ts --bundle --platform=node --outfile=dist/cli.js --format=esm",
+    "build": "esbuild src/cli.ts --bundle --platform=node --outfile=dist/cli.js --format=esm && esbuild src/installer.ts --bundle --platform=node --outfile=dist/installer.js --format=esm --external:picocolors",
     "dev": "tsx src/cli.ts",
     "test": "vitest run",
     "test:watch": "vitest",
