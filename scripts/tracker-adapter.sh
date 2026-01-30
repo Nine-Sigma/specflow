@@ -22,8 +22,8 @@ _ensure_issues_dir() {
 _next_local_id() {
     _ensure_issues_dir
     local max_id=0
-    shopt -s nullglob
-    for file in "$ISSUES_DIR"/*.json; do
+    # Use find instead of glob for cross-shell compatibility
+    while IFS= read -r file; do
         if [ -f "$file" ]; then
             local id
             id=$(basename "$file" .json)
@@ -31,8 +31,7 @@ _next_local_id() {
                 max_id=$id
             fi
         fi
-    done
-    shopt -u nullglob
+    done < <(find "$ISSUES_DIR" -maxdepth 1 -name "*.json" 2>/dev/null || true)
     echo $((max_id + 1))
 }
 
@@ -92,8 +91,7 @@ tracker_list_issues() {
         local)
             _ensure_issues_dir
             local issues="[]"
-            shopt -s nullglob
-            for file in "$ISSUES_DIR"/*.json; do
+            while IFS= read -r file; do
                 if [ -f "$file" ]; then
                     local issue
                     issue=$(cat "$file")
@@ -103,8 +101,7 @@ tracker_list_issues() {
                         issues=$(echo "$issues" | jq --argjson i "$issue" '. + [$i]')
                     fi
                 fi
-            done
-            shopt -u nullglob
+            done < <(find "$ISSUES_DIR" -maxdepth 1 -name "*.json" 2>/dev/null || true)
             echo "$issues"
             ;;
         *)
@@ -320,6 +317,140 @@ tracker_add_comment() {
 }
 
 # =============================================================================
+# Additional Functions
+# =============================================================================
+
+tracker_create_issue() {
+    # Create a new issue
+    # Arguments: title, body, [labels]
+    # Returns: JSON object with created issue
+
+    local title="$1"
+    local body="${2:-}"
+    local labels="${3:-}"
+    local type
+    type=$(tracker_type)
+
+    case "$type" in
+        github)
+            local cmd="gh issue create --title \"$title\" --body \"$body\""
+            if [ -n "$labels" ]; then
+                cmd="$cmd --label \"$labels\""
+            fi
+            local result
+            result=$(eval "$cmd" 2>&1)
+            local issue_number
+            issue_number=$(echo "$result" | grep -oE '[0-9]+$' || echo "")
+            if [ -n "$issue_number" ]; then
+                _log_tracker_op "create_issue" "$issue_number" "title=$title"
+                gh issue view "$issue_number" --json number,title,body,labels,state,assignees
+            else
+                echo "$result"
+                return 1
+            fi
+            ;;
+        jira)
+            echo "Jira adapter not implemented" >&2
+            return 1
+            ;;
+        linear)
+            echo "Linear adapter not implemented" >&2
+            return 1
+            ;;
+        local)
+            _ensure_issues_dir
+            local issue_id
+            issue_id=$(_next_local_id)
+            local timestamp
+            timestamp=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+            local file="$ISSUES_DIR/${issue_id}.json"
+
+            # Parse labels into array
+            local labels_array="[]"
+            if [ -n "$labels" ]; then
+                labels_array=$(echo "$labels" | tr ',' '\n' | jq -R '.' | jq -s '.')
+            fi
+
+            # Create issue JSON
+            jq -n \
+                --arg id "$issue_id" \
+                --arg title "$title" \
+                --arg body "$body" \
+                --argjson labels "$labels_array" \
+                --arg ts "$timestamp" \
+                '{
+                    id: $id,
+                    number: ($id | tonumber),
+                    title: $title,
+                    body: $body,
+                    labels: $labels,
+                    state: "open",
+                    assignees: [],
+                    created_at: $ts,
+                    updated_at: $ts,
+                    comments: []
+                }' > "$file"
+
+            _log_tracker_op "create_issue" "$issue_id" "title=$title"
+            cat "$file"
+            ;;
+        *)
+            echo "Unknown tracker type: $type" >&2
+            return 1
+            ;;
+    esac
+}
+
+tracker_search() {
+    # Search issues by query
+    # Arguments: query
+    # Returns: JSON array of matching issues
+
+    local query="$1"
+    local type
+    type=$(tracker_type)
+
+    case "$type" in
+        github)
+            gh issue list --search "$query" \
+                --json number,title,body,labels,state,assignees
+            ;;
+        jira)
+            echo "Jira adapter not implemented" >&2
+            return 1
+            ;;
+        linear)
+            echo "Linear adapter not implemented" >&2
+            return 1
+            ;;
+        local)
+            _ensure_issues_dir
+            local issues="[]"
+            local query_lower
+            query_lower=$(echo "$query" | tr '[:upper:]' '[:lower:]')
+            while IFS= read -r file; do
+                if [ -f "$file" ]; then
+                    local issue
+                    issue=$(cat "$file")
+                    local title body
+                    title=$(echo "$issue" | jq -r '.title // ""' | tr '[:upper:]' '[:lower:]')
+                    body=$(echo "$issue" | jq -r '.body // ""' | tr '[:upper:]' '[:lower:]')
+                    # Simple substring search
+                    if [[ "$title" == *"$query_lower"* ]] || [[ "$body" == *"$query_lower"* ]]; then
+                        issues=$(echo "$issues" | jq --argjson i "$issue" '. + [$i]')
+                    fi
+                fi
+            done < <(find "$ISSUES_DIR" -maxdepth 1 -name "*.json" 2>/dev/null || true)
+            echo "$issues"
+            ;;
+        *)
+            echo "Unknown tracker type: $type" >&2
+            return 1
+            ;;
+    esac
+}
+
+# =============================================================================
 # Help / Usage
 # =============================================================================
 
@@ -336,6 +467,9 @@ _tracker_adapter_show_help() {
     echo "  tracker_remove_label ID LABEL     - Remove label from issue"
     echo "  tracker_update_status ID STATUS   - Update status (open|closed)"
     echo "  tracker_add_comment ID COMMENT    - Add comment to issue"
+    echo "  tracker_create_issue TITLE BODY [LABELS]"
+    echo "                                    - Create new issue"
+    echo "  tracker_search QUERY              - Search issues"
     echo ""
     echo "Current configuration:"
     if [ -f "$CONFIG_FILE" ]; then
