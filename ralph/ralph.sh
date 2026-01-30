@@ -9,7 +9,7 @@ set -euo pipefail
 TOOL="${1:-claude}"
 MAX_ITERATIONS="${2:-10}"
 PROMPT_FILE="ralph/prompt.md"
-CLAUDE_PROMPT_FILE="ralph/CLAUDE.md"
+CLAUDE_PROMPT_FILE="ralph/claude-prompt.md"
 
 # Use appropriate prompt based on tool
 if [[ "$TOOL" == "claude" ]]; then
