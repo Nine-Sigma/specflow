@@ -878,6 +878,197 @@ sync_mapping_file() {
     }'
 }
 
+# =============================================================================
+# Comment Sync Functions
+# =============================================================================
+
+# Rate limit tracking
+_SYNC_API_CALLS=0
+_SYNC_API_LIMIT=100
+
+_hash_comment() {
+    # Generate content hash for comment deduplication
+    # Arguments: comment_body
+    # Returns: MD5 hash of comment body
+
+    local body="$1"
+    echo -n "$body" | md5 | cut -d' ' -f1
+}
+
+_rate_limit_check() {
+    # Check if we're approaching rate limit
+    # Returns: "ok" or "limit"
+
+    _SYNC_API_CALLS=$((_SYNC_API_CALLS + 1))
+
+    if [ $_SYNC_API_CALLS -ge $_SYNC_API_LIMIT ]; then
+        _log_sync "WARN" "Rate limit approaching ($_SYNC_API_CALLS calls), deferring remaining syncs"
+        echo "limit"
+        return 0
+    fi
+
+    echo "ok"
+}
+
+_reset_rate_limit() {
+    # Reset rate limit counter for new sync cycle
+    _SYNC_API_CALLS=0
+}
+
+sync_ticket_comments() {
+    # Sync comments bidirectionally between tracker and mapping file
+    # Arguments: ticket_id, mapping_file
+    # Returns: JSON with sync result
+
+    local ticket_id="$1"
+    local mapping_file="$2"
+
+    if [ ! -f "$mapping_file" ]; then
+        echo '{"synced": false, "error": "Mapping file not found", "ticket_id": "'"$ticket_id"'"}'
+        return 1
+    fi
+
+    # Check rate limit
+    local rate_check
+    rate_check=$(_rate_limit_check)
+    if [ "$rate_check" = "limit" ]; then
+        echo '{"synced": false, "rate_limited": true, "ticket_id": "'"$ticket_id"'"}'
+        return 0
+    fi
+
+    # Check if online
+    local online
+    online=$(_check_online)
+    if [ "$online" = "false" ]; then
+        echo '{"synced": false, "offline": true, "ticket_id": "'"$ticket_id"'"}'
+        return 0
+    fi
+
+    # Add small delay for rate limiting (100ms)
+    sleep 0.1
+
+    # Fetch remote comments
+    local remote_comments
+    remote_comments=$(tracker_get_comments "$ticket_id" 2>/dev/null) || {
+        _log_sync "ERROR" "Failed to fetch comments for ticket #$ticket_id"
+        echo '{"synced": false, "error": "Failed to fetch comments", "ticket_id": "'"$ticket_id"'"}'
+        return 1
+    }
+
+    # Load mapping and find story
+    local mapping
+    mapping=$(cat "$mapping_file")
+
+    local story_index
+    story_index=$(echo "$mapping" | jq --arg num "$ticket_id" \
+        '.stories | to_entries | map(select(.value.number == ($num | tonumber))) | .[0].key // -1')
+
+    if [ "$story_index" = "-1" ] || [ "$story_index" = "null" ]; then
+        # Maybe it's the epic
+        local epic_number
+        epic_number=$(echo "$mapping" | jq -r '.epic.number // 0')
+
+        if [ "$epic_number" != "$ticket_id" ]; then
+            echo '{"synced": false, "no_match": true, "ticket_id": "'"$ticket_id"'"}'
+            return 0
+        fi
+    fi
+
+    # Get existing comments in mapping (stored per-story)
+    local local_comments
+    if [ "$story_index" != "-1" ] && [ "$story_index" != "null" ]; then
+        local_comments=$(echo "$mapping" | jq ".stories[$story_index].comments // []")
+    else
+        local_comments=$(echo "$mapping" | jq '.epic.comments // []')
+    fi
+
+    # Build hash sets for deduplication
+    local local_hashes remote_hashes
+    local_hashes=$(echo "$local_comments" | jq -r '.[].hash // empty' | sort -u)
+    remote_hashes=""
+
+    local new_comments="[]"
+    local remote_count
+    remote_count=$(echo "$remote_comments" | jq 'length')
+
+    # Process remote comments
+    for i in $(seq 0 $((remote_count - 1))); do
+        local comment_body
+        comment_body=$(echo "$remote_comments" | jq -r ".[$i].body // \"\"")
+        local comment_hash
+        comment_hash=$(_hash_comment "$comment_body")
+
+        # Check if already in local
+        if ! echo "$local_hashes" | grep -q "^${comment_hash}$"; then
+            # New remote comment - add to local
+            local comment_ts author
+            comment_ts=$(echo "$remote_comments" | jq -r ".[$i].created_at // \"\"")
+            author=$(echo "$remote_comments" | jq -r ".[$i].author // \"unknown\"")
+
+            new_comments=$(echo "$new_comments" | jq --arg body "$comment_body" \
+                --arg hash "$comment_hash" --arg ts "$comment_ts" --arg author "$author" \
+                '. + [{"body": $body, "hash": $hash, "created_at": $ts, "author": $author, "source": "remote"}]')
+        fi
+
+        remote_hashes="${remote_hashes}${comment_hash}
+"
+    done
+
+    # Check for local comments not in remote (unlikely but handle)
+    local local_count local_to_push=0
+    local_count=$(echo "$local_comments" | jq 'length')
+
+    for i in $(seq 0 $((local_count - 1))); do
+        local comment_hash
+        comment_hash=$(echo "$local_comments" | jq -r ".[$i].hash // \"\"")
+
+        if [ -n "$comment_hash" ] && ! echo "$remote_hashes" | grep -q "^${comment_hash}$"; then
+            local source
+            source=$(echo "$local_comments" | jq -r ".[$i].source // \"local\"")
+
+            if [ "$source" = "local" ]; then
+                # Local comment not in remote - push to tracker
+                local comment_body
+                comment_body=$(echo "$local_comments" | jq -r ".[$i].body // \"\"")
+
+                tracker_add_comment "$ticket_id" "$comment_body" 2>/dev/null || true
+                local_to_push=$((local_to_push + 1))
+            fi
+        fi
+    done
+
+    # Merge new comments into mapping
+    local new_count
+    new_count=$(echo "$new_comments" | jq 'length')
+
+    if [ "$new_count" -gt 0 ]; then
+        local timestamp
+        timestamp=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+
+        if [ "$story_index" != "-1" ] && [ "$story_index" != "null" ]; then
+            mapping=$(echo "$mapping" | jq --argjson idx "$story_index" --argjson new "$new_comments" --arg ts "$timestamp" '
+                .stories[$idx].comments = ((.stories[$idx].comments // []) + $new | unique_by(.hash)) |
+                .stories[$idx].last_comment_sync = $ts
+            ')
+        else
+            mapping=$(echo "$mapping" | jq --argjson new "$new_comments" --arg ts "$timestamp" '
+                .epic.comments = ((.epic.comments // []) + $new | unique_by(.hash)) |
+                .epic.last_comment_sync = $ts
+            ')
+        fi
+
+        echo "$mapping" > "$mapping_file"
+        _log_sync "INFO" "Synced $new_count new comments for ticket #$ticket_id"
+    fi
+
+    echo '{
+        "synced": true,
+        "ticket_id": "'"$ticket_id"'",
+        "new_remote_comments": '"$new_count"',
+        "pushed_local_comments": '"$local_to_push"'
+    }'
+}
+
 sync_all_mappings() {
     # Sync all mapping files
     # Arguments: [--comments]
