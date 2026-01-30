@@ -1,5 +1,33 @@
 {
   "version": "1.0",
+  "tracker": {
+    "type": "local",
+    "repo": null,
+    "sync": {
+      "auto": true,
+      "notify": true,
+      "checkpoints": ["starting", "before_spec", "after_completion", "scope_change"]
+    }
+  },
+  "classification": {
+    "confidence_threshold": 70,
+    "type_defaults": {
+      "bug": { "pillars": ["testing"] },
+      "feature": { "pillars": ["security", "cost", "testing"] },
+      "refactor": { "pillars": ["security", "testing"] },
+      "chore": { "pillars": [] },
+      "docs": { "pillars": [] }
+    }
+  },
+  "size_mapping": {
+    "quick": ["trivial", "xs", "1", "small"],
+    "standard": ["medium", "m", "2", "3"],
+    "complex": ["large", "xl", "5", "8", "13"]
+  },
+  "labels": {
+    "prefix": "specflow:",
+    "managed": ["in-progress", "spec-ready", "completed"]
+  },
   "swarms": {
     "spec": { "enabled": true, "skip_research": false },
     "review": { "enabled": true },
