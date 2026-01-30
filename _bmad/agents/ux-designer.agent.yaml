@@ -24,8 +24,3 @@ agent:
     - trigger: CU or fuzzy match on ux-design
       exec: "{project-root}/_bmad/bmm/workflows/2-plan-workflows/create-ux-design/workflow.md"
       description: "[CU] Create UX: Guidance through realizing the plan for your UX to inform architecture and implementation. PRovides more details that what was discovered in the PRD"
-
-    # SpecFlow Extension - Design Swarm
-    - trigger: SD or fuzzy match on specflow-design
-      exec: "{project-root}/.specflow/workflows/ux-design.md"
-      description: "[SD] SpecFlow Design: Create UI/UX specs for feature, output wireframes and interaction flows"

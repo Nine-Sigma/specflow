@@ -34,8 +34,3 @@ agent:
     - trigger: DP or fuzzy match on document-project
       workflow: "{project-root}/_bmad/bmm/workflows/document-project/workflow.yaml"
       description: "[DP] Document Project: Analyze an existing project to produce useful documentation for both human and LLM"
-
-    # SpecFlow Extension - Research Orchestration
-    - trigger: SR or fuzzy match on specflow-research
-      exec: "{project-root}/.specflow/agents/research-orchestrator.md"
-      description: "[SR] SpecFlow Research: Orchestrate parallel research swarm (Stack, Patterns, Pitfalls) before spec creation"
