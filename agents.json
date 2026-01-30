@@ -1,0 +1,30 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "description": "SpecFlow custom agent registry",
+  "agents": {
+    "_example_npx": {
+      "source": "custom",
+      "invoke": "@example/scanner",
+      "description": "Example npx-based agent (remove or replace)"
+    },
+    "_example_local": {
+      "source": "custom",
+      "invoke": ".specflow/agents/example-agent.md",
+      "description": "Example local prompt agent (remove or replace)"
+    }
+  },
+  "_docs": {
+    "adding_agents": [
+      "1. Add entry to 'agents' object above",
+      "2. For npx: use package name as 'invoke' value",
+      "3. For local: use path to .md file as 'invoke' value",
+      "4. All custom agents use source: 'custom'",
+      "5. Agents prefixed with _ are examples/disabled"
+    ],
+    "invoking": [
+      "Via CLI: sf agent <name>",
+      "Via PM: PM may route to custom agents based on description",
+      "Via slash: Create .claude/commands/sf-<name>.md for direct access"
+    ]
+  }
+}
