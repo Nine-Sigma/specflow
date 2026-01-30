@@ -451,6 +451,170 @@ tracker_search() {
 }
 
 # =============================================================================
+# Epic/Story Management Functions
+# =============================================================================
+
+_get_repo_owner() {
+    # Extract owner from gh repo view
+    gh repo view --json owner --jq '.owner.login' 2>/dev/null || echo ""
+}
+
+_get_repo_name() {
+    # Extract repo name from gh repo view
+    gh repo view --json name --jq '.name' 2>/dev/null || echo ""
+}
+
+_get_issue_node_id() {
+    # Get the GraphQL node_id for a GitHub issue
+    # Arguments: issue_number
+    local issue_number="$1"
+    local owner repo
+
+    owner=$(_get_repo_owner)
+    repo=$(_get_repo_name)
+
+    if [ -z "$owner" ] || [ -z "$repo" ]; then
+        echo "" # Return empty if we can't get repo info
+        return 0
+    fi
+
+    gh api graphql -f query='
+        query($owner: String!, $repo: String!, $number: Int!) {
+            repository(owner: $owner, name: $repo) {
+                issue(number: $number) { id }
+            }
+        }' \
+        -F owner="$owner" -F repo="$repo" -F number="$issue_number" \
+        --jq '.data.repository.issue.id' 2>/dev/null || echo ""
+}
+
+tracker_create_epic() {
+    # Create an epic issue with parent tracking capability
+    # Arguments: title, body, [labels]
+    # Returns: JSON object with number, title, url, node_id, type
+
+    local title="$1"
+    local body="${2:-}"
+    local labels="${3:-}"
+    local type
+    type=$(tracker_type)
+
+    # Get the epic label from config
+    local epic_label
+    epic_label=$(_get_config_value '.ticket_management.labels.epic' 'specflow:epic')
+
+    # Ensure epic label is included
+    if [ -n "$labels" ]; then
+        labels="$labels,$epic_label"
+    else
+        labels="$epic_label"
+    fi
+
+    case "$type" in
+        github)
+            # Create the issue
+            local cmd="gh issue create --title \"$title\" --body \"$body\" --label \"$labels\""
+            local result
+            result=$(eval "$cmd" 2>&1)
+            local issue_number
+            issue_number=$(echo "$result" | grep -oE '[0-9]+$' || echo "")
+
+            if [ -z "$issue_number" ]; then
+                echo "$result" >&2
+                return 1
+            fi
+
+            # Get issue URL
+            local issue_url
+            issue_url=$(gh issue view "$issue_number" --json url --jq '.url' 2>/dev/null || echo "")
+
+            # Try to get node_id via GraphQL
+            local node_id
+            node_id=$(_get_issue_node_id "$issue_number")
+
+            if [ -z "$node_id" ]; then
+                echo "Warning: Could not fetch node_id for issue #$issue_number" >&2
+            fi
+
+            _log_tracker_op "create_epic" "$issue_number" "title=$title"
+
+            # Return JSON with all fields
+            jq -n \
+                --arg number "$issue_number" \
+                --arg title "$title" \
+                --arg url "$issue_url" \
+                --arg node_id "$node_id" \
+                '{
+                    number: ($number | tonumber),
+                    title: $title,
+                    url: $url,
+                    node_id: $node_id,
+                    type: "epic"
+                }'
+            ;;
+        jira)
+            echo "Jira adapter not implemented" >&2
+            return 1
+            ;;
+        linear)
+            echo "Linear adapter not implemented" >&2
+            return 1
+            ;;
+        local)
+            _ensure_issues_dir
+            local issue_id
+            issue_id=$(_next_local_id)
+            local timestamp
+            timestamp=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+            local file="$ISSUES_DIR/${issue_id}.json"
+
+            # Parse labels into array
+            local labels_array="[]"
+            if [ -n "$labels" ]; then
+                labels_array=$(echo "$labels" | tr ',' '\n' | jq -R '.' | jq -s '.')
+            fi
+
+            # Create epic JSON with type and sub_issues array
+            jq -n \
+                --arg id "$issue_id" \
+                --arg title "$title" \
+                --arg body "$body" \
+                --argjson labels "$labels_array" \
+                --arg ts "$timestamp" \
+                '{
+                    id: $id,
+                    number: ($id | tonumber),
+                    title: $title,
+                    body: $body,
+                    labels: $labels,
+                    state: "open",
+                    assignees: [],
+                    created_at: $ts,
+                    updated_at: $ts,
+                    comments: [],
+                    type: "epic",
+                    sub_issues: []
+                }' > "$file"
+
+            _log_tracker_op "create_epic" "$issue_id" "title=$title"
+
+            # Return JSON in same format as GitHub
+            jq '{
+                number: .number,
+                title: .title,
+                url: ("local://" + .id),
+                node_id: .id,
+                type: .type
+            }' "$file"
+            ;;
+        *)
+            echo "Unknown tracker type: $type" >&2
+            return 1
+            ;;
+    esac
+}
+
+# =============================================================================
 # Help / Usage
 # =============================================================================
 
