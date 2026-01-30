@@ -1,0 +1,365 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# Tracker Adapter - Unified interface for GitHub/Jira/Linear/Local issue tracking
+# Usage: source scripts/tracker-adapter.sh
+#
+# This script provides a common interface for tracker operations regardless
+# of the backend system configured in .specflow/config.json
+
+SPECFLOW_DIR=".specflow"
+CONFIG_FILE="$SPECFLOW_DIR/config.json"
+ISSUES_DIR="$SPECFLOW_DIR/issues"
+
+# =============================================================================
+# Internal Helper Functions
+# =============================================================================
+
+_ensure_issues_dir() {
+    mkdir -p "$ISSUES_DIR"
+}
+
+_next_local_id() {
+    _ensure_issues_dir
+    local max_id=0
+    shopt -s nullglob
+    for file in "$ISSUES_DIR"/*.json; do
+        if [ -f "$file" ]; then
+            local id
+            id=$(basename "$file" .json)
+            if [[ "$id" =~ ^[0-9]+$ ]] && [ "$id" -gt "$max_id" ]; then
+                max_id=$id
+            fi
+        fi
+    done
+    shopt -u nullglob
+    echo $((max_id + 1))
+}
+
+_log_tracker_op() {
+    local operation="$1"
+    local issue_id="$2"
+    local details="${3:-}"
+    local timestamp
+    timestamp=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+
+    _ensure_issues_dir
+    echo "$timestamp | $operation | Issue #$issue_id | $details" >> "$SPECFLOW_DIR/tracker.log"
+}
+
+_get_config_value() {
+    local key="$1"
+    local default="${2:-}"
+
+    if [ -f "$CONFIG_FILE" ]; then
+        local value
+        value=$(jq -r "$key // \"$default\"" "$CONFIG_FILE")
+        echo "$value"
+    else
+        echo "$default"
+    fi
+}
+
+# =============================================================================
+# Core Tracker Functions
+# =============================================================================
+
+tracker_type() {
+    # Returns the configured tracker type (github, jira, linear, local)
+    _get_config_value '.tracker.type' 'local'
+}
+
+tracker_list_issues() {
+    # List open issues assigned to current user
+    # Returns JSON array of issues
+
+    local type
+    type=$(tracker_type)
+
+    case "$type" in
+        github)
+            gh issue list --assignee "@me" --state open \
+                --json number,title,body,labels,state,assignees
+            ;;
+        jira)
+            echo "Jira adapter not implemented" >&2
+            return 1
+            ;;
+        linear)
+            echo "Linear adapter not implemented" >&2
+            return 1
+            ;;
+        local)
+            _ensure_issues_dir
+            local issues="[]"
+            shopt -s nullglob
+            for file in "$ISSUES_DIR"/*.json; do
+                if [ -f "$file" ]; then
+                    local issue
+                    issue=$(cat "$file")
+                    local state
+                    state=$(echo "$issue" | jq -r '.state // "open"')
+                    if [ "$state" = "open" ]; then
+                        issues=$(echo "$issues" | jq --argjson i "$issue" '. + [$i]')
+                    fi
+                fi
+            done
+            shopt -u nullglob
+            echo "$issues"
+            ;;
+        *)
+            echo "Unknown tracker type: $type" >&2
+            return 1
+            ;;
+    esac
+}
+
+tracker_get_issue() {
+    # Get a single issue by ID
+    # Arguments: issue_id
+    # Returns JSON object
+
+    local issue_id="$1"
+    local type
+    type=$(tracker_type)
+
+    case "$type" in
+        github)
+            gh issue view "$issue_id" --json number,title,body,labels,state,assignees,updatedAt
+            ;;
+        jira)
+            echo "Jira adapter not implemented" >&2
+            return 1
+            ;;
+        linear)
+            echo "Linear adapter not implemented" >&2
+            return 1
+            ;;
+        local)
+            local file="$ISSUES_DIR/${issue_id}.json"
+            if [ -f "$file" ]; then
+                cat "$file"
+            else
+                echo "Issue not found: $issue_id" >&2
+                return 1
+            fi
+            ;;
+        *)
+            echo "Unknown tracker type: $type" >&2
+            return 1
+            ;;
+    esac
+}
+
+tracker_add_label() {
+    # Add a label to an issue
+    # Arguments: issue_id, label
+
+    local issue_id="$1"
+    local label="$2"
+    local type
+    type=$(tracker_type)
+
+    case "$type" in
+        github)
+            gh issue edit "$issue_id" --add-label "$label"
+            _log_tracker_op "add_label" "$issue_id" "label=$label"
+            ;;
+        jira)
+            echo "Jira adapter not implemented" >&2
+            return 1
+            ;;
+        linear)
+            echo "Linear adapter not implemented" >&2
+            return 1
+            ;;
+        local)
+            local file="$ISSUES_DIR/${issue_id}.json"
+            if [ -f "$file" ]; then
+                jq --arg label "$label" '.labels += [$label] | .labels |= unique' "$file" > "${file}.tmp"
+                mv "${file}.tmp" "$file"
+                _log_tracker_op "add_label" "$issue_id" "label=$label"
+            else
+                echo "Issue not found: $issue_id" >&2
+                return 1
+            fi
+            ;;
+        *)
+            echo "Unknown tracker type: $type" >&2
+            return 1
+            ;;
+    esac
+}
+
+tracker_remove_label() {
+    # Remove a label from an issue
+    # Arguments: issue_id, label
+
+    local issue_id="$1"
+    local label="$2"
+    local type
+    type=$(tracker_type)
+
+    case "$type" in
+        github)
+            gh issue edit "$issue_id" --remove-label "$label"
+            _log_tracker_op "remove_label" "$issue_id" "label=$label"
+            ;;
+        jira)
+            echo "Jira adapter not implemented" >&2
+            return 1
+            ;;
+        linear)
+            echo "Linear adapter not implemented" >&2
+            return 1
+            ;;
+        local)
+            local file="$ISSUES_DIR/${issue_id}.json"
+            if [ -f "$file" ]; then
+                jq --arg label "$label" '.labels = (.labels | map(select(. != $label)))' "$file" > "${file}.tmp"
+                mv "${file}.tmp" "$file"
+                _log_tracker_op "remove_label" "$issue_id" "label=$label"
+            else
+                echo "Issue not found: $issue_id" >&2
+                return 1
+            fi
+            ;;
+        *)
+            echo "Unknown tracker type: $type" >&2
+            return 1
+            ;;
+    esac
+}
+
+tracker_update_status() {
+    # Update issue status (open/closed)
+    # Arguments: issue_id, status (open|closed)
+
+    local issue_id="$1"
+    local status="$2"
+    local type
+    type=$(tracker_type)
+
+    case "$type" in
+        github)
+            if [ "$status" = "closed" ]; then
+                gh issue close "$issue_id" --reason completed
+            else
+                gh issue reopen "$issue_id"
+            fi
+            _log_tracker_op "update_status" "$issue_id" "status=$status"
+            ;;
+        jira)
+            echo "Jira adapter not implemented" >&2
+            return 1
+            ;;
+        linear)
+            echo "Linear adapter not implemented" >&2
+            return 1
+            ;;
+        local)
+            local file="$ISSUES_DIR/${issue_id}.json"
+            if [ -f "$file" ]; then
+                jq --arg status "$status" '.state = $status' "$file" > "${file}.tmp"
+                mv "${file}.tmp" "$file"
+                _log_tracker_op "update_status" "$issue_id" "status=$status"
+            else
+                echo "Issue not found: $issue_id" >&2
+                return 1
+            fi
+            ;;
+        *)
+            echo "Unknown tracker type: $type" >&2
+            return 1
+            ;;
+    esac
+}
+
+tracker_add_comment() {
+    # Add a comment to an issue
+    # Arguments: issue_id, comment
+
+    local issue_id="$1"
+    local comment="$2"
+    local type
+    type=$(tracker_type)
+
+    case "$type" in
+        github)
+            gh issue comment "$issue_id" --body "$comment"
+            _log_tracker_op "add_comment" "$issue_id" "comment added"
+            ;;
+        jira)
+            echo "Jira adapter not implemented" >&2
+            return 1
+            ;;
+        linear)
+            echo "Linear adapter not implemented" >&2
+            return 1
+            ;;
+        local)
+            local file="$ISSUES_DIR/${issue_id}.json"
+            if [ -f "$file" ]; then
+                local timestamp
+                timestamp=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+                jq --arg comment "$comment" --arg ts "$timestamp" \
+                    '.comments = (.comments // []) + [{"body": $comment, "created_at": $ts}]' \
+                    "$file" > "${file}.tmp"
+                mv "${file}.tmp" "$file"
+                _log_tracker_op "add_comment" "$issue_id" "comment added"
+            else
+                echo "Issue not found: $issue_id" >&2
+                return 1
+            fi
+            ;;
+        *)
+            echo "Unknown tracker type: $type" >&2
+            return 1
+            ;;
+    esac
+}
+
+# =============================================================================
+# Help / Usage
+# =============================================================================
+
+_tracker_adapter_show_help() {
+    echo "Tracker Adapter - Unified interface for issue tracking"
+    echo ""
+    echo "Usage: source scripts/tracker-adapter.sh"
+    echo ""
+    echo "Functions:"
+    echo "  tracker_type                      - Get configured tracker type"
+    echo "  tracker_list_issues               - List open issues"
+    echo "  tracker_get_issue ID              - Get issue by ID"
+    echo "  tracker_add_label ID LABEL        - Add label to issue"
+    echo "  tracker_remove_label ID LABEL     - Remove label from issue"
+    echo "  tracker_update_status ID STATUS   - Update status (open|closed)"
+    echo "  tracker_add_comment ID COMMENT    - Add comment to issue"
+    echo ""
+    echo "Current configuration:"
+    if [ -f "$CONFIG_FILE" ]; then
+        echo "  Tracker type: $(tracker_type)"
+        echo "  Config file: $CONFIG_FILE"
+    else
+        echo "  Config file not found: $CONFIG_FILE"
+        echo "  Defaulting to: local"
+    fi
+}
+
+# Show help only when executed directly, not when sourced
+# Works with both bash and zsh
+if [ -n "${BASH_SOURCE:-}" ]; then
+    # Bash
+    if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
+        _tracker_adapter_show_help
+    fi
+elif [ -n "${ZSH_VERSION:-}" ]; then
+    # Zsh - check if sourced by looking at funcfiletrace
+    if [[ ${#funcfiletrace[@]} -eq 0 ]]; then
+        _tracker_adapter_show_help
+    fi
+else
+    # Unknown shell, default to showing help when run directly
+    _tracker_adapter_show_help
+fi
