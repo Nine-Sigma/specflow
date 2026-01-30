@@ -22,10 +22,10 @@ _ensure_issues_dir() {
 _next_local_id() {
     _ensure_issues_dir
     local max_id=0
+    local id  # Declare outside loop for zsh compatibility
     # Use find instead of glob for cross-shell compatibility
     while IFS= read -r file; do
         if [ -f "$file" ]; then
-            local id
             id=$(basename "$file" .json)
             if [[ "$id" =~ ^[0-9]+$ ]] && [ "$id" -gt "$max_id" ]; then
                 max_id=$id
@@ -614,6 +614,314 @@ tracker_create_epic() {
     esac
 }
 
+tracker_create_story() {
+    # Create a story issue, optionally linked to an epic
+    # Arguments: title, body, [labels], [epic_node_id]
+    # Returns: JSON object with number, title, url, node_id, parent_id, type
+
+    local title="$1"
+    local body="${2:-}"
+    local labels="${3:-}"
+    local epic_node_id="${4:-}"
+    local type
+    type=$(tracker_type)
+
+    # Get the story label from config
+    local story_label
+    story_label=$(_get_config_value '.ticket_management.labels.story' 'specflow:story')
+
+    # Ensure story label is included
+    if [ -n "$labels" ]; then
+        labels="$labels,$story_label"
+    else
+        labels="$story_label"
+    fi
+
+    case "$type" in
+        github)
+            # Create the issue
+            local cmd="gh issue create --title \"$title\" --body \"$body\" --label \"$labels\""
+            local result
+            result=$(eval "$cmd" 2>&1)
+            local issue_number
+            issue_number=$(echo "$result" | grep -oE '[0-9]+$' || echo "")
+
+            if [ -z "$issue_number" ]; then
+                echo "$result" >&2
+                return 1
+            fi
+
+            # Get issue URL
+            local issue_url
+            issue_url=$(gh issue view "$issue_number" --json url --jq '.url' 2>/dev/null || echo "")
+
+            # Get node_id via GraphQL
+            local node_id
+            node_id=$(_get_issue_node_id "$issue_number")
+
+            if [ -z "$node_id" ]; then
+                echo "Warning: Could not fetch node_id for issue #$issue_number" >&2
+            fi
+
+            # If epic_node_id provided, link as sub-issue
+            local link_success="false"
+            if [ -n "$epic_node_id" ] && [ -n "$node_id" ]; then
+                # Check if sub-issues are enabled in config
+                local use_sub_issues
+                use_sub_issues=$(_get_config_value '.tracker.github.use_sub_issues' 'true')
+
+                if [ "$use_sub_issues" = "true" ]; then
+                    # Try to link via GraphQL with sub_issues feature header
+                    local link_result
+                    link_result=$(gh api graphql \
+                        -H "GraphQL-Features: sub_issues" \
+                        -f query='
+                            mutation($parent: ID!, $child: ID!) {
+                                addSubIssue(input: {issueId: $parent, subIssueId: $child}) {
+                                    issue { title }
+                                }
+                            }' \
+                        -F parent="$epic_node_id" -F child="$node_id" 2>&1) || true
+
+                    if echo "$link_result" | grep -q '"title"'; then
+                        link_success="true"
+                    else
+                        echo "Warning: Could not link story as sub-issue: $link_result" >&2
+                        # Check fallback setting
+                        local fallback
+                        fallback=$(_get_config_value '.tracker.github.fallback_to_task_list' 'true')
+                        if [ "$fallback" = "true" ]; then
+                            echo "Note: Fallback to task list not yet implemented" >&2
+                        fi
+                    fi
+                fi
+            fi
+
+            _log_tracker_op "create_story" "$issue_number" "title=$title, epic=$epic_node_id, linked=$link_success"
+
+            # Return JSON with all fields
+            jq -n \
+                --arg number "$issue_number" \
+                --arg title "$title" \
+                --arg url "$issue_url" \
+                --arg node_id "$node_id" \
+                --arg parent_id "$epic_node_id" \
+                '{
+                    number: ($number | tonumber),
+                    title: $title,
+                    url: $url,
+                    node_id: $node_id,
+                    parent_id: $parent_id,
+                    type: "story"
+                }'
+            ;;
+        jira)
+            echo "Jira adapter not implemented" >&2
+            return 1
+            ;;
+        linear)
+            echo "Linear adapter not implemented" >&2
+            return 1
+            ;;
+        local)
+            _ensure_issues_dir
+            local issue_id
+            issue_id=$(_next_local_id)
+            local timestamp
+            timestamp=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+            local file="$ISSUES_DIR/${issue_id}.json"
+
+            # Parse labels into array
+            local labels_array="[]"
+            if [ -n "$labels" ]; then
+                labels_array=$(echo "$labels" | tr ',' '\n' | jq -R '.' | jq -s '.')
+            fi
+
+            # Create story JSON with type and parent_id
+            jq -n \
+                --arg id "$issue_id" \
+                --arg title "$title" \
+                --arg body "$body" \
+                --argjson labels "$labels_array" \
+                --arg ts "$timestamp" \
+                --arg parent_id "$epic_node_id" \
+                '{
+                    id: $id,
+                    number: ($id | tonumber),
+                    title: $title,
+                    body: $body,
+                    labels: $labels,
+                    state: "open",
+                    assignees: [],
+                    created_at: $ts,
+                    updated_at: $ts,
+                    comments: [],
+                    type: "story",
+                    parent_id: $parent_id
+                }' > "$file"
+
+            # If epic exists locally, update its sub_issues array
+            if [ -n "$epic_node_id" ]; then
+                local epic_file="$ISSUES_DIR/${epic_node_id}.json"
+                if [ -f "$epic_file" ]; then
+                    jq --arg story_id "$issue_id" \
+                        '.sub_issues = (.sub_issues // []) + [$story_id]' \
+                        "$epic_file" > "${epic_file}.tmp"
+                    mv "${epic_file}.tmp" "$epic_file"
+                fi
+            fi
+
+            _log_tracker_op "create_story" "$issue_id" "title=$title, epic=$epic_node_id"
+
+            # Return JSON in same format as GitHub
+            jq '{
+                number: .number,
+                title: .title,
+                url: ("local://" + .id),
+                node_id: .id,
+                parent_id: .parent_id,
+                type: .type
+            }' "$file"
+            ;;
+        *)
+            echo "Unknown tracker type: $type" >&2
+            return 1
+            ;;
+    esac
+}
+
+_calculate_story_points() {
+    # Calculate story points based on criteria count
+    # Arguments: criteria_count
+    # Returns: points (1 per 2 criteria, capped at configured max)
+
+    local criteria_count="${1:-0}"
+    local cap
+    cap=$(_get_config_value '.ticket_management.story_point_cap' '8')
+
+    # 1 point per 2 criteria
+    local points=$(( (criteria_count + 1) / 2 ))
+
+    # Cap at configured max
+    if [ "$points" -gt "$cap" ]; then
+        points=$cap
+    fi
+
+    # Minimum 1 point if any criteria
+    if [ "$criteria_count" -gt 0 ] && [ "$points" -lt 1 ]; then
+        points=1
+    fi
+
+    echo "$points"
+}
+
+tracker_set_story_points() {
+    # Set story points on an issue
+    # Arguments: issue_id_or_node_id, points
+    # For GitHub: Uses Projects API if configured, otherwise label fallback
+
+    local issue_id="$1"
+    local points="$2"
+    local type
+    type=$(tracker_type)
+
+    case "$type" in
+        github)
+            # Check if Projects API is configured
+            local project_id story_points_field_id
+            project_id=$(_get_config_value '.tracker.github.project_id' '')
+            story_points_field_id=$(_get_config_value '.tracker.github.story_points_field_id' '')
+
+            if [ -n "$project_id" ] && [ -n "$story_points_field_id" ]; then
+                # Use GitHub Projects API
+                # Note: This requires the issue to be added to the project first
+                echo "Warning: GitHub Projects API for story points not yet implemented" >&2
+                echo "Falling back to label" >&2
+            fi
+
+            # Fallback: Use label
+            # First remove any existing points:N labels
+            local existing_labels
+            existing_labels=$(gh issue view "$issue_id" --json labels --jq '.labels[].name' 2>/dev/null || echo "")
+            for lbl in $existing_labels; do
+                if [[ "$lbl" =~ ^points:[0-9]+$ ]]; then
+                    gh issue edit "$issue_id" --remove-label "$lbl" 2>/dev/null || true
+                fi
+            done
+
+            # Add new points label
+            gh issue edit "$issue_id" --add-label "points:$points" 2>/dev/null || {
+                echo "Warning: Could not add points label" >&2
+            }
+
+            _log_tracker_op "set_story_points" "$issue_id" "points=$points"
+            echo "{\"issue_id\": \"$issue_id\", \"story_points\": $points}"
+            ;;
+        jira)
+            echo "Jira adapter not implemented" >&2
+            return 1
+            ;;
+        linear)
+            echo "Linear adapter not implemented" >&2
+            return 1
+            ;;
+        local)
+            local file="$ISSUES_DIR/${issue_id}.json"
+            if [ -f "$file" ]; then
+                jq --argjson points "$points" '.story_points = $points' "$file" > "${file}.tmp"
+                mv "${file}.tmp" "$file"
+                _log_tracker_op "set_story_points" "$issue_id" "points=$points"
+                echo "{\"issue_id\": \"$issue_id\", \"story_points\": $points}"
+            else
+                echo "Issue not found: $issue_id" >&2
+                return 1
+            fi
+            ;;
+        *)
+            echo "Unknown tracker type: $type" >&2
+            return 1
+            ;;
+    esac
+}
+
+tracker_get_comments() {
+    # Get comments from an issue
+    # Arguments: issue_id
+    # Returns: JSON array of {body, created_at, author} objects
+
+    local issue_id="$1"
+    local type
+    type=$(tracker_type)
+
+    case "$type" in
+        github)
+            gh issue view "$issue_id" --json comments \
+                --jq '[.comments[] | {body: .body, created_at: .createdAt, author: .author.login}]' 2>/dev/null || echo "[]"
+            ;;
+        jira)
+            echo "Jira adapter not implemented" >&2
+            return 1
+            ;;
+        linear)
+            echo "Linear adapter not implemented" >&2
+            return 1
+            ;;
+        local)
+            local file="$ISSUES_DIR/${issue_id}.json"
+            if [ -f "$file" ]; then
+                jq '[(.comments // [])[] | {body: .body, created_at: .created_at, author: (.author // "local")}]' "$file"
+            else
+                echo "Issue not found: $issue_id" >&2
+                return 1
+            fi
+            ;;
+        *)
+            echo "Unknown tracker type: $type" >&2
+            return 1
+            ;;
+    esac
+}
+
 # =============================================================================
 # Help / Usage
 # =============================================================================
@@ -634,6 +942,15 @@ _tracker_adapter_show_help() {
     echo "  tracker_create_issue TITLE BODY [LABELS]"
     echo "                                    - Create new issue"
     echo "  tracker_search QUERY              - Search issues"
+    echo ""
+    echo "Epic/Story Management:"
+    echo "  tracker_create_epic TITLE BODY [LABELS]"
+    echo "                                    - Create epic issue with parent tracking"
+    echo "  tracker_create_story TITLE BODY [LABELS] [EPIC_NODE_ID]"
+    echo "                                    - Create story, optionally linked to epic"
+    echo "  tracker_set_story_points ID POINTS"
+    echo "                                    - Set story points (via Projects or label)"
+    echo "  tracker_get_comments ID           - Get comments from issue"
     echo ""
     echo "Current configuration:"
     if [ -f "$CONFIG_FILE" ]; then
