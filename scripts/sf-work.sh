@@ -102,6 +102,124 @@ _show_help() {
 }
 
 # ============================================================================
+# Deduplication
+# ============================================================================
+
+_find_similar_issues() {
+    local title="$1"
+    local threshold="${2:-0.6}"  # Default 60% similarity
+
+    # Get all existing issues
+    local issues
+    issues=$(tracker_list_issues 2>/dev/null) || return 1
+
+    local count
+    count=$(echo "$issues" | jq 'length' 2>/dev/null) || return 1
+    [ "$count" -eq 0 ] && return 1
+
+    # Normalize input title for comparison
+    local normalized_input
+    normalized_input=$(echo "$title" | tr '[:upper:]' '[:lower:]' | sed 's/[^a-z0-9 ]//g')
+
+    # Check each issue for similarity
+    local matches=""
+    while IFS= read -r issue; do
+        local issue_id issue_title normalized_title
+        issue_id=$(echo "$issue" | jq -r '.number // .id')
+        issue_title=$(echo "$issue" | jq -r '.title // ""')
+        normalized_title=$(echo "$issue_title" | tr '[:upper:]' '[:lower:]' | sed 's/[^a-z0-9 ]//g')
+
+        # Check for exact match (normalized)
+        if [ "$normalized_input" = "$normalized_title" ]; then
+            matches="${matches}#${issue_id}|${issue_title}|exact\n"
+            continue
+        fi
+
+        # Check if input contains issue title or vice versa (substring match)
+        if [[ "$normalized_input" == *"$normalized_title"* ]] || [[ "$normalized_title" == *"$normalized_input"* ]]; then
+            matches="${matches}#${issue_id}|${issue_title}|substring\n"
+            continue
+        fi
+
+        # Check word overlap (simple similarity)
+        local input_words title_words common_words total_words overlap
+        input_words=$(echo "$normalized_input" | tr ' ' '\n' | sort -u | grep -v '^$')
+        title_words=$(echo "$normalized_title" | tr ' ' '\n' | sort -u | grep -v '^$')
+        common_words=$(comm -12 <(echo "$input_words") <(echo "$title_words") | wc -l | tr -d ' ')
+        total_words=$(echo -e "${input_words}\n${title_words}" | sort -u | grep -v '^$' | wc -l | tr -d ' ')
+
+        if [ "$total_words" -gt 0 ]; then
+            # Calculate Jaccard similarity as percentage
+            overlap=$((common_words * 100 / total_words))
+            if [ "$overlap" -ge 60 ]; then
+                matches="${matches}#${issue_id}|${issue_title}|${overlap}%\n"
+            fi
+        fi
+    done < <(echo "$issues" | jq -c '.[]')
+
+    if [ -n "$matches" ]; then
+        echo -e "$matches" | grep -v '^$'
+        return 0
+    fi
+    return 1
+}
+
+_prompt_duplicate_resolution() {
+    local title="$1"
+    local matches="$2"
+
+    echo "" >&2
+    echo "╔══════════════════════════════════════════════════════════════╗" >&2
+    echo "║  Similar issues found                                        ║" >&2
+    echo "╚══════════════════════════════════════════════════════════════╝" >&2
+    echo "" >&2
+    echo "Your request: \"$title\"" >&2
+    echo "" >&2
+    echo "Found similar issues:" >&2
+
+    local idx=1
+    while IFS='|' read -r id issue_title match_type; do
+        [ -z "$id" ] && continue
+        echo "  [$idx] $id - $issue_title ($match_type)" >&2
+        idx=$((idx + 1))
+    done <<< "$matches"
+
+    echo "" >&2
+    echo "Options:" >&2
+    echo "  Enter number to use existing issue" >&2
+    echo "  Enter 'new' to create anyway" >&2
+    echo "  Enter 'cancel' to abort" >&2
+    echo "" >&2
+    read -p "Your choice: " choice
+
+    case "$choice" in
+        [0-9]*)
+            # Extract issue ID from the Nth match
+            local selected_id
+            selected_id=$(echo "$matches" | sed -n "${choice}p" | cut -d'|' -f1 | tr -d '#')
+            if [ -n "$selected_id" ]; then
+                echo "$selected_id"
+                return 0
+            fi
+            echo "Invalid selection" >&2
+            return 1
+            ;;
+        new|NEW|n|N)
+            echo "new"
+            return 0
+            ;;
+        cancel|CANCEL|c|C)
+            echo "cancel"
+            return 0
+            ;;
+        *)
+            echo "Invalid choice" >&2
+            return 1
+            ;;
+    esac
+}
+
+# ============================================================================
 # Issue Resolution
 # ============================================================================
 
@@ -271,6 +389,58 @@ EOF
 }
 
 # ============================================================================
+# Output
+# ============================================================================
+
+_print_summary() {
+    local issue_id="$1"
+    local title="$2"
+    local classification="$3"
+    local triage_file="$4"
+
+    echo ""
+    echo "======================================"
+    echo "Work Started: Issue #$issue_id"
+    echo "======================================"
+    echo ""
+    echo "Title: $title"
+    echo ""
+    echo "Classification:"
+    echo "  Type: $(echo "$classification" | jq -r '.type') ($(echo "$classification" | jq -r '.type_confidence')% confidence)"
+    echo "  Size: $(echo "$classification" | jq -r '.size') ($(echo "$classification" | jq -r '.size_confidence')% confidence)"
+    echo ""
+
+    local type_val
+    type_val=$(echo "$classification" | jq -r '.type')
+
+    echo "Next Steps:"
+    case "$type_val" in
+        bug)
+            echo "  1. Run /sf:bug workflow (testing focus)"
+            ;;
+        feature)
+            echo "  2. Run /sf:feature workflow (full spec)"
+            ;;
+        refactor)
+            echo "  3. Run /sf:refactor workflow (before/after comparison)"
+            ;;
+        chore)
+            echo "  4. Minimal ceremony - proceed directly"
+            ;;
+        docs)
+            echo "  5. Documentation workflow - no pillars required"
+            ;;
+        *)
+            echo "  6. Classification unclear - review with PM agent"
+            ;;
+    esac
+
+    echo ""
+    echo "Triage file: $triage_file"
+    echo "Classification log: $SPECFLOW_DIR/classification.log"
+}
+
+# ============================================================================
 # Main Flow
 # ============================================================================
 
@@ -313,10 +483,77 @@ main() {
             exit 1
         }
     else
-        # Natural language flow - create local issue
-        echo "Creating local work item..."
+        # Natural language flow - check for duplicates first
+        echo "Checking for similar issues..."
         source="local"
 
+        local similar_issues
+        if similar_issues=$(_find_similar_issues "$INPUT" 2>/dev/null) && [ -n "$similar_issues" ]; then
+            local resolution
+            resolution=$(_prompt_duplicate_resolution "$INPUT" "$similar_issues")
+
+            case "$resolution" in
+                cancel)
+                    echo "Operation cancelled."
+                    exit 0
+                    ;;
+                new)
+                    echo "Creating new issue..."
+                    ;;
+                *)
+                    # User selected existing issue
+                    issue_id="$resolution"
+                    source="$(tracker_type)"
+                    echo "Using existing issue #$issue_id"
+
+                    # Sync and get the existing issue
+                    sync_issue "$issue_id" "starting" 2>/dev/null || true
+                    issue_data=$(tracker_get_issue "$issue_id" 2>/dev/null) || {
+                        echo "Error: Could not fetch issue #$issue_id" >&2
+                        exit 1
+                    }
+
+                    # Skip to classification (don't create new)
+                    local title
+                    title=$(echo "$issue_data" | jq -r '.title // ""')
+
+                    echo "Classifying issue..."
+                    local classification
+                    classification=$(classify_issue "$issue_data")
+
+                    # Apply overrides if provided
+                    if [ -n "$OVERRIDE_TYPE" ]; then
+                        classification=$(echo "$classification" | jq --arg t "$OVERRIDE_TYPE" '.type = $t | .type_confidence = 100')
+                        echo "Classification overridden by user: type=$OVERRIDE_TYPE"
+                    fi
+
+                    if [ -n "$OVERRIDE_SIZE" ]; then
+                        classification=$(echo "$classification" | jq --arg s "$OVERRIDE_SIZE" '.size = $s | .size_confidence = 100')
+                        echo "Classification overridden by user: size=$OVERRIDE_SIZE"
+                    fi
+
+                    log_classification "$issue_id" "$classification"
+
+                    local needs_llm
+                    needs_llm=$(echo "$classification" | jq -r '.needs_llm // false')
+
+                    if [ "$needs_llm" = "true" ] && [ "$SKIP_PM" = "false" ]; then
+                        echo ""
+                        echo "Note: Low confidence classification. PM agent should verify."
+                        echo "Use --no-pm to skip PM verification."
+                    fi
+
+                    local triage_file
+                    triage_file=$(_create_triage_file "$issue_id" "$title" "$source" "$classification")
+
+                    _print_summary "$issue_id" "$title" "$classification" "$triage_file"
+                    exit 0
+                    ;;
+            esac
+        fi
+
+        # Create new local issue
+        echo "Creating local work item..."
         issue_data=$(tracker_create_issue "$INPUT" "" "") || {
             echo "Error: Could not create work item" >&2
             exit 1
@@ -363,46 +600,7 @@ main() {
     local triage_file
     triage_file=$(_create_triage_file "$issue_id" "$title" "$source" "$classification")
 
-    echo ""
-    echo "======================================"
-    echo "Work Started: Issue #$issue_id"
-    echo "======================================"
-    echo ""
-    echo "Title: $title"
-    echo ""
-    echo "Classification:"
-    echo "  Type: $(echo "$classification" | jq -r '.type') ($(echo "$classification" | jq -r '.type_confidence')% confidence)"
-    echo "  Size: $(echo "$classification" | jq -r '.size') ($(echo "$classification" | jq -r '.size_confidence')% confidence)"
-    echo ""
-
-    local type_val
-    type_val=$(echo "$classification" | jq -r '.type')
-
-    echo "Next Steps:"
-    case "$type_val" in
-        bug)
-            echo "  1. Run /sf:bug workflow (testing focus)"
-            ;;
-        feature)
-            echo "  2. Run /sf:feature workflow (full spec)"
-            ;;
-        refactor)
-            echo "  3. Run /sf:refactor workflow (before/after comparison)"
-            ;;
-        chore)
-            echo "  4. Minimal ceremony - proceed directly"
-            ;;
-        docs)
-            echo "  5. Documentation workflow - no pillars required"
-            ;;
-        *)
-            echo "  6. Classification unclear - review with PM agent"
-            ;;
-    esac
-
-    echo ""
-    echo "Triage file: $triage_file"
-    echo "Classification log: $SPECFLOW_DIR/classification.log"
+    _print_summary "$issue_id" "$title" "$classification" "$triage_file"
 }
 
 # Run main if executed directly

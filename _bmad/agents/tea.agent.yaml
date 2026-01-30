@@ -61,3 +61,16 @@ agent:
     - trigger: RV or fuzzy match on test-review
       workflow: "{project-root}/_bmad/bmm/workflows/testarch/test-review/workflow.yaml"
       description: "[RV] Review Tests: Perform a quality check against written tests using comprehensive knowledge base and best practices"
+
+    # SpecFlow Extension - Test Orchestration
+    - trigger: ST or fuzzy match on specflow-tests
+      exec: "{project-root}/.specflow/agents/test-orchestrator.md"
+      description: "[ST] SpecFlow Tests: Orchestrate test pyramid (integration after component, E2E after feature)"
+
+    - trigger: SU or fuzzy match on specflow-uat
+      exec: "{project-root}/.specflow/agents/uat-executor.md"
+      description: "[SU] SpecFlow UAT: Execute Gherkin scenarios via Playwright with flaky detection and evidence capture"
+
+    - trigger: SB or fuzzy match on specflow-boss
+      exec: "{project-root}/.specflow/agents/criteria-reviewer.md"
+      description: "[SB] SpecFlow BOSS: Validate acceptance criteria meet BOSS framework (Binary, Observable, Specific, Testable)"

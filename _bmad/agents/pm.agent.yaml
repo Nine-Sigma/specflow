@@ -44,3 +44,16 @@ agent:
     - trigger: CC or fuzzy match on correct-course
       workflow: "{project-root}/_bmad/bmm/workflows/4-implementation/correct-course/workflow.yaml"
       description: "[CC] Course Correction: Use this so we can determine how to proceed if major need for change is discovered mid implementation"
+
+    # SpecFlow Extension - Work Item Classification
+    - trigger: SC or fuzzy match on specflow-classify
+      exec: "{project-root}/.specflow/workflows/pm-classify.md"
+      description: "[SC] SpecFlow Classify: Classify ambiguous work item (type, size, pillars) when pattern matching is uncertain"
+
+    - trigger: SP or fuzzy match on specflow-pillars
+      exec: "{project-root}/.specflow/workflows/pm-pillars.md"
+      description: "[SP] SpecFlow Pillars: Determine which pillars (Security, Cost, Testing) apply based on work context"
+
+    - trigger: SS or fuzzy match on specflow-scope
+      exec: "{project-root}/.specflow/workflows/pm-scope.md"
+      description: "[SS] SpecFlow Scope: Assess scope change and recommend route adjustment (quick/standard/complex)"
