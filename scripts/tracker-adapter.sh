@@ -173,7 +173,7 @@ tracker_add_label() {
         local)
             local file="$ISSUES_DIR/${issue_id}.json"
             if [ -f "$file" ]; then
-                jq --arg label "$label" '.labels += [$label] | .labels |= unique' "$file" > "${file}.tmp"
+                jq --arg lbl "$label" '.labels += [$lbl] | .labels |= unique' "$file" > "${file}.tmp"
                 mv "${file}.tmp" "$file"
                 _log_tracker_op "add_label" "$issue_id" "label=$label"
             else
@@ -213,7 +213,7 @@ tracker_remove_label() {
         local)
             local file="$ISSUES_DIR/${issue_id}.json"
             if [ -f "$file" ]; then
-                jq --arg label "$label" '.labels = (.labels | map(select(. != $label)))' "$file" > "${file}.tmp"
+                jq --arg lbl "$label" '.labels = (.labels | map(select(. != $lbl)))' "$file" > "${file}.tmp"
                 mv "${file}.tmp" "$file"
                 _log_tracker_op "remove_label" "$issue_id" "label=$label"
             else
