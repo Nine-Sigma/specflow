@@ -394,6 +394,96 @@ create_stories_from_spec() {
 }
 
 # =============================================================================
+# Integration Functions
+# =============================================================================
+
+create_and_plan() {
+    # Full orchestration: spec -> epic -> stories -> mapping -> plan
+    # Arguments: feature_name
+    # Returns: summary of what was created
+    local feature="$1"
+
+    # Step 1: Verify spec exists
+    if ! _spec_exists "$feature"; then
+        echo "Error: Spec not found: $SPECS_DIR/$feature/spec.md" >&2
+        return 1
+    fi
+
+    # Step 2: Check for approval (optional but noted)
+    local approval_file="$SPECS_DIR/$feature/approval.md"
+    if [ -f "$approval_file" ]; then
+        echo "  Found approval: $approval_file"
+    else
+        echo "  Note: No approval file found (continuing anyway)"
+    fi
+
+    # Step 3: Create epic
+    echo "Creating epic..."
+    local epic_json
+    epic_json=$(create_epic_from_spec "$feature")
+    if [ $? -ne 0 ]; then
+        echo "Error: Failed to create epic" >&2
+        return 1
+    fi
+    local epic_number
+    epic_number=$(echo "$epic_json" | jq -r '.number')
+    echo "  Created epic #$epic_number"
+
+    # Step 4: Create stories
+    echo "Creating stories..."
+    local stories_json
+    stories_json=$(create_stories_from_spec "$feature" "$epic_json")
+    if [ $? -ne 0 ]; then
+        echo "Error: Failed to create stories" >&2
+        return 1
+    fi
+    local story_count
+    story_count=$(echo "$stories_json" | jq 'length')
+    echo "  Created $story_count stories"
+
+    # Step 5: Generate plan via plan-generator.sh
+    if [ -f "$SCRIPT_DIR/plan-generator.sh" ]; then
+        echo ""
+        echo "Generating execution plan..."
+        "$SCRIPT_DIR/plan-generator.sh" generate "$feature" "$epic_json" "$stories_json"
+    else
+        echo "Warning: plan-generator.sh not found, skipping plan generation" >&2
+    fi
+
+    # Step 6: Return summary
+    local summary
+    summary=$(jq -n \
+        --arg feature "$feature" \
+        --argjson epic "$epic_json" \
+        --argjson stories "$stories_json" \
+        --argjson story_count "$story_count" \
+        '{
+            feature: $feature,
+            epic: $epic,
+            stories: $stories,
+            total_tickets: ($story_count + 1)
+        }')
+
+    echo ""
+    echo "=========================================="
+    echo "COMPLETE: Created $((story_count + 1)) tickets for $feature"
+    echo "  Epic: #$epic_number"
+    echo "  Stories: $story_count"
+    if [ -f "$TICKETS_DIR/${feature}.json" ]; then
+        echo "  Mapping: $TICKETS_DIR/${feature}.json"
+    fi
+    if [ -f "$SPECS_DIR/$feature/PLAN.md" ]; then
+        echo "  Plan: $SPECS_DIR/$feature/PLAN.md"
+    fi
+    echo "=========================================="
+
+    _log_creation "$feature" "Complete: epic=#$epic_number, stories=$story_count"
+
+    # Return success
+    return 0
+}
+
+# =============================================================================
 # Preview Functions
 # =============================================================================
 
@@ -554,37 +644,8 @@ main() {
     echo "Creating tickets..."
     echo ""
 
-    # Create epic
-    echo "Creating epic..."
-    local epic_json
-    epic_json=$(create_epic_from_spec "$feature")
-    local epic_number
-    epic_number=$(echo "$epic_json" | jq -r '.number')
-    echo "  Created epic #$epic_number"
-
-    # Create stories
-    echo "Creating stories..."
-    local stories_json
-    stories_json=$(create_stories_from_spec "$feature" "$epic_json")
-    local story_count
-    story_count=$(echo "$stories_json" | jq 'length')
-    echo "  Created $story_count stories"
-
-    # Call plan-generator if available
-    if [ -f "$SCRIPT_DIR/plan-generator.sh" ]; then
-        echo ""
-        echo "Generating execution plan..."
-        "$SCRIPT_DIR/plan-generator.sh" generate "$feature" "$epic_json" "$stories_json"
-    fi
-
-    echo ""
-    echo "=========================================="
-    echo "COMPLETE: Created $((story_count + 1)) tickets for $feature"
-    echo "  Epic: #$epic_number"
-    echo "  Stories: $story_count"
-    echo "=========================================="
-
-    _log_creation "$feature" "Complete: epic=#$epic_number, stories=$story_count"
+    # Use integrated create_and_plan function
+    create_and_plan "$feature"
 }
 
 # Run main if executed directly
