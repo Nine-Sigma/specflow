@@ -1,6 +1,6 @@
 # /sf:security - Security Analysis (Jordan)
 
-Invoke Jordan, the security-focused SpecFlow agent.
+Wraps BMAD `/cloud-security` (Jordan) with SpecFlow file protocol.
 
 ## Usage
 
@@ -9,55 +9,89 @@ Invoke Jordan, the security-focused SpecFlow agent.
 /sf:security <feature-description>
 ```
 
-## What This Does
+## File Protocol
 
-Jordan performs comprehensive security analysis:
-1. STRIDE threat modeling (all 6 categories)
-2. Trust boundary identification
-3. Data classification
-4. Mitigation recommendations
+<required_reading>
+Before starting work, read in order:
 
-## STRIDE Categories
+1. `.specflow/STATE.md` - Get current feature slug
+2. `.specflow/features/{slug}/1-spec.md` - Requirements context
+3. `.specflow/features/{slug}/2-architecture.md` - Architecture to secure
+</required_reading>
 
-| Category | Threats |
-|----------|---------|
-| Spoofing | Identity, credentials |
-| Tampering | Data modification, injection |
-| Repudiation | Audit logs, non-repudiation |
-| Information Disclosure | Data leaks, errors |
-| Denial of Service | Rate limits, resources |
-| Elevation of Privilege | AuthZ checks, roles |
+<constraints>
+Extract from prior outputs and honor:
+- Architecture patterns (from 2-architecture.md)
+- Acceptance criteria requiring security (from 1-spec.md)
+- Existing security decisions (from 2-architecture.md)
+</constraints>
 
-## Output Format
+<output>
+After completing analysis:
 
-Jordan produces a structured security assessment with:
-- Trust boundary diagram (ASCII)
-- Data classification table
-- STRIDE analysis table with risks and mitigations
+1. Write output to `.specflow/features/{slug}/3-security.md`
+2. Append to `.specflow/features/{slug}/PROGRESS.md`:
+   ```
+   ## {timestamp} - Security (/sf:security)
 
-## Trust Boundary Example
+   **Work Done:**
+   - [Summary of security analysis]
 
+   **Output:** `3-security.md`
+
+   **Constraints Honored:**
+   - [List constraints from 1-spec.md and 2-architecture.md]
+
+   ---
+   ```
+3. Update `.specflow/STATE.md`:
+   - last-agent: security
+   - next-agent: cost
+</output>
+
+## Output Format (3-security.md)
+
+```markdown
+---
+agent: security
+created: {iso-timestamp}
+depends_on: ["1-spec.md", "2-architecture.md"]
+status: draft
+---
+
+# {Feature Name} Security Assessment
+
+## Summary
+
+{2-3 sentence summary of security posture}
+
+## STRIDE Analysis
+
+| Category | Threat | Mitigation | Priority |
+|----------|--------|------------|----------|
+| Spoofing | {threat} | {mitigation} | {H/M/L} |
+| Tampering | {threat} | {mitigation} | {H/M/L} |
+| Repudiation | {threat} | {mitigation} | {H/M/L} |
+| Info Disclosure | {threat} | {mitigation} | {H/M/L} |
+| Denial of Service | {threat} | {mitigation} | {H/M/L} |
+| Elevation of Privilege | {threat} | {mitigation} | {H/M/L} |
+
+## Trust Boundaries
+
+{ASCII diagram of trust boundaries}
+
+## Constraints for Downstream
+
+- {Security requirements dev must implement}
+- {Logging/audit requirements}
+
+## Open Questions
+
+- {Any unresolved items for PM review}
 ```
-+----------------+       +----------------+
-|   Browser      |       |    API         |
-|   (Untrusted)  |------>|    (Trusted)   |
-+----------------+       +----------------+
-        |                        |
-        v                        v
-+----------------+       +----------------+
-|   CDN          |       |    Database    |
-|   (Semi-trust) |       |    (Trusted)   |
-+----------------+       +----------------+
-```
-
-## When to Use
-
-- Always for new features (/sf:pm routes automatically)
-- When reviewing security implications of changes
-- Before implementing authentication/authorization
 
 ## Related
 
-- `/cloud-security` - Original BMAD security agent
-- `/sf:cost` - Cost analysis (Taylor)
-- `/sf:pm` - PM orchestrator
+- `/cloud-security` - Original BMAD Jordan agent
+- `/sf:architect` - Prior in pillar sequence (2-architecture.md)
+- `/sf:cost` - Next in pillar sequence

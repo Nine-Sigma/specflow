@@ -1,59 +1,91 @@
-# /sf:architect - Architecture Decisions
+# /sf:architect - Architecture Design
 
-Wraps BMAD `/architect` with SpecFlow ADR format.
+Wraps BMAD `/architect` with SpecFlow file protocol.
 
 ## Usage
 
 ```
 /sf:architect
-/sf:architect <decision-context>
+/sf:architect <feature-description>
 ```
 
-## SpecFlow Context
+## File Protocol
 
-This command invokes BMAD's architect with additional context:
-- ADR (Architecture Decision Record) format
-- Integration with spec system
-- Security and cost considerations included
+<required_reading>
+Before starting work, read in order:
 
-## Output Format
+1. `.specflow/STATE.md` - Get current feature slug
+2. `.specflow/features/{slug}/1-spec.md` - Requirements to design for
+</required_reading>
 
-Architecture output includes:
-- Context and problem statement
-- Decision drivers
-- Considered options with tradeoffs
-- Decision outcome
-- Consequences (security, cost, maintenance)
+<constraints>
+Extract from 1-spec.md and honor:
+- User stories (what to design for)
+- Acceptance criteria (what must be achievable)
+- Constraints for downstream (previous decisions)
+</constraints>
 
-## ADR Template
+<output>
+After completing design:
+
+1. Write output to `.specflow/features/{slug}/2-architecture.md`
+2. Append to `.specflow/features/{slug}/PROGRESS.md`:
+   ```
+   ## {timestamp} - Architect (/sf:architect)
+
+   **Work Done:**
+   - [Summary of architecture decisions]
+
+   **Output:** `2-architecture.md`
+
+   **Constraints Honored:**
+   - [List constraints from 1-spec.md that were followed]
+
+   ---
+   ```
+3. Update `.specflow/STATE.md`:
+   - last-agent: architect
+   - next-agent: security
+</output>
+
+## Output Format (2-architecture.md)
 
 ```markdown
-# ADR-NNN: [Title]
+---
+agent: architect
+created: {iso-timestamp}
+depends_on: ["1-spec.md"]
+status: draft
+---
 
-## Status
-Proposed | Accepted | Deprecated | Superseded
+# {Feature Name} Architecture
 
-## Context
-[Why this decision is needed]
+## Summary
 
-## Decision
-[What we decided]
+{2-3 sentence summary of architecture decisions}
 
-## Consequences
-- Security: [impact]
-- Cost: [impact]
-- Maintenance: [impact]
+## Key Decisions
+
+### Decision 1: {Title}
+- **Context:** {Why this decision was needed}
+- **Decision:** {What was decided}
+- **Consequences:** {Trade-offs}
+
+## Component Design
+
+{Technical design details}
+
+## Constraints for Downstream
+
+- {Constraints security/cost/dev must honor}
+
+## Open Questions
+
+- {Any unresolved items for PM review}
 ```
-
-## When to Use
-
-- New service or component architecture
-- Technology selection decisions
-- Integration approach choices
-- Data model design
 
 ## Related
 
 - `/architect` - Original BMAD architect
-- `/sf:pm` - PM orchestrator (routes to architect)
-- `/sf:create-architecture` - Full architecture creation
+- `/sf:analyst` - Prior in pillar sequence (1-spec.md)
+- `/sf:security` - Next in pillar sequence
