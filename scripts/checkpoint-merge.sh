@@ -29,6 +29,9 @@ source "$SCRIPT_DIR/parallel-coordinator.sh"
 # Source sync-manager for ticket updates
 source "$SCRIPT_DIR/sync-manager.sh"
 
+# Source drift-detector for drift detection
+source "$SCRIPT_DIR/drift-detector.sh"
+
 # =============================================================================
 # Internal Helper Functions
 # =============================================================================
@@ -206,6 +209,44 @@ checkpoint_merge() {
         _checkpoint_log "WARN" "QA scope violations detected (auto-corrected: $scope_corrected)"
     fi
 
+    # Step 1.5: Run drift detection (unless skipped)
+    local drift_report=""
+    local drift_status="skipped"
+    if [[ "${SKIP_DRIFT_CHECK:-false}" != "true" ]]; then
+        _checkpoint_log "INFO" "Step 1.5: Running drift detection"
+        drift_report=$(detect_drift "$feature" "$checkpoint_type" 2>/dev/null) || drift_report='{"has_invalid_drift": false, "has_valid_drift": false}'
+
+        # Handle invalid drift (missing criteria)
+        if echo "$drift_report" | jq -e '.has_invalid_drift == true' >/dev/null 2>&1; then
+            _checkpoint_log "WARN" "Invalid drift detected - missing acceptance criteria"
+            local guidance
+            guidance=$(handle_invalid_drift "$feature" "$drift_report")
+            _checkpoint_log "INFO" "Guidance written to: $guidance"
+            drift_status="has_invalid_drift"
+            # Continue with merge but record warning
+        fi
+
+        # Handle valid drift (improvements)
+        if echo "$drift_report" | jq -e '.has_valid_drift == true' >/dev/null 2>&1; then
+            _checkpoint_log "INFO" "Valid drift detected (improvement) - escalating to PM"
+            local handoff
+            handoff=$(escalate_improvement_to_pm "$feature" "$checkpoint_type" "$drift_report")
+            _checkpoint_log "INFO" "PM handoff created: $handoff"
+            if [ "$drift_status" = "has_invalid_drift" ]; then
+                drift_status="both"
+            else
+                drift_status="has_valid_drift"
+            fi
+            # Continue with merge, PM reviews async
+        fi
+
+        if [ "$drift_status" = "skipped" ]; then
+            drift_status="clean"
+        fi
+    else
+        _checkpoint_log "WARN" "Drift detection skipped (--skip-drift-check)"
+    fi
+
     # Step 2: Save checkpoint diffs for both agents
     _checkpoint_log "INFO" "Step 2: Saving checkpoint diffs"
     local dev_diff qa_diff
@@ -288,14 +329,16 @@ checkpoint_merge() {
     _checkpoint_log "INFO" "Step 6: Updating state"
     local state_file="$EXECUTION_DIR/${feature}/state.json"
     if [ -f "$state_file" ]; then
-        jq --arg ts "$timestamp" --arg cp "$checkpoint_type" \
+        jq --arg ts "$timestamp" --arg cp "$checkpoint_type" --arg drift "$drift_status" \
             '.checkpoints += [{
                 type: $cp,
                 timestamp: $ts,
-                status: "completed"
+                status: "completed",
+                drift_status: $drift
             }] |
             .current_checkpoint = $cp |
-            .last_checkpoint_at = $ts' \
+            .last_checkpoint_at = $ts |
+            .last_drift_status = $drift' \
             "$state_file" > "${state_file}.tmp"
         mv "${state_file}.tmp" "$state_file"
     fi
@@ -317,6 +360,7 @@ checkpoint_merge() {
         --argjson scope_corrected "$scope_corrected" \
         --argjson dev_rebased "$dev_rebased" \
         --argjson qa_rebased "$qa_rebased" \
+        --arg drift_status "$drift_status" \
         '{
             feature: $feature,
             checkpoint: $checkpoint,
@@ -335,6 +379,9 @@ checkpoint_merge() {
                 passed: $scope_valid,
                 violations: $scope_violations,
                 auto_corrected: $scope_corrected
+            },
+            drift_detection: {
+                status: $drift_status
             },
             rebase_result: {
                 dev_rebased: $dev_rebased,
@@ -637,12 +684,27 @@ list_checkpoints() {
 _cmd_merge() {
     local feature="$1"
     local checkpoint="$2"
+    shift 2 2>/dev/null || true
 
     if [ -z "$feature" ] || [ -z "$checkpoint" ]; then
         echo "Error: Feature and checkpoint required" >&2
-        echo "Usage: checkpoint-merge.sh merge <feature> <checkpoint>" >&2
+        echo "Usage: checkpoint-merge.sh merge <feature> <checkpoint> [--skip-drift-check]" >&2
         return 1
     fi
+
+    # Parse optional flags
+    while [[ $# -gt 0 ]]; do
+        case "$1" in
+            --skip-drift-check|-s)
+                export SKIP_DRIFT_CHECK=true
+                echo "Warning: Drift detection will be skipped (--skip-drift-check)"
+                ;;
+            *)
+                echo "Unknown option: $1" >&2
+                ;;
+        esac
+        shift
+    done
 
     echo "=== Checkpoint Merge: $feature at $checkpoint ==="
     echo ""
@@ -701,14 +763,16 @@ USAGE:
     checkpoint-merge.sh <command> [arguments]
 
 COMMANDS:
-    merge <feature> <checkpoint>
+    merge <feature> <checkpoint> [--skip-drift-check]
         Force a checkpoint merge for the feature
         Checkpoint types: component-complete, feature-complete
         - Validates QA scope before merge
+        - Runs drift detection against acceptance criteria
         - Merges Dev then QA into feature branch
         - Rebases worktrees onto merged feature
         - Triggers appropriate test suite
         - Updates ticket with checkpoint status
+        Use --skip-drift-check for emergency merges (not recommended)
 
     signal <feature> <agent> <checkpoint>
         Signal that an agent is ready for checkpoint
