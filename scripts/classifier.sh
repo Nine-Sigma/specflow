@@ -229,6 +229,127 @@ classify_size() {
 }
 
 # ============================================================================
+# Combined Issue Classification
+# ============================================================================
+# Combines type and size classification, adds pillars from config,
+# generates reasoning, and determines LLM need.
+# ============================================================================
+
+classify_issue() {
+    local issue_json="${1:-{}}"
+
+    # Extract title, body, and labels from issue JSON
+    local title body labels
+    title=$(echo "$issue_json" | jq -r '.title // ""' 2>/dev/null)
+    body=$(echo "$issue_json" | jq -r '.body // ""' 2>/dev/null)
+    labels=$(echo "$issue_json" | jq -c '.labels // []' 2>/dev/null)
+
+    # Handle GitHub issue format where labels are objects with name property
+    if echo "$labels" | jq -e '.[0].name?' >/dev/null 2>&1; then
+        labels=$(echo "$labels" | jq -c '[.[].name]' 2>/dev/null)
+    fi
+
+    # Classify type and size
+    local type_result size_result
+    type_result=$(classify_type "$title" "$body" "$labels")
+    size_result=$(classify_size "$title" "$body" "$labels")
+
+    # Extract values from results
+    local type_val type_conf type_src type_llm
+    type_val=$(echo "$type_result" | jq -r '.type')
+    type_conf=$(echo "$type_result" | jq -r '.confidence')
+    type_src=$(echo "$type_result" | jq -r '.source')
+    type_llm=$(echo "$type_result" | jq -r '.needs_llm')
+
+    local size_val size_conf size_src size_llm
+    size_val=$(echo "$size_result" | jq -r '.size')
+    size_conf=$(echo "$size_result" | jq -r '.confidence')
+    size_src=$(echo "$size_result" | jq -r '.source')
+    size_llm=$(echo "$size_result" | jq -r '.needs_llm')
+
+    # Determine if LLM is needed (either sub-classifier needs it)
+    local needs_llm=false
+    if [ "$type_llm" = "true" ] || [ "$size_llm" = "true" ]; then
+        needs_llm=true
+    fi
+
+    # Get pillars from config based on type
+    local pillars="[]"
+    if [ -f "$CONFIG_FILE" ] && [ "$type_val" != "unknown" ]; then
+        pillars=$(jq -r --arg t "$type_val" \
+            '.classification.type_defaults[$t].pillars // []' \
+            "$CONFIG_FILE" 2>/dev/null)
+    fi
+
+    # Generate reasoning
+    local reasoning=""
+    if [ "$type_src" = "label" ]; then
+        reasoning="Label indicates $type_val"
+    elif [ "$type_src" = "keyword" ]; then
+        reasoning="Keyword pattern indicates $type_val"
+    else
+        reasoning="No clear type indicators"
+    fi
+
+    if [ "$size_src" = "label" ]; then
+        reasoning="$reasoning; label indicates $size_val size"
+    elif [ "$size_src" = "heuristic" ]; then
+        reasoning="$reasoning; heuristics suggest $size_val size"
+    fi
+
+    # Build and output combined result (compact format for shell compatibility)
+    jq -cn \
+        --arg type "$type_val" \
+        --argjson type_confidence "$type_conf" \
+        --arg size "$size_val" \
+        --argjson size_confidence "$size_conf" \
+        --argjson pillars "$pillars" \
+        --argjson needs_llm "$needs_llm" \
+        --arg reasoning "$reasoning" \
+        '{
+            type: $type,
+            type_confidence: $type_confidence,
+            size: $size,
+            size_confidence: $size_confidence,
+            pillars: $pillars,
+            needs_llm: $needs_llm,
+            reasoning: $reasoning
+        }'
+}
+
+# ============================================================================
+# Classification Audit Logging
+# ============================================================================
+# Logs classification decisions to .specflow/classification.log
+# ============================================================================
+
+log_classification() {
+    local issue_id="${1:-unknown}"
+    local classification_json="${2:-{}}"
+
+    # Ensure log directory exists
+    mkdir -p "$SPECFLOW_DIR"
+
+    local log_file="$SPECFLOW_DIR/classification.log"
+    local timestamp
+    timestamp=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+
+    # Extract key values from classification with explicit null/empty handling
+    local type_val size_val reasoning
+    type_val=$(printf '%s' "$classification_json" | jq -r '.type' 2>/dev/null) || true
+    [ -z "$type_val" ] || [ "$type_val" = "null" ] && type_val="unknown"
+
+    size_val=$(printf '%s' "$classification_json" | jq -r '.size' 2>/dev/null) || true
+    [ -z "$size_val" ] || [ "$size_val" = "null" ] && size_val="unknown"
+
+    reasoning=$(printf '%s' "$classification_json" | jq -r '.reasoning' 2>/dev/null) || true
+    [ -z "$reasoning" ] || [ "$reasoning" = "null" ] && reasoning="No reasoning provided"
+
+    # Append to log
+    echo "$timestamp | Issue #$issue_id | $type_val/$size_val | $reasoning" >> "$log_file"
+}
+
+# ============================================================================
 # Usage Help (when run directly)
 # ============================================================================
 
