@@ -32,6 +32,9 @@ source "$SCRIPT_DIR/sync-manager.sh"
 # Source drift-detector for drift detection
 source "$SCRIPT_DIR/drift-detector.sh"
 
+# Source conflict-resolver for conflict handling
+source "$SCRIPT_DIR/conflict-resolver.sh"
+
 # =============================================================================
 # Internal Helper Functions
 # =============================================================================
@@ -100,6 +103,7 @@ handle_merge_conflict() {
     # Handle merge conflict during checkpoint
     # Arguments: feature, agent, checkpoint
     # Returns: JSON with conflict info
+    # Uses conflict-resolver.sh for proper conflict tracking and resolution
 
     local feature="$1"
     local agent="$2"
@@ -111,50 +115,82 @@ handle_merge_conflict() {
 
     _ensure_checkpoint_dir "$feature"
 
-    # Get conflict details
-    local conflicted_files
-    conflicted_files=$(git diff --name-only --diff-filter=U 2>/dev/null | jq -R -s 'split("\n") | map(select(length > 0))') || conflicted_files="[]"
+    # Get conflicted files
+    local conflicts
+    conflicts=$(git diff --name-only --diff-filter=U 2>/dev/null || echo "")
 
-    # Write conflict marker file
+    local resolved_count=0
+    local unresolved_count=0
+    local conflict_ids="[]"
+
+    # Process each conflicted file through conflict-resolver
+    for file in $conflicts; do
+        [ -z "$file" ] && continue
+
+        _checkpoint_log "INFO" "Processing conflict for file: $file"
+
+        # Create conflict record via conflict-resolver
+        local conflict_id
+        conflict_id=$(create_conflict "$feature" "file" "{\"affected_path\": \"$file\", \"agent\": \"$agent\", \"checkpoint\": \"$checkpoint\"}")
+
+        conflict_ids=$(echo "$conflict_ids" | jq --arg id "$conflict_id" '. + [$id]')
+
+        # Attempt resolution
+        local resolve_result
+        resolve_result=$(resolve_conflict "$feature" "$conflict_id" 2>/dev/null) || resolve_result='{"resolved": false}'
+
+        if echo "$resolve_result" | jq -e '.resolved == true' >/dev/null 2>&1; then
+            resolved_count=$((resolved_count + 1))
+            _checkpoint_log "INFO" "Conflict $conflict_id resolved automatically"
+        else
+            unresolved_count=$((unresolved_count + 1))
+            _checkpoint_log "WARN" "Conflict $conflict_id requires escalation"
+        fi
+    done
+
+    # Also write legacy conflict marker file for backwards compatibility
     local conflict_file="$EXECUTION_DIR/${feature}/conflicts/merge-${checkpoint}-${agent}.json"
+    local conflicted_files
+    conflicted_files=$(echo "$conflicts" | jq -R -s 'split("\n") | map(select(length > 0))')
     jq -n \
         --arg feature "$feature" \
         --arg agent "$agent" \
         --arg checkpoint "$checkpoint" \
         --arg timestamp "$timestamp" \
         --argjson files "$conflicted_files" \
+        --argjson conflict_ids "$conflict_ids" \
+        --argjson resolved "$resolved_count" \
+        --argjson unresolved "$unresolved_count" \
         '{
             feature: $feature,
             agent: $agent,
             checkpoint: $checkpoint,
             timestamp: $timestamp,
             conflicted_files: $files,
-            status: "conflict"
+            conflict_ids: $conflict_ids,
+            resolved: $resolved,
+            unresolved: $unresolved,
+            status: (if $unresolved > 0 then "conflict" else "resolved" end)
         }' > "$conflict_file"
 
-    # Update ticket with conflict notification
-    local mapping_file="$SPECFLOW_DIR/tickets/${feature}.json"
-    if [ -f "$mapping_file" ]; then
-        _checkpoint_log "INFO" "Notifying ticket of conflict"
-        local epic_number
-        epic_number=$(jq -r '.epic.number // 0' "$mapping_file" 2>/dev/null)
-        if [ "$epic_number" != "0" ]; then
-            tracker_add_comment "$epic_number" "Merge conflict detected in $checkpoint checkpoint for $agent branch. Escalating to conflict resolver." 2>/dev/null || true
-        fi
-    fi
-
-    # Return conflict info (don't exit - let caller handle)
+    # Return conflict info
     jq -n \
         --arg feature "$feature" \
         --arg agent "$agent" \
         --arg checkpoint "$checkpoint" \
         --argjson files "$conflicted_files" \
+        --argjson conflict_ids "$conflict_ids" \
+        --argjson resolved "$resolved_count" \
+        --argjson unresolved "$unresolved_count" \
         '{
-            conflict: true,
+            conflict: ($unresolved > 0),
             feature: $feature,
             agent: $agent,
             checkpoint: $checkpoint,
-            files: $files
+            files: $files,
+            conflict_ids: $conflict_ids,
+            auto_resolved: $resolved,
+            unresolved: $unresolved
         }'
 }
 
