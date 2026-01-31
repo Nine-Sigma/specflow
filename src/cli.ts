@@ -3,6 +3,7 @@ import { Command } from 'commander';
 import pc from 'picocolors';
 import { pmOrchestrate, showPmInfo } from './orchestrator/pm.js';
 import { runAgent, loadCustomAgents, listAgents, getAgent } from './wrapper/agent-runner.js';
+import { installSkillCommand, listSkillsCommand, removeSkillCommand } from './skills/commands.js';
 
 const program = new Command();
 
@@ -84,5 +85,28 @@ program
     console.log(pc.green('OK') + ' BMAD + Ralph + TypeScript architecture');
     console.log(pc.dim('Run "sf pm --info" for routing information'));
   });
+
+// Skill management
+const skillCommand = new Command('skill')
+  .description('Manage external skills');
+
+skillCommand
+  .command('install')
+  .description('Install skill from GitHub')
+  .argument('<spec>', 'Skill spec (e.g., pptx@anthropics/skills)')
+  .action(installSkillCommand);
+
+skillCommand
+  .command('list')
+  .description('List installed skills')
+  .action(listSkillsCommand);
+
+skillCommand
+  .command('remove')
+  .description('Remove installed skill')
+  .argument('<name>', 'Skill name to remove')
+  .action(removeSkillCommand);
+
+program.addCommand(skillCommand);
 
 program.parse();
