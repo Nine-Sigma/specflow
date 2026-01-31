@@ -43,6 +43,20 @@ Agents communicate via files in `.specflow/`:
 - File presence signals completion
 - File contents validated by PM before continuing
 
+## Decision Workflows
+
+For detailed decision logic, reference these workflow documents:
+
+| Decision | Workflow File | When to Use |
+|----------|---------------|-------------|
+| Classification | `.specflow/workflows/pm-classify.md` | When pattern matching confidence < 70% |
+| Scope/Size | `.specflow/workflows/pm-scope.md` | When determining quick/standard/complex |
+| Pillar Selection | `.specflow/workflows/pm-pillars.md` | When deciding which pillars apply |
+| Spec Gate | `.specflow/workflows/pm-spec-gate.md` | When approving/rejecting specs |
+| Agent Consensus | `.specflow/workflows/consensus-mechanism.md` | When agents disagree |
+| Parallel Dev | `.specflow/workflows/parallel-dev-workflow.md` | During dev+qa parallel work |
+| UX Design | `.specflow/workflows/ux-design.md` | When UI/UX design is needed |
+
 ## Work Type Classification
 
 | Type | Signals | Three Pillars? |
@@ -51,6 +65,8 @@ Agents communicate via files in `.specflow/`:
 | Feature | "add", "new", "implement", "create" | **Yes** |
 | Refactor | "refactor", "cleanup", "improve", "optimize" | No |
 | Documentation | "document", "docs", "readme", "explain" | No |
+
+> **Uncertain?** Read `.specflow/workflows/pm-classify.md` for edge cases and confidence scoring.
 
 ## Agent Routing
 
@@ -140,6 +156,8 @@ For features, you MUST ensure:
 | Cost | /cloud-cost | Cost breakdown with scaling projections |
 | Testing | /qa | Gherkin scenarios (min 6: 2 happy, 2 error, 1 edge, 1 security) |
 
+> **Context-aware:** Pillars are NOT mandatory by type. A bug touching auth needs security. A feature with no cloud resources skips cost. See `.specflow/workflows/pm-pillars.md` for triggers.
+
 ## BOSS Criteria Validation
 
 Before approving specs, verify all acceptance criteria are:
@@ -147,6 +165,8 @@ Before approving specs, verify all acceptance criteria are:
 - **O**bservable: Can be verified by running code
 - **S**pecific: Exact values, not "reasonable" or "appropriate"
 - **S**cope-bound: Tied to this feature only
+
+> **Deep validation:** Use `.specflow/agents/criteria-reviewer.md` for detailed BOSS assessment and rewrite suggestions.
 
 ## Output Format
 
@@ -183,22 +203,89 @@ This ensures:
 
 ## Parallel Execution
 
-PM orchestrates agents in parallel when dependencies allow:
+PM can spawn agents in parallel when their work is independent. Use Claude's Task tool to execute multiple agents concurrently.
 
+<parallel_patterns>
+**Pattern 1: Pillar agents after architect**
+
+When STATE.md shows `phase: pillars` and `last-agent: architect`:
+
+1. **Read 0-triage.md** to get the pillar list and agent sequence
+2. Spawn in parallel based on triage decision:
+   - If pillars include [security, cost]: Invoke `/sf:security` AND `/sf:cost` in same response
+   - Each agent writes its numbered output independently
+   - No file conflicts (3-security.md vs 4-cost.md)
+
+Example (make both tool calls in the same response):
 ```
-Three Pillars (parallel):
-├─→ /sf:security (STRIDE analysis)
-└─→ /sf:cost (cost breakdown)
-    Both complete → continue
-
-Implementation (parallel TDD):
-├─→ /sf:dev (write code)
-└─→ /sf:qa (write tests)
-    Both complete → /sf:implement (Ralph loop)
+Task 1: Invoke /sf:security with feature context
+Task 2: Invoke /sf:cost with feature context
 ```
 
-To run agents in parallel, PM makes multiple tool calls in a single message.
-Claude Code executes them concurrently.
+**Pattern 2: Execution agents**
+
+When STATE.md shows `phase: execution` and `last-agent: tea`:
+
+1. **Read 0-triage.md** to confirm dev and qa are in sequence
+2. Spawn in parallel:
+   - Invoke `/sf:dev` AND `/sf:qa` in same response
+   - Dev writes 6-dev-output.md, QA writes 7-qa-output.md
+   - No file conflicts
+
+**Determining what to parallelize:**
+
+Always read `0-triage.md` for the definitive agent sequence:
+- Check the `**Agent Sequence:**` line for the ordered list
+- Only parallelize agents that are adjacent in the sequence AND write different files
+- Never parallelize agents that depend on each other's output
+
+**After parallel completion:**
+
+1. Check COMMS/ for any messages created during parallel execution
+2. If either agent is BLOCKED, route their COMMS before proceeding
+3. If CONFLICTS.md was created, resolve before continuing
+4. Only proceed to next phase when all parallel agents complete without blockers
+</parallel_patterns>
+
+<parallel_constraints>
+**When NOT to parallelize:**
+
+- Agents that depend on each other's output (dev needs architect before starting)
+- When file conflicts would occur (two agents writing same file)
+- When COMMS or CONFLICTS already pending resolution
+
+**Sequencing rules:**
+
+| Phase | Sequence | Parallelizable |
+|-------|----------|----------------|
+| Triage | pm | No (single agent) |
+| Analysis | analyst -> architect | No (sequential) |
+| Pillars | [security, cost] -> tea | Yes (security + cost) |
+| Execution | dev, qa | Yes (dev + qa) |
+| Review | pm | No (single agent) |
+</parallel_constraints>
+
+## COMMS Routing During Parallel Execution
+
+When agents run in parallel and one creates a COMMS message:
+
+1. The COMMS-creating agent enters BLOCKED state
+2. Other parallel agents may continue if not affected
+3. After all parallel agents return, scan COMMS/
+4. Route pending COMMS before proceeding
+
+Example flow:
+```
+PM reads 0-triage.md -> confirms dev + qa can run parallel
+PM spawns: dev (parallel) + qa (parallel)
+Dev completes: 6-dev-output.md written
+QA blocks: writes COMMS/qa-to-dev-001.md, enters BLOCKED
+PM sees: dev complete, qa blocked
+PM routes: qa's question to dev
+Dev responds: updates COMMS status to resolved
+PM clears: qa BLOCKED state
+PM reinvokes: qa to continue
+```
 
 ## Escalation
 
