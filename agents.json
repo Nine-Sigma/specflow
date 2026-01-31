@@ -2,15 +2,25 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "description": "SpecFlow custom agent registry",
   "agents": {
+    "criteria-reviewer": {
+      "source": "custom",
+      "invoke": ".specflow/agents/criteria-reviewer.md",
+      "description": "BOSS criteria validation (Binary, Observable, Specific, Scope-bound)"
+    },
     "_example_npx": {
       "source": "custom",
       "invoke": "@example/scanner",
-      "description": "Example npx-based agent (remove or replace)"
+      "description": "Example npx-based agent (disabled - remove underscore to enable)"
     },
     "_example_local": {
       "source": "custom",
       "invoke": ".specflow/agents/example-agent.md",
-      "description": "Example local prompt agent (remove or replace)"
+      "description": "Example local prompt agent (disabled - remove underscore to enable)"
+    },
+    "_test_skill": {
+      "source": "skill",
+      "invoke": ".specflow/skills/test",
+      "description": "Test skill for verification (disabled)"
     }
   },
   "_docs": {
@@ -19,12 +29,14 @@
       "2. For npx: use package name as 'invoke' value",
       "3. For local: use path to .md file as 'invoke' value",
       "4. All custom agents use source: 'custom'",
-      "5. Agents prefixed with _ are examples/disabled"
+      "5. Agents prefixed with _ are examples/disabled",
+      "6. For skills: installed via 'sf skill install', use source: 'skill'"
     ],
     "invoking": [
       "Via CLI: sf agent <name>",
       "Via PM: PM may route to custom agents based on description",
-      "Via slash: Create .claude/commands/sf-<name>.md for direct access"
+      "Via slash: Create .claude/commands/sf-<name>.md for direct access",
+      "Via skill: sf skill install name@owner/repo (auto-registers)"
     ]
   }
 }
