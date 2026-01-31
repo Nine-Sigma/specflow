@@ -9,6 +9,7 @@ import { invokeBmadAgent } from './bmad-agents.js';
 import { executeRalphLoop } from './ralph-executor.js';
 import { invokeSpecflowUtility } from './specflow-utils.js';
 import { invokeCustomAgent } from './custom-agents.js';
+import { invokeSkill } from '../skills/runner.js';
 
 // Merged registry (defaults + custom)
 let agents: AgentRegistry = { ...defaultAgents };
@@ -63,6 +64,7 @@ export async function runAgent(name: string, context: AgentContext = {}): Promis
     ralph: pc.magenta,
     specflow: pc.cyan,
     custom: pc.yellow,
+    skill: pc.green,
   };
   const colorFn = sourceColors[agent.source] || pc.white;
 
@@ -77,6 +79,8 @@ export async function runAgent(name: string, context: AgentContext = {}): Promis
       return invokeSpecflowUtility(agent.invoke, context);
     case 'custom':
       return invokeCustomAgent(agent.invoke, context);
+    case 'skill':
+      return invokeSkill(agent.invoke, context);
     default:
       return {
         success: false,

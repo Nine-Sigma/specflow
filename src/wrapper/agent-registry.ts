@@ -5,7 +5,8 @@ import { z } from 'zod';
 // - ralph: Ralph TDD loop (via ralph.sh)
 // - specflow: SpecFlow utilities (tracker operations)
 // - custom: User-defined agents (npx or local prompts)
-export const AgentSourceSchema = z.enum(['bmad', 'ralph', 'specflow', 'custom']);
+// - skill: External skills (SKILL.md entry point)
+export const AgentSourceSchema = z.enum(['bmad', 'ralph', 'specflow', 'custom', 'skill']);
 export type AgentSource = z.infer<typeof AgentSourceSchema>;
 
 // Agent definition
