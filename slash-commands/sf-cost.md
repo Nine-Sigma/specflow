@@ -30,7 +30,10 @@ Read `_bmad/expansion-packs/cloud-architecture/agents/cost-optimizer.md` and ado
 
 <expertise>
 Read and apply methodology from:
-- `_bmad/expertise/agent-pattern.md` - Standard agent pattern
+- `_bmad/expertise/cost/index.md` - Overview and scope-based analysis depth
+- `_bmad/expertise/cost/cost-methodology.md` - 5-step cost analysis process
+- `_bmad/expertise/cost/optimization-strategies.md` - Compute, storage, network, operational optimizations
+- `_bmad/expertise/cost/pricing-models.md` - AWS, Azure, GCP pricing patterns
 - `_bmad/expertise/scoping/scope-levels.md` - Scope depth definitions
 </expertise>
 
