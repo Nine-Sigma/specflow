@@ -1,0 +1,1 @@
+../../slash-commands/sf-analyst.md
