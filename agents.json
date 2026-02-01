@@ -21,6 +21,11 @@
       "source": "skill",
       "invoke": ".specflow/skills/test",
       "description": "Test skill for verification (disabled)"
+    },
+    "code-review-excellence": {
+      "source": "skill",
+      "invoke": "/Users/deanb/dev/ai/specflow/.specflow/skills/code-review-excellence",
+      "description": "Master effective code review practices to provide constructive feedback, catch bugs early, and foster knowledge sharing while maintaining team morale. Use when reviewing pull requests, establishing review standards, or mentoring developers."
     }
   },
   "_docs": {
