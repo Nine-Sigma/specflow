@@ -76,7 +76,7 @@ For each applicable control category:
 - [x] [Control implemented]
 - [x] [Control implemented]
 
-b**Gaps Identified:**
+**Gaps Identified:**
 - [ ] [Missing control - priority]
 - [ ] [Missing control - priority]
 
