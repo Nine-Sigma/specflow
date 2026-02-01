@@ -79,9 +79,33 @@ Read `_bmad/agents/{agent}.agent.yaml` and adopt:
 ### Step 3: Load Expertise
 
 <expertise>
-Read and apply methodology from:
-- `_bmad/expertise/{domain}/{relevant-file}.md`
-- `_bmad/expertise/{domain}/quality-checklist.md`
+Read and apply methodology from two sources:
+
+**Internal expertise (always loaded):**
+- `_bmad/expertise/{domain}/index.md` - Overview and scope-based depth
+- `_bmad/expertise/{domain}/{specific}.md` - Domain-specific methodology
+- `_bmad/expertise/scoping/scope-levels.md` - Scope depth definitions
+
+**External skills (when applicable):**
+- `.specflow/skills/{skill-name}/SKILL.md` - Skill-provided methodology
+- Skill provides specialized techniques beyond baseline methodology
+
+**Loading order and precedence:**
+1. Internal expertise first (establishes baseline methodology)
+2. External skills layer on top (adds specialized techniques)
+3. Conflict resolution: explicit instructions > internal > external
+4. If skill not installed, use internal expertise only
+
+**Example for review lens:**
+```markdown
+# Internal (always)
+- _bmad/expertise/review/index.md
+- _bmad/expertise/review/output-format.md
+- _bmad/expertise/review/feedback-loop.md
+
+# External (if installed)
+- .specflow/skills/code-review-excellence/SKILL.md
+```
 </expertise>
 
 ### Step 4: Execute
@@ -157,6 +181,11 @@ PM will:
 | `/sf:tea` | (SpecFlow) | `validation/`, `scoping/` | 5-test-plan.md |
 | `/sf:dev` | Amelia | `requirements/` (constraints) | Implementation |
 | `/sf:qa` | Quinn | `validation/` | Test execution |
+| `/sf:review-code` | (SpecFlow) | `review/` + code-review-excellence skill | 8-review-output.md |
+| `/sf:review-test` | (SpecFlow) | `review/` + test-review-excellence skill | 8-review-output.md |
+| `/sf:review-security` | Jordan | `review/`, `security/` | 8-review-output.md |
+| `/sf:review-arch` | Winston | `review/`, `architecture/` | 8-review-output.md |
+| `/sf:review-perf` | (SpecFlow) | `review/` + performance-review skill | 8-review-output.md |
 
 ## Agent Expertise Loading
 
@@ -232,6 +261,52 @@ Detailed mapping of which specific files each agent loads in Step 3.
 - _bmad/expertise/validation/traceability-matrix.md  # Coverage validation
 - _bmad/expertise/elicitation/when-to-use.md         # User engagement decisions
 ```
+
+### Review Lenses (sf-review-*.md)
+
+All review lenses load the base review expertise:
+
+**Common (all lenses):**
+```markdown
+- _bmad/expertise/review/index.md              # Overview, lenses, scope usage
+- _bmad/expertise/review/output-format.md      # 8-review-output.md structure
+- _bmad/expertise/review/feedback-loop.md      # Dev/QA routing protocol
+- _bmad/expertise/review/escalation-rules.md   # PM escalation triggers
+```
+
+**sf-review-code.md (external skill):**
+```markdown
+- Common review expertise (above)
+- .specflow/skills/code-review-excellence/SKILL.md  # Code review methodology
+```
+
+**sf-review-test.md (external skill):**
+```markdown
+- Common review expertise (above)
+- .specflow/skills/test-review-excellence/SKILL.md  # Test review methodology
+```
+
+**sf-review-security.md (internal expertise):**
+```markdown
+- Common review expertise (above)
+- _bmad/expertise/security/index.md            # Fresh security review perspective
+- _bmad/expertise/security/stride-framework.md # STRIDE re-validation
+```
+
+**sf-review-arch.md (internal expertise):**
+```markdown
+- Common review expertise (above)
+- _bmad/expertise/architecture/index.md        # Fresh arch review perspective
+- _bmad/expertise/architecture/validation-checklist.md  # ADR validation
+```
+
+**sf-review-perf.md (external skill):**
+```markdown
+- Common review expertise (above)
+- .specflow/skills/performance-review/SKILL.md # Performance review patterns
+```
+
+**Note:** Review lenses with external skills fall back to internal-only review expertise if skill is not installed. The lens still functions but without specialized methodology.
 
 ## Loading Example
 
