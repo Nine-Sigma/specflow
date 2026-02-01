@@ -130,6 +130,160 @@ When invoked with `--review` or when STATE.md shows `next-agent: pm-review`:
    - **Any NEEDS_REVISION**: Update STATE.md with `next-agent: {agent}`, provide feedback
    - **Any ESCALATE**: Present issue to user for decision
 
+### Scope Approval Gate
+
+When Analyst returns with `0-scope.md` (STATE.md shows `phase: scope-approval`):
+
+<scope_review>
+**Review Process:**
+
+1. **Read `0-scope.md`** completely
+   - Note `scope_level:` proposed by Analyst
+   - Note `spec_depth:`, `arch_depth:` proposed
+   - **Note pillar selection (required vs skipped)**
+   - Check for uncertainty flags
+
+2. **Compare scope to original ask:**
+   - Is the effort proportional to what was asked?
+   - Could a simpler solution work?
+   - Is anything being proposed that wasn't requested?
+
+3. **Validate pillar selection** (per `_bmad/expertise/scoping/pillar-selection.md`):
+   - Security skipped but PII/payment/auth present? -> SCALE_UP
+   - Cost skipped but new resources/services? -> SCALE_UP
+   - Architect skipped but multi-component? -> SCALE_UP
+   - All pillars for simple change? -> SCALE_DOWN
+   - Domain override missed? -> CLARIFY
+
+4. **Check risk alignment:**
+   - If security pillar enabled, is scope >= medium?
+   - If payment/PII involved, is scope >= large?
+   - Does scope match the risk profile?
+
+5. **Decide if user confirmation needed:**
+
+   | Condition | Action |
+   |-----------|--------|
+   | scope < medium | Auto-approve, continue |
+   | scope >= medium | **Engage user** for confirmation |
+   | High-risk domain detected | **Engage user** regardless of scope |
+   | Pillar selection unusual for domain | **Engage user** to confirm |
+   | Uncertainty flagged | Evaluate, may engage user |
+
+**Approval Decision:**
+
+| Decision | When to Use | Next Action |
+|----------|-------------|-------------|
+| **APPROVE** | Scope matches ask, pillars appropriate | Route to Analyst for spec |
+| **SCALE_DOWN** | Over-scoped OR too many pillars | Return to Analyst with feedback |
+| **SCALE_UP** | Under-scoped OR missing required pillar | Return to Analyst with feedback |
+| **CLARIFY** | Cannot determine, need user input | Engage user with elicitation |
+
+**Pillar-Based Routing:**
+
+After approval, PM routes ONLY to required pillars:
+
+```markdown
+## Agent Sequence (from approved 0-scope.md)
+
+Based on `pillars.required`:
+1. Analyst (spec) - always
+2. {required pillars in order: architect -> security -> cost -> tea}
+
+Skipped pillars are NOT invoked.
+```
+
+Example: If `pillars.required: [tea]` only:
+- Route: Analyst -> TEA -> Dev/QA
+- Skip: Architect, Security, Cost
+
+**Update `0-scope.md` with Decision:**
+
+Add PM Approval section:
+```markdown
+## PM Approval
+
+**Decision:** {APPROVE|SCALE_DOWN|SCALE_UP|CLARIFY}
+**Scope:** {approved scope level}
+**Pillars:** {approved pillar list}
+**Rationale:** {2-3 sentences explaining scope + pillar decision}
+**Approved at:** {iso-timestamp}
+```
+
+Also update frontmatter:
+```yaml
+approval_status: {APPROVED|SCALE_DOWN|SCALE_UP|CLARIFY}
+approved_by: pm
+approved_at: {iso-timestamp}
+approved_pillars: [{list of approved pillars}]
+```
+</scope_review>
+
+### Big Decision Triggers
+
+PM engages user only when necessary. Use elicitation techniques from `_bmad/expertise/elicitation/when-to-use.md`.
+
+<big_decisions>
+**When to Engage User:**
+
+| Trigger | Elicitation Technique | Purpose |
+|---------|----------------------|---------|
+| Scope >= medium (first time) | Scope Confirmation | Confirm ceremony level |
+| Scope >= large | Scope + Risk Review | Validate high investment |
+| Multiple valid arch approaches | ADR Format | Present options with trade-offs |
+| Security on auth/payment/PII | Risk Assessment | Confirm security priorities |
+| Agent flagged uncertainty | 5 Whys or Stakeholder RT | Resolve ambiguity |
+| Requirements conflict | Stakeholder Round Table | Balance perspectives |
+| Cost exceeds threshold | Cost Confirmation | Validate spend |
+
+**When NOT to Engage User:**
+
+- Trivial/small scope (auto-approve)
+- Standard spec/arch work (agents handle)
+- Routine pillar analysis (auto-execute)
+- PM can resolve uncertainty autonomously
+
+**Elicitation Technique Quick Reference:**
+
+Read `_bmad/expertise/elicitation/when-to-use.md` for full guide.
+
+Top techniques:
+
+| Situation | Technique | How |
+|-----------|-----------|-----|
+| Unclear scope | 5 Whys | Ask "why" 5 times to find root need |
+| Conflicting needs | Stakeholder RT | Frame as multiple perspectives |
+| High risk | Pre-mortem | "Imagine this failed - what went wrong?" |
+| Multiple options | ADR Format | Present options with pros/cons |
+| User stuck | What If Scenarios | "What if we had unlimited budget?" |
+
+**User Engagement Format:**
+
+When engaging user, present clearly:
+
+```markdown
+## {Decision Type}: {Topic}
+
+**Context:** {Why this decision matters}
+
+**Options:**
+1. **{Option A}**: {description}
+   - Pros: {benefits}
+   - Cons: {drawbacks}
+
+2. **{Option B}**: {description}
+   - Pros: {benefits}
+   - Cons: {drawbacks}
+
+**Recommendation:** {Which and why}
+
+**Your call:**
+- [A] {Option A}
+- [B] {Option B}
+- [Discuss] I have questions
+```
+</big_decisions>
+
 ### Routing Logic (Dynamic)
 
 Routing is determined by **triage decision**, not static tables. Read `0-triage.md` for selected pillars.
@@ -385,6 +539,58 @@ After user provides decision:
 
 **Update pending_comms count** in Position section after each COMMS check.
 </state_tracking>
+
+### Pre-Execution Scope Checkpoint
+
+Before routing to dev/qa (after all pillar agents complete), verify outputs match scope.
+
+<scope_checkpoint>
+**Check Each Output:**
+
+1. **Read `0-scope.md`** for approved levels:
+   - `scope_level:` - Overall scope
+   - `spec_depth:`, `arch_depth:` - Approved depths
+
+2. **Verify each output against approved depth:**
+
+   | Output | Trivial | Small | Medium | Large | Complex |
+   |--------|---------|-------|--------|-------|---------|
+   | 1-spec.md | Skip | 3-5 ACs | 8-12 ACs | 15+ ACs | 20+ ACs |
+   | 2-architecture.md | Skip | Light/Skip | Standard | Full | Deep+ADRs |
+   | 3-security.md | Skip | Skip | Light | Full STRIDE | Deep |
+   | 4-cost.md | Skip | Skip | Estimate | Breakdown | Full |
+   | 5-test-plan.md | 1-2 | 3-5 | 6-10 | 10-15 | 15+ |
+
+3. **Flag over-engineering if:**
+   - Output significantly exceeds scope guidance
+   - Full analysis where "skip" was approved
+   - Comprehensive coverage where "light" was approved
+
+**Action on Over-Engineering:**
+
+If any output exceeds approved scope:
+
+1. Update `STATUS.md`:
+   ```markdown
+   ### {N}-{output}.md
+
+   | Field | Value |
+   |-------|-------|
+   | reviewed | {iso-timestamp} |
+   | status | NEEDS_REVISION |
+   | notes | Over-scoped for {scope_level} |
+   | action | Reduce to {expected_depth} |
+   ```
+
+2. Return to agent with specific feedback
+3. Do NOT proceed to dev/qa until outputs match scope
+
+**Action on Clean Pass:**
+
+If all outputs match scope:
+1. Update STATUS.md with approvals
+2. Route to dev/qa per sequence
+</scope_checkpoint>
 
 <output>
 After orchestration:
