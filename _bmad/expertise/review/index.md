@@ -21,10 +21,10 @@ This folder contains review methodology for specialized review lenses. Each lens
 | Lens | Agent | Loads Internal | Loads External |
 |------|-------|----------------|----------------|
 | Code | /sf:review-code | review/* | code-review-excellence |
-| Test | /sf:review-test | review/* | test-review-excellence |
+| Test | /sf:review-test | review/* | e2e-testing-patterns |
 | Security | /sf:review-security | review/*, security/* | - |
 | Architecture | /sf:review-arch | review/*, architecture/* | - |
-| Performance | /sf:review-perf | review/* | performance-review |
+| Performance | /sf:review-perf | review/* | sql-optimization-patterns |
 
 ### Loading Pattern
 
