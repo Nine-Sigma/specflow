@@ -29,7 +29,10 @@ Read `_bmad/agents/architect.agent.yaml` and adopt:
 
 <expertise>
 Read and apply methodology from:
-- `_bmad/expertise/agent-pattern.md` - Standard agent pattern
+- `_bmad/expertise/architecture/index.md` - Overview and scope-based depth
+- `_bmad/expertise/architecture/decision-categories.md` - 5 decision domains (Data, Auth, API, Frontend, Infrastructure)
+- `_bmad/expertise/architecture/adr-template.md` - ADR format for complex scope
+- `_bmad/expertise/architecture/validation-checklist.md` - 40-item post-design validation
 - `_bmad/expertise/scoping/scope-levels.md` - Scope depth definitions
 </expertise>
 
