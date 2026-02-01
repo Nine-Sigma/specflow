@@ -30,7 +30,10 @@ Read `_bmad/expansion-packs/cloud-architecture/agents/security-reviewer.md` and 
 
 <expertise>
 Read and apply methodology from:
-- `_bmad/expertise/agent-pattern.md` - Standard agent pattern
+- `_bmad/expertise/security/index.md` - Overview and scope-based analysis depth
+- `_bmad/expertise/security/stride-framework.md` - STRIDE threat categories and analysis process
+- `_bmad/expertise/security/security-controls.md` - 5 control category checklists
+- `_bmad/expertise/security/compliance-patterns.md` - GDPR, HIPAA, PCI-DSS, SOX, ISO 27001 (if applicable)
 - `_bmad/expertise/scoping/scope-levels.md` - Scope depth definitions
 </expertise>
 

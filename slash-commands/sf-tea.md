@@ -31,9 +31,10 @@ TEA is a SpecFlow-specific agent (no BMAD equivalent).
 
 <expertise>
 Read and apply methodology from:
-- `_bmad/expertise/agent-pattern.md` - Standard agent pattern
+- `_bmad/expertise/validation/index.md` - Overview and agent usage patterns
+- `_bmad/expertise/validation/test-criteria.md` - Test quality standards, scope-based depth tables
+- `_bmad/expertise/validation/traceability-matrix.md` - Requirements coverage format
 - `_bmad/expertise/scoping/scope-levels.md` - Scope depth definitions
-- `_bmad/expertise/validation/` - Test validation methodology
 </expertise>
 
 ## Scope-Limited Coverage
