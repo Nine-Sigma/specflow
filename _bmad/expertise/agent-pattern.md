@@ -182,10 +182,10 @@ PM will:
 | `/sf:dev` | Amelia | `requirements/` (constraints) | Implementation |
 | `/sf:qa` | Quinn | `validation/` | Test execution |
 | `/sf:review-code` | (SpecFlow) | `review/` + code-review-excellence skill | 8-review-output.md |
-| `/sf:review-test` | (SpecFlow) | `review/` + test-review-excellence skill | 8-review-output.md |
+| `/sf:review-test` | (SpecFlow) | `review/` + e2e-testing-patterns skill | 8-review-output.md |
 | `/sf:review-security` | Jordan | `review/`, `security/` | 8-review-output.md |
 | `/sf:review-arch` | Winston | `review/`, `architecture/` | 8-review-output.md |
-| `/sf:review-perf` | (SpecFlow) | `review/` + performance-review skill | 8-review-output.md |
+| `/sf:review-perf` | (SpecFlow) | `review/` + sql-optimization-patterns skill | 8-review-output.md |
 
 ## Agent Expertise Loading
 
@@ -283,7 +283,7 @@ All review lenses load the base review expertise:
 **sf-review-test.md (external skill):**
 ```markdown
 - Common review expertise (above)
-- .specflow/skills/test-review-excellence/SKILL.md  # Test review methodology
+- .specflow/skills/e2e-testing-patterns/SKILL.md  # E2E testing methodology
 ```
 
 **sf-review-security.md (internal expertise):**
@@ -303,7 +303,7 @@ All review lenses load the base review expertise:
 **sf-review-perf.md (external skill):**
 ```markdown
 - Common review expertise (above)
-- .specflow/skills/performance-review/SKILL.md # Performance review patterns
+- .specflow/skills/sql-optimization-patterns/SKILL.md # SQL optimization patterns
 ```
 
 **Note:** Review lenses with external skills fall back to internal-only review expertise if skill is not installed. The lens still functions but without specialized methodology.
