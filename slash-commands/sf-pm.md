@@ -288,30 +288,52 @@ When engaging user, present clearly:
 
 Routing is determined by **triage decision**, not static tables. Read `0-triage.md` for selected pillars.
 
-**Base sequence (always):**
+**Full sequence with synthesis gate:**
 ```
-analyst -> architect -> tea -> dev -> qa
+analyst (scope) -> PM approval -> analyst (codebase) -> PM -> analyst (spec) -> PM ->
+architect -> [security?] -> [cost?] -> tea -> PM SYNTHESIS GATE -> dev -> qa
 ```
 
-**Insert pillars after architect based on triage:**
-```
-analyst -> architect -> [security?] -> [cost?] -> tea -> dev -> qa
-```
+**Detailed routing:**
+
+| Phase | Agent | Output | Next |
+|-------|-------|--------|------|
+| Scope | analyst | 0-scope.md | PM (scope approval) |
+| Scope Approval | PM | Approves scope | analyst |
+| Codebase Analysis | analyst | 1.5-codebase-constraints.md | PM |
+| PM Review | PM | Routes to spec | analyst |
+| Spec | analyst | 1-spec.md | PM |
+| Architecture | architect | 2-architecture.md | PM |
+| Security (if needed) | security | 3-security.md | PM |
+| Cost (if needed) | cost | 4-cost.md | PM |
+| Test Plan | tea | 5-test-plan.md | PM |
+| **Synthesis Gate** | PM | 5-requirements-lock.md | User approval |
+| User Approval | User | APPROVE/EDIT/REJECT | dev |
+| Development | dev | 6-dev-output.md | qa |
+| QA | qa | 7-qa-output.md | PM -> Review |
+
+**PM checkpoints before synthesis:**
+- After scope (0-scope.md): Approve scope level
+- After codebase (1.5): Route to spec
+- After each pillar: Review quality, route to next
+
+**Synthesis gate trigger:**
+After TEA completes (last pillar), PM runs synthesis gate before routing to dev.
 
 **Examples by triage outcome:**
 
 | Triage Result | Agent Sequence |
 |---------------|----------------|
-| pillars: [security, cost, testing] | analyst -> architect -> security -> cost -> tea -> dev -> qa |
-| pillars: [security, testing] | analyst -> architect -> security -> tea -> dev -> qa |
-| pillars: [testing] | analyst -> architect -> tea -> dev -> qa |
+| pillars: [security, cost, testing] | analyst -> architect -> security -> cost -> tea -> **PM synthesis** -> dev -> qa |
+| pillars: [security, testing] | analyst -> architect -> security -> tea -> **PM synthesis** -> dev -> qa |
+| pillars: [testing] | analyst -> architect -> tea -> **PM synthesis** -> dev -> qa |
 | pillars: [] (docs only) | analyst |
 
 **File numbering adjusts to sequence:**
-- Always: `1-spec.md`, `2-architecture.md`
+- Always: `1-spec.md`, `1.5-codebase-constraints.md`, `2-architecture.md`
 - If security: `3-security.md`
-- If cost: `{N}-cost.md` (N depends on whether security ran)
-- Always: `{N}-test-plan.md`, `{N+1}-dev-output.md`, `{N+2}-qa-output.md`
+- If cost: `4-cost.md`
+- Always: `5-test-plan.md`, `5-requirements-lock.md`, `6-dev-output.md`, `7-qa-output.md`
 
 ### Work Type Defaults (Starting Point)
 
