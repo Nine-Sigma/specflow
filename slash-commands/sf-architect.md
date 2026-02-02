@@ -154,6 +154,10 @@ After completing design:
 
    **Scope Honored:** {scope_level} -> {arch_depth} depth applied
 
+   **Codebase Constraints Honored:**
+   - [List TC-XX items from 1.5-codebase-constraints.md that were followed]
+   - [List IP-XX integration points that architecture aligns with]
+
    **Constraints Honored:**
    - [List constraints from 1-spec.md that were followed]
 
@@ -173,7 +177,7 @@ After completing design:
 ---
 agent: architect
 created: {iso-timestamp}
-depends_on: ["0-scope.md", "1-spec.md"]
+depends_on: ["0-scope.md", "1-spec.md", "1.5-codebase-constraints.md"]
 status: draft
 scope_level: {from 0-scope.md}
 arch_depth: {from 0-scope.md}
@@ -205,6 +209,15 @@ arch_depth: {from 0-scope.md}
 
 {Schema changes, new tables/collections}
 {Skip for light depth}
+
+## Codebase Constraints Honored
+
+| Source | Constraint | How Honored |
+|--------|------------|-------------|
+| TC-{N} | {constraint from 1.5} | {how this architecture honors it} |
+| IP-{N} | {integration point} | {how this architecture integrates} |
+
+{If any conflicts or deviations, explain here}
 
 ## Constraints for Downstream
 
