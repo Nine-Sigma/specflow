@@ -80,12 +80,141 @@ This log is included in 8-review-output-vN.md frontmatter as `detection_log`.
 
 **Step 4: Spawn Skills in Parallel**
 
-See: Plan 20-03 adds parallel Task tool spawning here.
+<parallel_spawning>
+For each matched skill from detection, spawn a Task with fresh context.
 
-For now, list matched skills:
-- Skill: {name} (source: {source})
-- Reason: {reason}
-- Files: {files matching this skill's triggers}
+### Loading Skill Methodology
+
+Each skill has a source type that determines where to load methodology:
+
+**External skills (source: "skill"):**
+- Load from `.specflow/skills/{skill.name}/SKILL.md`
+- Read SKILL.md content and pass as methodology context
+- Example: code-review-excellence, e2e-testing-patterns, sql-optimization-patterns
+
+**Internal expertise (source: "internal"):**
+- Load from `_bmad/expertise/{skill.name}/`
+- For security: load `_bmad/expertise/security/stride-framework.md`
+- For architecture: load `_bmad/expertise/architecture/adr-template.md`
+
+### File Filtering for Skills
+
+Not all files go to all skills. Filter based on detection results.
+
+**Detection provides:**
+- skill.name: Which skill
+- skill.triggers.files[]: File patterns this skill cares about
+- skill.triggers.patterns[]: Code patterns this skill cares about
+
+**Filter logic:**
+1. Take changed files from 6-dev-output.md
+2. For each skill, keep only files that match its triggers
+3. If a skill has no matching files, still include but note "triggered by scope/pillar"
+
+Example:
+- sql-optimization-patterns: Only receives .sql files and files with prisma code
+- code-review-excellence: Receives all .ts/.tsx/.js files
+- security: Receives auth/login/payment related files
+
+### Build Per-Skill Context
+
+For each skill in matched[]:
+1. Identify relevant files (files matching this skill's triggers)
+2. Read file contents for those files only
+3. Extract AC section from 1-spec.md
+4. Load methodology (SKILL.md or expertise files based on source)
+5. Load output format from _bmad/expertise/review/output-format.md
+
+### Spawn Task for Each Skill
+
+```markdown
+Task: {skill.name} Review
+
+<skill_context>
+## Skill Methodology
+
+{For external skills:}
+{Content of .specflow/skills/{skill.name}/SKILL.md}
+
+{For internal expertise:}
+{Content of relevant _bmad/expertise/{skill.name}/ files}
+
+## Files to Review
+
+{List only files matching this skill's triggers:}
+- {file1.ts} (matched: {trigger detail})
+- {file2.ts} (matched: {trigger detail})
+
+## File Contents
+
+{For each file above, include content:}
+### {file1.ts}
+```{language}
+{file content}
+```
+
+## Acceptance Criteria Reference
+
+{Extract AC section from 1-spec.md}
+
+## Output Instructions
+
+Write your findings following this format:
+
+### {skill.name} Findings
+
+| ID | Location | Issue | AC Reference | Severity |
+|----|----------|-------|--------------|----------|
+| {prefix}-01 | file:line | {description} | AC-XX | {severity} |
+
+For each finding, add:
+### {ID}: {Issue Title}
+**What's wrong:** {explanation}
+**How to fix:** {specific instructions}
+**Files to change:** {list}
+
+Severity guide:
+- CRITICAL: Security vulnerability, data loss, crashes
+- MAJOR: Performance issue, incomplete feature, edge case failures
+- MINOR: Style, naming, minor optimization
+
+</skill_context>
+
+Instructions: Review the provided files using {skill.name} methodology. Find issues, write findings in the format above. Be specific about locations and fixes.
+```
+
+### Parallel Execution
+
+Spawn ALL skill Tasks at once (do not wait between them). The Task tool will execute them in parallel.
+
+After all Tasks complete, collect their outputs for consolidation (Step 5).
+
+### Re-Review Mode (iteration > 1)
+
+When `--verify-fixes` is set or iteration > 1:
+
+1. Read previous `8-review-output-v{N-1}.md`
+2. Extract skills_invoked from frontmatter
+3. Only spawn skills that had findings (status != clean for that skill)
+4. Pass additional context to each Task:
+
+```markdown
+## Previous Findings to Verify
+
+{List finding IDs from previous iteration for this skill}
+
+Mode: VERIFY_FIXES
+- Only check that specific findings above are resolved
+- Do NOT look for new issues (unless CRITICAL severity discovered)
+- Mark each previous finding as: FIXED | PARTIAL | UNRESOLVED
+```
+
+**Re-review filtering:**
+- If a skill had no findings in v{N-1}, do NOT spawn it again
+- This focuses re-review on skills that actually found issues
+- Reduces unnecessary work and context bloat
+
+</parallel_spawning>
 
 **Step 5: Consolidate Findings**
 
