@@ -218,7 +218,315 @@ Mode: VERIFY_FIXES
 
 **Step 5: Consolidate Findings**
 
-See: Plan 20-04 adds finding consolidation here.
+After all skills complete (outputs in `.specflow/features/{slug}/8-skill-{name}.md`), consolidate into single output.
+
+<consolidation>
+### 5.1: Collect Skill Outputs
+
+For each spawned skill:
+```bash
+cat .specflow/features/{slug}/8-skill-{skill-name}.md
+```
+
+Parse each skill output:
+- Extract findings tables (CRITICAL, MAJOR, MINOR)
+- Extract fix instructions
+- Note source skill for each finding
+
+### 5.2: Merge Findings by Severity
+
+**Severity order:** CRITICAL > MAJOR > MINOR
+
+For each finding from all skills:
+1. Check for duplicates (same file:line, similar issue description)
+2. Deduplicate: keep first occurrence, add "also found by: {skill2, skill3}" attribution
+3. Assign consolidated ID (preserve original skill ID as reference)
+
+**Consolidated ID format:**
+- C-{NN} for CRITICAL (e.g., C-01, C-02)
+- M-{NN} for MAJOR
+- m-{NN} for MINOR
+
+**Deduplication rules:**
+1. **Same location**: file:line match within 3 lines = potential duplicate
+2. **Similar issue**: >80% text similarity in issue description = duplicate
+3. **On duplicate**: Keep higher severity, attribute all finding skills
+4. **Cross-skill**: If code and security find same issue, security skill's severity wins
+
+### 5.3: Consolidate Fix Instructions
+
+For each unique finding:
+1. Merge fix instructions from all skills that found it
+2. Preserve skill-specific guidance (e.g., security lens adds security-focused fix detail)
+3. Order by severity (CRITICAL fixes first)
+
+**Fix instruction format:**
+```markdown
+### {ID}: {Issue Title}
+
+**Found by:** {skill1}, {skill2}
+**What's wrong:** {consolidated explanation}
+**How to fix:** {merged instructions}
+**Files to change:** {unique file list}
+```
+
+### 5.4: Build Consolidated Output
+
+Create finding summary:
+```markdown
+## Findings Summary
+
+| Severity | Count | Skills Contributing |
+|----------|-------|---------------------|
+| CRITICAL | {N}   | {skill list}        |
+| MAJOR    | {N}   | {skill list}        |
+| MINOR    | {N}   | {skill list}        |
+
+Total unique findings: {N}
+Duplicates merged: {N}
+```
+</consolidation>
+
+### 5.5: Route Categorization
+
+<routing>
+Categorize each finding for routing to Dev or QA:
+
+**Dev Issues (route to /sf:dev):**
+- Security vulnerabilities
+- Code quality issues
+- Logic errors
+- Performance problems
+- Architecture concerns
+- API design issues
+
+**QA Issues (route to /sf:qa):**
+- Test coverage gaps
+- Test quality issues
+- Flaky test identification
+- Missing test scenarios
+- Test assertion weaknesses
+
+**Classification table:**
+| Finding ID | Severity | Type | Route To | Independent? |
+|------------|----------|------|----------|--------------|
+| C-01 | CRITICAL | Security | Dev | Yes |
+| M-01 | MAJOR | Test gap | QA | Yes |
+| M-02 | MAJOR | Logic error | Dev | Yes |
+| m-01 | MINOR | Naming | Dev | Yes |
+
+**Independence check:**
+- "Independent? Yes" = Can be fixed without affecting other findings
+- "Independent? No" = Fix may impact other findings (e.g., refactor affects tests)
+
+**Parallel routing decision:**
+```
+IF all_dev_issues_independent AND all_qa_issues_independent:
+    route_parallel = true  # Dev and QA can work simultaneously
+ELSE:
+    route_parallel = false  # Route Dev first, then QA
+    note_dependencies = [list of dependent pairs]
+```
+
+**Routing summary:**
+```markdown
+## Route Decision
+
+**Dev Issues:** {count} ({list IDs})
+**QA Issues:** {count} ({list IDs})
+**Parallel Safe:** Yes|No
+**Dependencies:** {list or "None"}
+```
+</routing>
+
+**Step 6: Check Escalation and Return**
+
+<escalation>
+After consolidation, check escalation triggers before returning to PM.
+
+### 6.1: Check CRITICAL Findings
+
+```
+IF any finding.severity == CRITICAL AND iteration >= 2:
+    status = ESCALATED
+    trigger = "CRITICAL finding persists after remediation"
+    # Do not route to Dev/QA - go directly to PM
+```
+
+**Why iteration 2:** Give Dev one chance to fix. If CRITICAL still present after fix attempt, PM must review.
+
+### 6.2: Check Max Iterations
+
+```
+IF iteration >= 3 AND status == findings:
+    status = ESCALATED
+    trigger = "Max iterations reached (3) with findings remaining"
+    # Include full history in escalation
+```
+
+### 6.3: Check AC Reference
+
+```
+FOR each finding:
+    IF finding.ac_reference == "AC-??" OR finding.ac_reference is null:
+        flag_for_pm = true
+        note = "Finding {ID} has no AC mapping - scope clarification needed"
+```
+
+If any finding lacks AC reference, include note in PM return (may be out of scope).
+
+### 6.4: Determine Final Status
+
+| Condition | Status | Next |
+|-----------|--------|------|
+| No findings | CLEAN | Return to PM, ready for merge |
+| Findings exist, iteration < 3, no CRITICAL (or iteration 1) | NEEDS_FIXES | Route to Dev/QA |
+| CRITICAL after iteration 2 | ESCALATED | Return to PM with escalation |
+| Iteration >= 3 with findings | ESCALATED | Return to PM with escalation |
+
+### 6.5: Write Final Output
+
+Write to `.specflow/features/{slug}/8-review-output-v{N}.md`:
+
+```yaml
+---
+agent: review
+created: {iso-timestamp}
+version: v{N}
+status: {clean|findings|escalated}
+scope_level: {from 0-scope.md}
+iteration: {N}
+skills_invoked: [{skill list}]
+detection_log: |
+  {detection results from Step 3}
+route_decision:
+  dev_issues: [{IDs}]
+  qa_issues: [{IDs}]
+  parallel_safe: {true|false}
+---
+```
+
+**Body structure:**
+```markdown
+# {Feature Name} - Review v{N}
+
+## Summary
+
+{2-3 sentence summary: N findings by severity, skills that found them, overall assessment}
+
+## Findings Summary
+
+| Severity | Count | Skills |
+|----------|-------|--------|
+| CRITICAL | {N} | {list} |
+| MAJOR | {N} | {list} |
+| MINOR | {N} | {list} |
+
+## Findings
+
+### CRITICAL (blocks merge)
+
+{Table of CRITICAL findings}
+
+### MAJOR (should fix)
+
+{Table of MAJOR findings}
+
+### MINOR (nice to have)
+
+{Table of MINOR findings}
+
+## Fix Instructions
+
+{Consolidated fix instructions by finding ID}
+
+## Route Decision
+
+{Dev vs QA routing table and parallel decision}
+
+## Verification
+
+{Checklist for verifying fixes}
+```
+
+### 6.6: Return to PM
+
+**If CLEAN:**
+```markdown
+**Review Complete**
+
+Feature: {slug}
+Status: CLEAN
+Iteration: {N}
+Skills: {list}
+
+No findings. Ready for merge.
+
+next-agent: pm
+```
+
+**If NEEDS_FIXES:**
+```markdown
+**Review Complete**
+
+Feature: {slug}
+Status: NEEDS_FIXES
+Iteration: {N}
+Skills: {list}
+
+Findings: {N} CRITICAL, {N} MAJOR, {N} MINOR
+Output: 8-review-output-v{N}.md
+
+Route Decision:
+- Dev: {count} issues ({IDs})
+- QA: {count} issues ({IDs})
+- Parallel: {Yes|No}
+
+next-agent: pm
+```
+
+**If ESCALATED:**
+```markdown
+**ESCALATE TO PM**
+
+Feature: {slug}
+Review Iteration: {N}
+Trigger: {escalation trigger from 6.1-6.3}
+
+## Issue Summary
+
+{2-3 sentence summary of what happened and why escalation is needed}
+
+## Review Recommendation
+
+{What Review thinks should happen}
+
+## Supporting Evidence
+
+### Findings History
+
+| Version | Findings | Status |
+|---------|----------|--------|
+| v1 | {list} | {Fixed/Partial/Unresolved} |
+| v{N} | {list} | Current |
+
+### Relevant Files
+
+- `8-review-output-v1.md`: Initial review
+- `8-review-output-v{N}.md`: Current state
+
+## Decision Needed
+
+{Specific question for PM}
+
+Options:
+1. Override and approve (accept remaining findings)
+2. Route back for targeted fixes with guidance
+3. Escalate to user for decision
+
+next-agent: pm
+```
+</escalation>
 
 ## Options
 
