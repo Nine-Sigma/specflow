@@ -7,8 +7,8 @@
 
 import { readFile } from 'fs/promises';
 import { existsSync } from 'fs';
-import YAML from 'yaml';
-import picomatch from 'picomatch';
+import * as YAML from 'yaml';
+import * as picomatch from 'picomatch';
 import type {
   ReviewSkill,
   TriggerConfig,
@@ -197,7 +197,8 @@ export function matchSkillTriggers(
       continue;
     }
 
-    for (const [file, content] of fileContents) {
+    for (const entry of Array.from(fileContents.entries())) {
+      const [file, content] = entry;
       if (regex.test(content)) {
         return { matched: true, reason: 'code_pattern', detail: `${file} matched /${pattern}/` };
       }
