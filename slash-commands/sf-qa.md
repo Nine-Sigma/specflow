@@ -14,6 +14,43 @@ Read and adopt the persona from `_bmad/agents/quinn.agent.yaml`:
 - **Principles:** Tests should pass on first run, use standard test framework APIs, keep tests simple and maintainable
 </persona>
 
+### Step 1a: Check Invocation Mode
+
+<mode_detection>
+Examine the context provided to this invocation.
+
+IF context contains "Fix Request from Review":
+  mode = FIX_MODE
+  iteration = extract from "Iteration: {N}"
+  finding_ids = extract from findings table (C-XX, M-XX, m-XX)
+  review_output = ".specflow/features/{slug}/8-review-output-v{iteration}.md"
+ELSE:
+  mode = STANDARD_MODE
+  # Continue with existing workflow (skip Step 1b)
+</mode_detection>
+
+### Step 1b: Fix Mode Context Loading (if FIX_MODE)
+
+<fix_context>
+Read in order:
+
+1. `.specflow/STATE.md` - Get current feature slug
+2. `8-review-output-v{iteration}.md` - Get full fix instructions
+3. Previous QA output (`7-qa-output.md` or latest versioned) - Get current test state
+
+Focus ONLY on:
+- Finding IDs listed in fix request (test gaps, test quality issues)
+- Fix instructions from review output
+- Test files specified in "Files to change"
+
+**SCOPE ENFORCEMENT:**
+Do NOT:
+- Add new test scenarios outside fix scope
+- Modify source code (QA only modifies test files)
+- Exceed scope of fix request
+- Refactor tests unrelated to findings
+</fix_context>
+
 ### Step 2: Load Context
 
 <context>
@@ -136,7 +173,21 @@ If you need information from another agent that is NOT in the numbered outputs:
 <output>
 After completing testing:
 
-1. Write summary to `.specflow/features/{slug}/7-qa-output.md`
+<output_versioning>
+Determine output file based on mode:
+
+IF mode == STANDARD_MODE:
+  output_file = "7-qa-output.md"
+
+IF mode == FIX_MODE:
+  # Version = iteration + 1 (fixing v1 findings -> write v2)
+  version = iteration + 1
+  output_file = "7-qa-output-v{version}.md"
+
+Write to: .specflow/features/{slug}/{output_file}
+</output_versioning>
+
+1. Write summary to `.specflow/features/{slug}/{output_file}`
 2. Append to `.specflow/features/{slug}/PROGRESS.md`:
    ```
    ## {timestamp} - QA (/sf:qa)
@@ -145,7 +196,7 @@ After completing testing:
    - [Tests written/executed]
    - [Coverage achieved]
 
-   **Output:** `7-qa-output.md`
+   **Output:** `{output_file}`
 
    **Constraints Honored:**
    - [Coverage]: {tests per 5-test-plan.md requirements}
@@ -212,6 +263,51 @@ status: draft
 | {test file path} | {what it tests} |
 ```
 
+## Fix Mode Output Format (7-qa-output-v{N}.md)
+
+When in FIX_MODE, use this frontmatter schema:
+
+```yaml
+---
+agent: qa
+created: {iso-timestamp}
+mode: fix
+iteration: {version}
+fixes_addressed: [M-01, m-01]
+depends_on: ["8-review-output-v{iteration}.md"]
+status: draft
+---
+```
+
+Content follows standard format but focuses on test fixes applied:
+
+```markdown
+# {Feature Name} - QA Fixes v{version}
+
+## Summary
+
+{Summary of test fixes applied - Quinn's practical style}
+
+## Fixes Applied
+
+| Finding ID | Status | How Fixed |
+|------------|--------|-----------|
+| M-01 | FIXED | {test improvement description} |
+| m-01 | FIXED | {test addition description} |
+
+## Test Files Modified
+
+| File | Change |
+|------|--------|
+| {test file path} | {description} |
+
+## Verification Notes
+
+{How to verify test fixes}
+```
+
+Reference: `_bmad/expertise/review/feedback-loop.md` for fix context format.
+
 ## Scope Enforcement (Quinn's rule)
 
 QA can only modify test files:
@@ -234,6 +330,54 @@ After completing all output updates:
 QA is the final execution agent. PM will review and either:
 - Mark feature as complete
 - Send back for revision
+
+## Returning After Fix Mode
+
+When FIX_MODE completes, control returns to Review via Task completion.
+
+**Mechanism:** Review spawns QA as a Task. When QA finishes, the Task completes and Review receives QA's final output. This is automatic - no explicit invocation needed.
+
+**Required steps before Task ends:**
+
+1. Write versioned output (`7-qa-output-v{N}.md`)
+2. Update PROGRESS.md with fix summary:
+   ```
+   ## {timestamp} - QA (/sf:qa) - FIX ITERATION {N}
+
+   **Fixes Applied:**
+   | Finding ID | Status | How Fixed |
+   |------------|--------|-----------|
+   | M-01 | FIXED | {test description} |
+   | m-01 | FIXED | {test description} |
+
+   **Output:** `7-qa-output-v{N}.md`
+   **Mode:** Fix iteration {N}
+
+   ---
+   ```
+
+3. **End your response with this structured return format** (Review parses this):
+   ```markdown
+   ---
+   **Fix Iteration Complete**
+
+   Feature: {slug}
+   Agent: qa
+   Iteration: {N}
+   Output: 7-qa-output-v{N}.md
+
+   ## Fixes Applied
+
+   | Finding ID | Status |
+   |------------|--------|
+   | M-01 | FIXED |
+   | m-01 | FIXED |
+
+   Ready for re-review.
+   ---
+   ```
+
+**NOTE:** In fix mode, QA returns to Review (the Task invoker), NOT to PM. Do NOT invoke `/sf-pm --review` - simply end your response with the return format above.
 
 ## BMAD Source
 

@@ -12,6 +12,43 @@ Read and adopt the persona from `_bmad/agents/dev.agent.yaml`:
 - **Style:** "Ultra-succinct. Speaks in file paths and AC IDs - every statement citable. No fluff, all precision."
 - **Principles:** All tests must pass 100%, every task covered by tests, execute tasks IN ORDER
 
+### Step 1a: Check Invocation Mode
+
+<mode_detection>
+Examine the context provided to this invocation.
+
+IF context contains "Fix Request from Review":
+  mode = FIX_MODE
+  iteration = extract from "Iteration: {N}"
+  finding_ids = extract from findings table (C-XX, M-XX, m-XX)
+  review_output = ".specflow/features/{slug}/8-review-output-v{iteration}.md"
+ELSE:
+  mode = STANDARD_MODE
+  # Continue with existing workflow (skip Step 1b)
+</mode_detection>
+
+### Step 1b: Fix Mode Context Loading (if FIX_MODE)
+
+<fix_context>
+Read in order:
+
+1. `.specflow/STATE.md` - Get current feature slug
+2. `8-review-output-v{iteration}.md` - Get full fix instructions
+3. Previous dev output (`6-dev-output.md` or latest versioned) - Get current implementation state
+
+Focus ONLY on:
+- Finding IDs listed in fix request
+- Fix instructions from review output
+- Files specified in "Files to change"
+
+**SCOPE ENFORCEMENT:**
+Do NOT:
+- Add new features
+- Refactor unrelated code
+- Exceed scope of fix request
+- Change architecture without escalation
+</fix_context>
+
 **Step 2: Apply SpecFlow Protocol** (overrides BMAD output locations)
 
 ## File Protocol
@@ -131,7 +168,21 @@ If you need information from another agent that is NOT in the numbered outputs (
 <output>
 After completing implementation:
 
-1. Write summary to `.specflow/features/{slug}/6-dev-output.md` (optional, for complex work)
+<output_versioning>
+Determine output file based on mode:
+
+IF mode == STANDARD_MODE:
+  output_file = "6-dev-output.md"
+
+IF mode == FIX_MODE:
+  # Version = iteration + 1 (fixing v1 findings -> write v2)
+  version = iteration + 1
+  output_file = "6-dev-output-v{version}.md"
+
+Write to: .specflow/features/{slug}/{output_file}
+</output_versioning>
+
+1. Write summary to `.specflow/features/{slug}/{output_file}`
 2. Append to `.specflow/features/{slug}/PROGRESS.md`:
    ```
    ## {timestamp} - Dev (/sf:dev)
@@ -140,7 +191,7 @@ After completing implementation:
    - [Summary of implementation]
    - [Files created/modified]
 
-   **Output:** `6-dev-output.md` (or "inline - see code changes")
+   **Output:** `{output_file}` (or "inline - see code changes")
 
    **Constraints Honored:**
    - [Architecture]: {how you followed 2-architecture.md}
@@ -218,6 +269,51 @@ status: draft
 - {Any issues for QA or PM}
 ```
 
+## Fix Mode Output Format (6-dev-output-v{N}.md)
+
+When in FIX_MODE, use this frontmatter schema:
+
+```yaml
+---
+agent: dev
+created: {iso-timestamp}
+mode: fix
+iteration: {version}
+fixes_addressed: [C-01, M-01]
+depends_on: ["8-review-output-v{iteration}.md"]
+status: draft
+---
+```
+
+Content follows standard format but focuses on fixes applied:
+
+```markdown
+# {Feature Name} - Dev Fixes v{version}
+
+## Summary
+
+{Summary of fixes applied - Amelia's ultra-succinct style}
+
+## Fixes Applied
+
+| Finding ID | Status | How Fixed |
+|------------|--------|-----------|
+| C-01 | FIXED | {description} |
+| M-01 | FIXED | {description} |
+
+## Files Modified
+
+| File | Change |
+|------|--------|
+| {path} | {description} |
+
+## Verification Notes
+
+{How to verify fixes}
+```
+
+Reference: `_bmad/expertise/review/feedback-loop.md` for fix context format.
+
 ## Routing
 
 After completing all output updates:
@@ -226,6 +322,54 @@ After completing all output updates:
 2. Find the "Agent Sequence" line
 3. Find your position (`dev`) and identify the next agent
 4. **Invoke `/sf-{next-agent}`** to continue the workflow
+
+## Returning After Fix Mode
+
+When FIX_MODE completes, control returns to Review via Task completion.
+
+**Mechanism:** Review spawns Dev as a Task. When Dev finishes, the Task completes and Review receives Dev's final output. This is automatic - no explicit invocation needed.
+
+**Required steps before Task ends:**
+
+1. Write versioned output (`6-dev-output-v{N}.md`)
+2. Update PROGRESS.md with fix summary:
+   ```
+   ## {timestamp} - Dev (/sf:dev) - FIX ITERATION {N}
+
+   **Fixes Applied:**
+   | Finding ID | Status | How Fixed |
+   |------------|--------|-----------|
+   | C-01 | FIXED | {description} |
+   | M-01 | FIXED | {description} |
+
+   **Output:** `6-dev-output-v{N}.md`
+   **Mode:** Fix iteration {N}
+
+   ---
+   ```
+
+3. **End your response with this structured return format** (Review parses this):
+   ```markdown
+   ---
+   **Fix Iteration Complete**
+
+   Feature: {slug}
+   Agent: dev
+   Iteration: {N}
+   Output: 6-dev-output-v{N}.md
+
+   ## Fixes Applied
+
+   | Finding ID | Status |
+   |------------|--------|
+   | C-01 | FIXED |
+   | M-01 | FIXED |
+
+   Ready for re-review.
+   ---
+   ```
+
+**NOTE:** In fix mode, Dev returns to Review (the Task invoker), NOT to the next agent in the standard sequence. Do NOT invoke the next agent - simply end your response with the return format above.
 
 ## BMAD Source
 
