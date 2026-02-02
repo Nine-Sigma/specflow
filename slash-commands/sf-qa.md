@@ -19,17 +19,62 @@ Read and adopt the persona from `_bmad/agents/quinn.agent.yaml`:
 <mode_detection>
 Examine the context provided to this invocation.
 
+**Priority 1: Check for Drift Correction Mode**
+
+```bash
+ls .specflow/features/{slug}/drift/correction-qa-*.md 2>/dev/null
+```
+
+IF correction files exist:
+  mode = DRIFT_FIX_MODE
+  # Find highest numbered correction file
+  correction_file = latest correction-qa-{N}.md (highest N)
+  Read correction_file for specific instructions
+
+**Priority 2: Check for Review Fix Mode**
+
 IF context contains "Fix Request from Review":
   mode = FIX_MODE
   iteration = extract from "Iteration: {N}"
   finding_ids = extract from findings table (C-XX, M-XX, m-XX)
   review_output = ".specflow/features/{slug}/8-review-output-v{iteration}.md"
+
+**Default: Standard Mode**
+
 ELSE:
   mode = STANDARD_MODE
-  # Continue with existing workflow (skip Step 1b)
+  # Continue with standard workflow
 </mode_detection>
 
-### Step 1b: Fix Mode Context Loading (if FIX_MODE)
+### Step 1b: Drift Fix Mode Context Loading (if DRIFT_FIX_MODE)
+
+<drift_fix_context>
+Read in order:
+
+1. `.specflow/STATE.md` - Get current feature slug, iteration count
+2. `drift/correction-qa-{N}.md` - Get specific correction instructions
+3. `5-requirements-lock.md` - Immutable reference (focus on ACs listed in correction)
+4. Previous QA output (`7-qa-output.md` or `7-qa-output-v{N-1}.md`) - Current test state
+
+**Focus ONLY on:**
+- AC items listed in correction file's "Missing coverage" section
+- Test scenarios listed in correction file's "Wrong scenarios" section
+- Specific instructions from correction file
+
+**SCOPE ENFORCEMENT:**
+Do NOT:
+- Add tests beyond what correction specifies
+- Refactor tests not mentioned in correction
+- Modify source code (QA only modifies test files)
+- Exceed scope of drift correction
+
+**Output versioning:**
+- DRIFT_FIX iteration 1 -> write `7-qa-output-v2.md`
+- DRIFT_FIX iteration 2 -> write `7-qa-output-v3.md`
+- Version = previous version + 1 (or 2 if first fix)
+</drift_fix_context>
+
+### Step 1c: Fix Mode Context Loading (if FIX_MODE)
 
 <fix_context>
 Read in order:
