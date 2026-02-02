@@ -58,12 +58,18 @@ Before starting work, read in order:
 
 1. `.specflow/STATE.md` - Get current feature slug
 2. `.specflow/features/{slug}/0-triage.md` - Get agent sequence for routing
-3. `.specflow/features/{slug}/1-spec.md` - Acceptance criteria to implement
-4. `.specflow/features/{slug}/2-architecture.md` - Architecture decisions to follow
-5. `.specflow/features/{slug}/3-security.md` - Security constraints to honor (if exists)
-6. `.specflow/features/{slug}/4-cost.md` - Cost/resource constraints (if exists)
-7. `.specflow/features/{slug}/5-test-plan.md` - Test plan to satisfy (if exists)
-8. `.specflow/features/{slug}/COMMS/*.md` - Any resolved messages for context (if folder exists)
+3. `.specflow/features/{slug}/5-requirements-lock.md` - **PRIMARY INPUT: Synthesized requirements (FR/TC/SC/AC/IP)**
+4. `.specflow/features/{slug}/2-architecture.md` - Architecture decisions (detailed design)
+5. `.specflow/features/{slug}/5-test-plan.md` - Test plan to satisfy (if exists)
+6. `.specflow/features/{slug}/COMMS/*.md` - Any resolved messages for context (if folder exists)
+
+**Note:** The requirements lock (`5-requirements-lock.md`) is the authoritative source. It synthesizes:
+- 1-spec.md (functional requirements, acceptance criteria)
+- 1.5-codebase-constraints.md (tech constraints, integration points)
+- 3-security.md (security constraints)
+- 4-cost.md (cost constraints)
+
+You do NOT need to read these individual files unless you need additional context beyond what's in the lock.
 
 Replace {slug} with the feature slug from STATE.md.
 </required_reading>
