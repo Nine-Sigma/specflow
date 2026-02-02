@@ -371,6 +371,85 @@ Content follows standard format but focuses on fixes applied:
 
 Reference: `_bmad/expertise/review/feedback-loop.md` for fix context format.
 
+## Drift Fix Mode Output Format (6-dev-output-v{N}.md)
+
+When in DRIFT_FIX_MODE, use this frontmatter schema:
+
+```yaml
+---
+agent: dev
+created: {iso-timestamp}
+mode: drift-fix
+iteration: {version}
+correction_file: drift/correction-dev-{N}.md
+depends_on: ["5-requirements-lock.md", "drift/correction-dev-{N}.md"]
+status: draft
+---
+```
+
+Content focuses on addressing drift correction:
+
+```markdown
+# {Feature Name} - Drift Fix v{version}
+
+## Summary
+
+{Summary of drift fixes applied - Amelia's ultra-succinct style}
+
+## Correction Addressed
+
+From: `drift/correction-dev-{N}.md`
+
+| Item | Status | How Fixed |
+|------|--------|-----------|
+| FR-01 (missing) | FIXED | {implementation description} |
+| OUT OF SCOPE removal | FIXED | Removed {file}:{lines} |
+
+## Files Modified
+
+| File | Change |
+|------|--------|
+| {path} | {description} |
+
+## Requirements Coverage
+
+| FR/AC | Status | Evidence |
+|-------|--------|----------|
+| FR-01 | IMPLEMENTED | {file:line} |
+| FR-02 | IMPLEMENTED | {file:line} |
+
+## Verification Notes
+
+{How to verify drift is resolved}
+```
+
+**Returning After Drift Fix:**
+
+End response with structured return format (same as standard, but with mode indicator):
+
+```markdown
+---
+**Execution Complete**
+
+Feature: {slug}
+Agent: dev
+Output: 6-dev-output-v{N}.md
+Mode: DRIFT_FIX
+Correction: drift/correction-dev-{M}.md
+
+## Corrections Applied
+
+| Item | Status |
+|------|--------|
+| FR-01 (missing) | FIXED |
+| OUT OF SCOPE | REMOVED |
+
+Ready for PM checkpoint.
+---
+```
+
+**NOTE:** In DRIFT_FIX mode, Dev returns to PM for re-checkpoint, NOT to QA. PM will verify the correction was successful before routing forward.
+
 ## Routing
 
 After completing all output updates:
