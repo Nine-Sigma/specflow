@@ -1,9 +1,9 @@
 #!/usr/bin/env node
 import { Command } from 'commander';
 import pc from 'picocolors';
-import { pmOrchestrate, showPmInfo } from './orchestrator/pm.js';
 import { runAgent, loadCustomAgents, listAgents, getAgent } from './wrapper/agent-runner.js';
 import { installSkillCommand, listSkillsCommand, removeSkillCommand } from './skills/commands.js';
+import { reviewCommand } from './review/commands.js';
 
 const program = new Command();
 
@@ -18,38 +18,24 @@ program
   .description(pc.cyan('SpecFlow') + ' - Security-first, cost-aware development')
   .version('1.0.0');
 
-// Main PM entry point
+// PM command - directs to slash command
 program
   .command('pm [issue]')
-  .description('Invoke PM orchestrator for intelligent agent routing')
-  .option('--type <type>', 'Override work type (bug|feature|refactor|documentation)')
-  .option('--no-pillars', 'Skip three-pillar enforcement')
-  .option('--info', 'Show PM routing information')
-  .action(async (issue, options) => {
-    await loadCustomAgents();
-
-    if (options.info || !issue) {
-      showPmInfo();
-      return;
-    }
-
-    try {
-      const result = await pmOrchestrate(issue, {
-        type: options.type,
-        noPillars: options.noPillars,
-      });
-
-      console.log('\n' + '='.repeat(50));
-      console.log(result.summary);
-
-      if (!result.success) {
-        console.log('\nSome agents failed. Review output above.');
-        process.exit(1);
-      }
-    } catch (err) {
-      console.error('PM orchestration failed:', err);
-      process.exit(1);
-    }
+  .description('PM orchestrator (use /sf:pm in Claude Code)')
+  .action(() => {
+    console.log(pc.bold(pc.cyan('SpecFlow PM Orchestrator')));
+    console.log();
+    console.log('PM orchestration uses prompt-based routing in Claude Code.');
+    console.log();
+    console.log(pc.bold('Usage:'));
+    console.log('  In Claude Code, invoke: ' + pc.green('/sf:pm "your feature description"'));
+    console.log();
+    console.log(pc.bold('Available commands:'));
+    console.log('  /sf:pm <description>  - Start new feature workflow');
+    console.log('  /sf:pm --review       - Review current feature outputs');
+    console.log('  /sf:pm --status       - Show current STATE.md');
+    console.log();
+    console.log(pc.dim('The PM agent (John) orchestrates: analyst → architect → [security] → [cost] → tea → dev → qa'));
   });
 
 // Direct agent invocation (escape hatches)
@@ -82,8 +68,8 @@ program
   .description('Show SpecFlow status')
   .action(() => {
     console.log(pc.bold(pc.cyan('SpecFlow CLI')) + ' v1.0.0');
-    console.log(pc.green('OK') + ' BMAD + Ralph + TypeScript architecture');
-    console.log(pc.dim('Run "sf pm --info" for routing information'));
+    console.log(pc.green('OK') + ' Prompt-based orchestration via /sf:* commands');
+    console.log(pc.dim('Run "sf pm" for PM routing information'));
   });
 
 // Skill management
@@ -108,5 +94,6 @@ skillCommand
   .action(removeSkillCommand);
 
 program.addCommand(skillCommand);
+program.addCommand(reviewCommand);
 
 program.parse();
