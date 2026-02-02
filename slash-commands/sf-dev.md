@@ -17,14 +17,31 @@ Read and adopt the persona from `_bmad/agents/dev.agent.yaml`:
 <mode_detection>
 Examine the context provided to this invocation.
 
+**Priority 1: Check for Drift Correction Mode**
+
+```bash
+ls .specflow/features/{slug}/drift/correction-dev-*.md 2>/dev/null
+```
+
+IF correction files exist:
+  mode = DRIFT_FIX_MODE
+  # Find highest numbered correction file
+  correction_file = latest correction-dev-{N}.md (highest N)
+  Read correction_file for specific instructions
+
+**Priority 2: Check for Review Fix Mode**
+
 IF context contains "Fix Request from Review":
   mode = FIX_MODE
   iteration = extract from "Iteration: {N}"
   finding_ids = extract from findings table (C-XX, M-XX, m-XX)
   review_output = ".specflow/features/{slug}/8-review-output-v{iteration}.md"
+
+**Default: Standard Mode**
+
 ELSE:
   mode = STANDARD_MODE
-  # Continue with existing workflow (skip Step 1b)
+  # Continue with standard workflow
 </mode_detection>
 
 ### Step 1b: Fix Mode Context Loading (if FIX_MODE)
@@ -48,6 +65,34 @@ Do NOT:
 - Exceed scope of fix request
 - Change architecture without escalation
 </fix_context>
+
+### Step 1c: Drift Fix Mode Context Loading (if DRIFT_FIX_MODE)
+
+<drift_fix_context>
+Read in order:
+
+1. `.specflow/STATE.md` - Get current feature slug, iteration count
+2. `drift/correction-dev-{N}.md` - Get specific correction instructions
+3. `5-requirements-lock.md` - Immutable reference (focus on items listed in correction)
+4. Previous dev output (`6-dev-output.md` or `6-dev-output-v{N-1}.md`) - Current implementation state
+
+**Focus ONLY on:**
+- FR/AC items listed in correction file's "Missing" section
+- Files/lines listed in correction file's "Extra" section (to remove)
+- Specific instructions from correction file
+
+**SCOPE ENFORCEMENT:**
+Do NOT:
+- Add features beyond what correction specifies
+- Refactor code not mentioned in correction
+- Exceed scope of drift correction
+- Modify requirements lock
+
+**Output versioning:**
+- DRIFT_FIX iteration 1 -> write `6-dev-output-v2.md`
+- DRIFT_FIX iteration 2 -> write `6-dev-output-v3.md`
+- Version = previous version + 1 (or 2 if first fix)
+</drift_fix_context>
 
 **Step 2: Apply SpecFlow Protocol** (overrides BMAD output locations)
 
