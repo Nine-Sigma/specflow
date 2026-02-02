@@ -376,6 +376,14 @@ Categorize each finding for routing to Dev or QA:
 - Missing test scenarios
 - Test assertion weaknesses
 
+**Integration Review Issues (from integration-review skill):**
+- ALWAYS route to Dev (never QA)
+- Interface changes affecting callers
+- Circular import risks
+- Breaking export changes
+
+Integration issues are code structure issues, not test issues. Even test-related callers route to Dev because the fix is in the source code, not the tests.
+
 **Classification table:**
 | Finding ID | Severity | Type | Route To | Independent? |
 |------------|----------|------|----------|--------------|
@@ -423,6 +431,20 @@ IF any finding.severity == CRITICAL AND iteration >= 2:
 ```
 
 **Why iteration 2:** Give Dev one chance to fix. If CRITICAL still present after fix attempt, PM must review.
+
+### 6.1b: Check BREAKING Status from Integration Review
+
+```
+IF any finding from integration-review has status == BREAKING:
+    status = NEEDS_USER_DECISION
+    trigger = "BREAKING change detected - callers will fail"
+    # Present to user with options:
+    # 1. Approve with migration plan
+    # 2. Request Dev to add backward compatibility
+    # 3. Abort merge
+```
+
+BREAKING changes from integration-review are like CRITICAL security issues - they cannot be auto-fixed without user input because they affect external callers.
 
 ### 6.2: Check Max Iterations
 
@@ -592,6 +614,35 @@ Options:
 1. Override and approve (accept remaining findings)
 2. Route back for targeted fixes with guidance
 3. Escalate to user for decision
+
+next-agent: pm
+```
+
+**If NEEDS_USER_DECISION (BREAKING detected):**
+```markdown
+**BREAKING CHANGE DETECTED**
+
+Feature: {slug}
+Review Iteration: {N}
+Source: integration-review skill
+
+## Breaking Changes Found
+
+{Table of BREAKING changes with callers affected}
+
+## Impact Assessment
+
+- Files affected: {N}
+- Callers that will break: {list}
+- Migration effort: {estimate}
+
+## Decision Needed
+
+1. **Approve with migration plan** - Merge now, update callers in follow-up PR
+2. **Request backward compatibility** - Dev adds optional params/deprecation
+3. **Abort merge** - Rework to avoid breaking change
+
+Select option (1, 2, or 3):
 
 next-agent: pm
 ```
@@ -803,6 +854,7 @@ After iteration 3 with findings: ESCALATE to PM (max iterations reached).
 | CLEAN | No findings OR all previous findings FIXED | Return to PM, ready for merge |
 | NEEDS_FIXES | Has findings, iteration < 3 | Route to Step 7 (fix loop) |
 | ESCALATED | CRITICAL after iteration 2 OR iteration >= 3 with findings | Return to PM for decision |
+| NEEDS_USER_DECISION | BREAKING detected from integration-review | Return to PM with options |
 
 ### Output Versioning (REV-05)
 
