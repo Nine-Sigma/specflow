@@ -1248,6 +1248,54 @@ After corrections:
 - {What the next agent (QA or Review) will verify}
 ```
 
+**Step 2b: QA Drift Classification (QA checkpoint only)**
+
+When QA checkpoint returns MAJOR_DRIFT, analyze to determine root cause:
+
+<qa_drift_analysis>
+**Signals for TEST_DRIFT (write correction for QA):**
+- Tests pass but don't cover ACs from requirements lock
+- Tests cover wrong scenarios (not matching spec)
+- Coverage gaps in test plan
+- Test assertions don't match AC criteria
+
+**Signals for CODE_ISSUE (write correction for Dev):**
+- Tests fail because code doesn't implement FR
+- Tests correctly assert expected behavior, but code returns wrong result
+- Code is missing functionality that tests expect
+
+**Classification Process:**
+
+1. Read `7-qa-output.md` test results
+2. For each failing/missing test, ask:
+   - Does the test correctly reflect the AC from requirements lock?
+   - If yes -> CODE_ISSUE (code wrong)
+   - If no -> TEST_DRIFT (test wrong)
+
+3. Write analysis to checkpoint file:
+
+```markdown
+## QA Drift Analysis
+
+**Classification:** {TEST_DRIFT | CODE_ISSUE}
+
+| Signal | Observed |
+|--------|----------|
+| Tests fail but code meets FR | {Yes/No} -> CODE_ISSUE |
+| Tests pass but don't cover ACs | {Yes/No} -> TEST_DRIFT |
+| Tests cover wrong scenarios | {Yes/No} -> TEST_DRIFT |
+| Code doesn't implement FR | {Yes/No} -> CODE_ISSUE |
+
+**Verdict:** {TEST_DRIFT | CODE_ISSUE}
+**Rationale:** {1-2 sentences explaining classification}
+**Route to:** {qa | dev}
+```
+
+4. Route correction:
+   - TEST_DRIFT: Write `drift/correction-qa-{N}.md`, re-invoke QA
+   - CODE_ISSUE: Write `drift/correction-dev-{N}.md`, re-invoke Dev
+</qa_drift_analysis>
+
 **Step 3: Update STATE.md**
 
 Update iteration tracking:
