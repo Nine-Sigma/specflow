@@ -1200,6 +1200,116 @@ Score: M/N criteria met (X%)
 
 </drift_checkpoint>
 
+### Drift Correction Routing
+
+When checkpoint returns MAJOR_DRIFT, PM writes correction file and re-invokes the agent.
+
+<drift_routing>
+**Step 1: Check Iteration Count**
+
+Read STATE.md for current iteration count:
+- `dev_iterations`: Number of Dev re-runs for this feature
+- `qa_iterations`: Number of QA re-runs for this feature
+
+Per skill limits:
+- Max 2 re-runs per agent
+- If agent has been re-run twice, escalate to user
+
+**Step 2: Write Correction File**
+
+Write to `.specflow/features/{slug}/drift/correction-{agent}-{N}.md`:
+
+```yaml
+---
+agent: {dev|qa}
+iteration: {N}
+timestamp: {iso-timestamp}
+severity: MAJOR_DRIFT
+source_checkpoint: drift/checkpoint-{agent}.md
+---
+
+# Correction for {Agent} (Iteration {N})
+
+## Drift Summary
+- Missing: {list FR/AC items not implemented}
+- Extra: {list out-of-scope additions with file:line}
+- Quality: {issues if any}
+
+## Specific Instructions
+
+1. {Specific fix instruction referencing FR/AC IDs}
+2. {Specific fix instruction with file paths}
+3. {What to remove/revert if out-of-scope}
+
+## Next Phase Context
+
+After corrections:
+- {What the output should satisfy}
+- {What the next agent (QA or Review) will verify}
+```
+
+**Step 3: Update STATE.md**
+
+Update iteration tracking:
+```markdown
+## Position
+
+| Field | Value |
+|-------|-------|
+| last-agent | pm |
+| next-agent | {dev|qa} |
+| phase | drift-fix |
+| dev_iterations | {N} |
+| qa_iterations | {N} |
+| drift_status | correcting |
+```
+
+**Step 4: Re-invoke Agent**
+
+```markdown
+IF dev_iterations <= 2 AND agent == dev:
+  Invoke /sf:dev (Dev will detect correction file, enter DRIFT_FIX mode)
+
+IF qa_iterations <= 2 AND agent == qa:
+  Invoke /sf:qa (QA will detect correction file, enter DRIFT_FIX mode)
+
+IF iterations > 2:
+  Escalate to user (see Escalation Format below)
+```
+
+**Step 5: Handle Escalation (iterations exceeded)**
+
+When max iterations reached, present to user:
+
+```markdown
+## DRIFT ESCALATION
+
+**Feature:** {slug}
+**Agent:** {dev|qa}
+**Iterations:** {N} (max 2 exceeded)
+
+### Drift History
+
+| Iteration | Issue | Correction Given |
+|-----------|-------|------------------|
+| 1 | {summary} | {summary} |
+| 2 | {summary} | {summary} |
+
+### Current Drift
+
+{From latest checkpoint}
+
+### Options
+
+1. **Override** - Accept current output despite drift, proceed to next phase
+2. **Manual Fix** - You will provide the fix, then continue
+3. **Abort** - Stop this feature, address root cause
+
+Please choose an option.
+```
+
+</drift_routing>
+
 <output>
 After orchestration:
 
