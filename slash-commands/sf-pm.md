@@ -35,6 +35,7 @@ On every invocation, read:
 3. `.specflow/features/{slug}/PROGRESS.md` - Work log (if feature in progress)
 4. `.specflow/features/{slug}/COMMS/*.md` - Pending communications (if folder exists)
 5. `.specflow/features/{slug}/CONFLICTS.md` - Unresolved conflicts (if exists)
+6. `.specflow/skills/hierarchical-coordinator/SKILL.md` - Drift detection methodology (when running checkpoint)
 
 Replace {slug} with feature slug from STATE.md.
 </required_reading>
@@ -1067,6 +1068,120 @@ Update STATE.md after approval:
 - next-agent: dev
 
 </synthesis_gate>
+
+### Drift Detection Checkpoint Protocol
+
+After Dev or QA completes and returns to PM, run a drift checkpoint before routing to the next agent.
+
+<drift_checkpoint>
+**Trigger:** PM receives control with `phase: checkpoint` in STATE.md (set by Dev or QA upon completion).
+
+**Step 1: Load Skill Methodology**
+
+Read `.specflow/skills/hierarchical-coordinator/SKILL.md` for:
+- Checkpoint evaluation framework (Completeness, Relevance, Quality)
+- Drift severity thresholds
+- Correction file format
+- Escalation patterns
+
+**Step 2: Load Immutable Reference**
+
+Read `.specflow/features/{slug}/5-requirements-lock.md` as the coordinator-context:
+- This is the FROZEN requirements document approved before dev started
+- All FR, TC, SC, AC, IP items are the comparison baseline
+- Never modify this during execution
+
+**Step 3: Load Agent Output**
+
+Read the agent's output file:
+- After Dev: `6-dev-output.md` (or `6-dev-output-v{N}.md` if iteration)
+- After QA: `7-qa-output.md` (or `7-qa-output-v{N}.md` if iteration)
+
+**Step 4: Evaluate Alignment (Three Dimensions)**
+
+Per skill methodology, evaluate:
+
+**Completeness (Requirements Coverage):**
+```markdown
+For each FR/AC in requirements lock:
+- [x] FR-01: "{criterion}" — Evidence: {file:line or code reference}
+- [ ] FR-02: "{criterion}" — MISSING: {explanation}
+
+Score: M/N criteria met (X%)
+```
+
+**Relevance (Scope Adherence):**
+```markdown
+Scan output for work NOT in requirements lock:
+- OUT OF SCOPE: {feature/code added}
+  Files affected: {path with line numbers}
+- Status: N out-of-scope additions detected
+```
+
+**Quality:**
+```markdown
+- Deliverable exists: Yes/No
+- Actionable for next phase: Yes/No
+- Placeholder content: None/details
+```
+
+**Step 5: Determine Severity**
+
+Based on skill thresholds:
+
+| Score | Status | Action |
+|-------|--------|--------|
+| >95% complete, 0 out-of-scope | ALIGNED | Proceed immediately |
+| 80-95% complete, minor out-of-scope | MINOR_DRIFT | Proceed with notes |
+| <80% complete OR major out-of-scope | MAJOR_DRIFT | Re-run phase (max 2 times) |
+| Fundamentally wrong approach | OFF_TRACK | Escalate to user |
+
+Additional limits (from skill):
+- 3 consecutive MINOR_DRIFT -> escalate
+- 5 total corrections across feature -> pause for review
+
+**Step 6: Write Checkpoint File**
+
+Write to `.specflow/features/{slug}/drift/checkpoint-{agent}.md`:
+
+```yaml
+---
+checkpoint: {dev|qa}
+timestamp: {iso-timestamp}
+source_output: {6-dev-output.md or 7-qa-output.md}
+severity: {ALIGNED|MINOR_DRIFT|MAJOR_DRIFT|OFF_TRACK}
+---
+
+# Checkpoint: {Agent} Validation
+
+## Alignment Score: {severity}
+
+## Completeness (Requirements Coverage)
+{FR/AC checklist with evidence}
+
+Score: M/N criteria met (X%)
+
+## Relevance (Scope Adherence)
+{OUT OF SCOPE items if any}
+
+## Quality
+- Deliverable exists: {Yes/No}
+- Actionable for next phase: {Yes/No}
+- Placeholder content: {None/details}
+
+## Verdict: {one-line summary}
+```
+
+**Step 7: Route Based on Severity**
+
+| Severity | Action |
+|----------|--------|
+| ALIGNED | Write `drift/phase-{agent}-findings.md` with context, route to next agent |
+| MINOR_DRIFT | Write findings, proceed with adjustments noted |
+| MAJOR_DRIFT | Write correction file, re-invoke agent (see Plan 23-03) |
+| OFF_TRACK | Stop workflow, escalate to user with options |
+
+</drift_checkpoint>
 
 <output>
 After orchestration:
