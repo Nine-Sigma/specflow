@@ -75,23 +75,28 @@ Replace {slug} with the feature slug from STATE.md.
 </required_reading>
 
 <constraints>
-Extract from required reading and list explicitly before coding:
+Extract from `5-requirements-lock.md` and list explicitly before coding:
 
-**Architecture Constraints (from 2-architecture.md):**
-- [List key architecture decisions that must be followed]
-- [API patterns, data models, component boundaries]
+**Functional Requirements (FR from lock):**
+- [List FR-XX items to implement]
 
-**Security Constraints (from 3-security.md):**
-- [List required mitigations from STRIDE table]
-- [Trust boundaries that must be enforced]
-- [Logging/audit requirements]
+**Technical Constraints (TC from lock):**
+- [List TC-XX items - includes both architecture and codebase constraints]
+- [Note source: some are from 2-architecture.md, some from CODEBASE:]
 
-**Cost Constraints (from 4-cost.md):**
-- [Resource limits]
-- [Performance bounds]
-- [Infrastructure restrictions]
+**Security Constraints (SC from lock):**
+- [List SC-XX items if security pillar ran]
+- [Mitigations with STRIDE categories]
+
+**Acceptance Criteria (AC from lock):**
+- [List AC-XX items - these are your testable success criteria]
+
+**Integration Points (IP from lock):**
+- [List IP-XX items - existing code to integrate with]
+- [Note interfaces and patterns to follow]
 
 You MUST list these constraints in your output before showing any code.
+Reference constraint IDs (FR-01, TC-02, etc.) in your implementation notes.
 </constraints>
 
 ## Asking Questions to Other Agents
