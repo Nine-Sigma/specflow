@@ -854,6 +854,198 @@ If all outputs match scope:
 2. Route to dev/qa per sequence
 </scope_checkpoint>
 
+### Requirements Synthesis Gate
+
+After ALL pillar agents complete (before routing to dev/qa), PM synthesizes requirements.
+
+<synthesis_gate>
+**Trigger:** PM receives control after the last pillar agent completes (typically TEA).
+
+Check: Do all required pillar outputs exist?
+- `1-spec.md` (REQUIRED)
+- `1.5-codebase-constraints.md` (REQUIRED)
+- `2-architecture.md` (if architect in sequence)
+- `3-security.md` (if security in sequence)
+- `4-cost.md` (if cost in sequence)
+- `5-test-plan.md` (if tea in sequence)
+
+**Step 1: Load Synthesis Expertise**
+
+Read `_bmad/expertise/synthesis/requirements-lock.md` for:
+- Document format (FR/TC/SC/AC/IP categories)
+- Source attribution rules
+- Immutability protocol
+
+**Step 2: Gather Pillar Outputs**
+
+Read each output that exists and extract requirements:
+
+| From | Extract | Category |
+|------|---------|----------|
+| 1-spec.md | Acceptance criteria | FR, AC |
+| 1.5-codebase-constraints.md | Tech constraints | TC (with CODEBASE: source) |
+| 1.5-codebase-constraints.md | Integration points | IP |
+| 2-architecture.md | Architecture decisions | TC |
+| 3-security.md | Security mitigations | SC |
+| 5-test-plan.md | Test types for ACs | AC (test type column) |
+
+**Step 3: Normalize and De-duplicate**
+
+- Convert all requirements to standard format (ID, description, source, additional columns)
+- Remove duplicates (prefer most authoritative source)
+- Assign sequential IDs within each category (FR-01, TC-01, etc.)
+
+**Step 4: Resolve Conflicts**
+
+If pillar outputs conflict:
+
+```markdown
+## Conflict Detected
+
+**Sources:** {source1} vs {source2}
+**Issue:** {description of conflict}
+
+**PM Resolution:**
+- IF technical question with clear answer: Resolve autonomously
+- IF business/scope decision: Escalate to user
+- Record resolution in lock document
+```
+
+**Step 5: Write Requirements Lock**
+
+Write to `.specflow/features/{slug}/5-requirements-lock.md`:
+
+```yaml
+---
+feature: {slug}
+version: 1.0
+created: {iso-timestamp}
+approved_at: null
+approved_by: null
+frozen: false
+synthesized_from:
+  - 1-spec.md
+  - 1.5-codebase-constraints.md
+  - 2-architecture.md  # if exists
+  - 3-security.md      # if exists
+  - 4-cost.md          # if exists
+  - 5-test-plan.md     # if exists
+codebase_analysis:
+  tech_stack: [{from 1.5}]
+  patterns_detected: {count from 1.5}
+---
+
+# Requirements Lock: {Feature Name}
+
+## Functional Requirements (FR)
+{table with ID, Requirement, Source, Verifiable}
+
+## Technical Constraints (TC)
+{table with ID, Constraint, Source, Rationale}
+
+## Security Constraints (SC)
+{table with ID, Constraint, Source, STRIDE Category}
+{Omit section if 3-security.md does not exist}
+
+## Acceptance Criteria (AC)
+{table with ID, Criterion, Test Type, Source}
+
+## Integration Points (IP)
+{table with ID, Integration, Related Files, Impact}
+```
+
+**Step 6: Present for User Approval**
+
+| Scope | Approval Required |
+|-------|-------------------|
+| trivial | No - PM auto-approves |
+| small | No - PM auto-approves |
+| medium | Yes - user approval |
+| large | Yes - user approval |
+| complex | Yes - user approval |
+
+**For trivial/small (auto-approve):**
+
+```markdown
+## Requirements Lock Created
+
+**Feature:** {slug}
+**Scope:** {scope_level}
+
+Requirements lock created and auto-approved (trivial/small scope).
+
+| Category | Count |
+|----------|-------|
+| FR | {N} |
+| TC | {N} |
+| SC | {N} |
+| AC | {N} |
+| IP | {N} |
+
+Proceeding to development.
+```
+
+Update 5-requirements-lock.md frontmatter:
+```yaml
+approved_at: {iso-timestamp}
+approved_by: pm
+frozen: true
+```
+
+**For medium+ (user approval):**
+
+```markdown
+## REQUIREMENTS LOCK REVIEW
+
+**Feature:** {slug}
+**Scope:** {scope_level}
+
+### Synthesized Requirements
+
+| Category | Count |
+|----------|-------|
+| Functional Requirements (FR) | {N} |
+| Technical Constraints (TC) | {N} |
+| Security Constraints (SC) | {N} |
+| Acceptance Criteria (AC) | {N} |
+| Integration Points (IP) | {N} |
+
+### Codebase Constraints Detected
+
+| Category | Count | Examples |
+|----------|-------|----------|
+| Tech Stack | {N} | {examples} |
+| Patterns | {N} | {examples} |
+| Integration Points | {N} | {examples} |
+
+### Decision Needed
+
+Review the full lock document below. **All development work will reference this document.**
+
+- **[APPROVE]** - Lock is accurate, proceed to development
+- **[EDIT]** - I want to modify specific requirements (specify which)
+- **[REJECT]** - Major issues, need to revisit pillar outputs
+
+---
+
+{Full 5-requirements-lock.md content here}
+```
+
+**Step 7: Handle User Response**
+
+| Response | Action |
+|----------|--------|
+| APPROVE | Update frontmatter (approved_at, approved_by: user, frozen: true), route to dev |
+| EDIT | Apply user's edits, re-present for approval |
+| REJECT | Route back to specified agent for revision |
+
+Update STATE.md after approval:
+- phase: synthesis-approved
+- last-agent: pm
+- next-agent: dev
+
+</synthesis_gate>
+
 <output>
 After orchestration:
 
