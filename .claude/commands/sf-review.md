@@ -528,6 +528,110 @@ next-agent: pm
 ```
 </escalation>
 
+**Step 7: Route Fixes** (only if status == NEEDS_FIXES)
+
+<fix_routing>
+After consolidation and before returning to PM, route fixes to Dev/QA.
+
+### 7.1: Read Route Decision
+
+From 8-review-output-v{N}.md frontmatter:
+- dev_issues: [{IDs}]
+- qa_issues: [{IDs}]
+- parallel_safe: {true|false}
+
+### 7.2: Build Fix Context
+
+For Dev issues, create fix context:
+```markdown
+**Fix Request from Review**
+
+Feature: {feature-slug}
+Iteration: {N}
+Review Output: `.specflow/features/{slug}/8-review-output-v{N}.md`
+Priority: CRITICAL first, then MAJOR
+
+## Findings to Address
+
+| ID | Severity | Brief Description |
+|----|----------|-------------------|
+{For each dev_issue:}
+| {ID} | {severity} | {one-line summary} |
+
+## Instructions
+
+1. Read full finding details in `8-review-output-v{N}.md`
+2. Apply fixes following the Fix Instructions section
+3. Write versioned output (`6-dev-output-v{N+1}.md`)
+4. Confirm fixes complete
+
+## Scope
+
+This fix request is LIMITED to the findings listed above. Do not:
+- Refactor unrelated code
+- Add features not in the original spec
+- Change architecture without escalation
+```
+
+For QA issues, create matching fix context (7-qa-output-v{N+1}.md).
+
+### 7.3: Route Based on Independence
+
+**Case 1: No findings** (should not reach Step 7)
+```
+IF dev_issues.length == 0 AND qa_issues.length == 0:
+    # Should have been caught in Step 6 as CLEAN
+    status = CLEAN
+    return to PM
+```
+
+**Case 2: Dev only**
+```
+IF qa_issues.length == 0 AND dev_issues.length > 0:
+    Spawn single Task: /sf:dev with fix context
+    Wait for completion
+    Proceed to re-review (Step 3 with --verify-fixes)
+```
+
+**Case 3: QA only**
+```
+IF dev_issues.length == 0 AND qa_issues.length > 0:
+    Spawn single Task: /sf:qa with fix context
+    Wait for completion
+    Proceed to re-review (Step 3 with --verify-fixes)
+```
+
+**Case 4: Both - Parallel** (parallel_safe == true)
+```
+IF parallel_safe == true:
+    Spawn Task: /sf:dev with dev fix context
+    Spawn Task: /sf:qa with qa fix context
+    # Both run simultaneously
+    Wait for both to complete
+    Proceed to re-review
+```
+
+**Case 5: Both - Sequential** (parallel_safe == false)
+```
+IF parallel_safe == false:
+    # Default: Dev first (code fixes may affect tests)
+    Spawn Task: /sf:dev with fix context
+    Wait for completion
+    Spawn Task: /sf:qa with fix context
+    Wait for completion
+    Proceed to re-review
+```
+
+### 7.4: After Fixes Complete
+
+After Dev/QA complete their fixes:
+1. Read versioned outputs (6-dev-output-v{N+1}.md, 7-qa-output-v{N+1}.md)
+2. Increment iteration counter
+3. Loop back to Step 3 (detection) with --verify-fixes mode
+4. Repeat until CLEAN or max iterations (Step 6 handles escalation)
+
+</fix_routing>
+
 ## Options
 
 - `--skills skill1,skill2` - Manual override: specify skills to run, bypasses detection (Step 3 is skipped entirely)
