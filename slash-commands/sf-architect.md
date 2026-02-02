@@ -13,6 +13,7 @@ Read in order:
 2. `.specflow/features/{slug}/0-triage.md` - Get pillars, agent sequence
 3. `.specflow/features/{slug}/0-scope.md` - **Get `arch_depth:` for output depth**
 4. `.specflow/features/{slug}/1-spec.md` - Requirements to design for
+5. `.specflow/features/{slug}/1.5-codebase-constraints.md` - **Tech stack, patterns, integration points to honor**
 </context>
 
 ### Step 2: Load Persona
