@@ -565,6 +565,162 @@ Review will:
 PM does NOT need to route to Dev/QA for fixes. Review owns the fix loop internally.
 </review_routing>
 
+### Handling Review Status
+
+When Review returns with a status, handle based on the status type.
+
+<status_handling>
+
+**Read Review Output:**
+
+```
+Read .specflow/features/{slug}/8-review-output-v{N}.md
+Extract from frontmatter:
+- status: clean | findings | escalated  # EXACT values from Review
+- route_decision: (if status == findings)
+```
+
+**Status Value Reference:**
+
+Review writes these exact status values in frontmatter (from sf-review.md Step 6.5):
+| Value | Meaning | PM Action |
+|-------|---------|-----------|
+| `clean` | No findings OR all fixed | Proceed to PR |
+| `findings` | Has findings, may loop | Usually Review handles internally |
+| `escalated` | CRITICAL persists OR max iterations | PM evaluates and decides |
+
+Note: If status == `findings`, Review should be handling internally (Step 7 fix loop). PM only sees `clean` or `escalated` as final return states.
+
+#### Status: clean
+
+Review completed with no findings (or all findings resolved).
+
+```markdown
+**Action:**
+1. Log completion in PROGRESS.md:
+   ```
+   ## {timestamp} - PM (/sf:pm)
+
+   **Review Status:** CLEAN
+   **Review Output:** 8-review-output-v{N}.md
+   **Action:** Ready for merge
+
+   All review lenses passed. Feature implementation complete.
+
+   ---
+   ```
+
+2. Update STATE.md:
+   - phase: complete
+   - last-agent: pm
+   - next-agent: (end)
+
+3. Inform user or proceed to PR creation:
+   ```markdown
+   **Review Complete**
+
+   Feature: {slug}
+   Status: CLEAN
+   Review Iterations: {N}
+
+   All lenses passed. Ready for:
+   - [ ] PR creation
+   - [ ] Deployment
+
+   Would you like me to create a PR?
+   ```
+```
+
+#### Status: escalated
+
+Review escalated due to CRITICAL persisting, max iterations, or decision needed.
+
+```markdown
+**Action:**
+1. Read escalation context from 8-review-output-v{N}.md:
+   - Trigger: (CRITICAL_PERSISTS | MAX_ITERATIONS | DECISION_NEEDED)
+   - Issue Summary
+   - Review Recommendation
+   - Options
+
+2. Evaluate if PM can resolve autonomously:
+
+   | Trigger | PM Can Resolve? |
+   |---------|-----------------|
+   | CRITICAL_PERSISTS | Maybe - if clear fix path exists |
+   | MAX_ITERATIONS | Maybe - can override if acceptable risk |
+   | DECISION_NEEDED | Maybe - if within PM authority |
+   | USER_PREFERENCE | No - must escalate to user |
+
+3. IF PM can resolve:
+   ```markdown
+   **PM Decision:**
+
+   Trigger: {trigger}
+   Decision: {APPROVE | OVERRIDE | DEFER}
+   Rationale: {reasoning}
+
+   Recording decision and continuing workflow.
+   ```
+
+   Update 8-review-output-v{N}.md with PM decision
+   Route back to Review with --continue if needed
+   OR mark feature complete if APPROVE
+
+4. IF PM cannot resolve:
+   ```markdown
+   ## ESCALATE TO USER
+
+   **Feature:** {slug}
+   **Review Iteration:** {N}
+   **Trigger:** {escalation trigger}
+
+   ### Issue Summary
+
+   {From Review's escalation}
+
+   ### Review Recommendation
+
+   {From Review}
+
+   ### PM Analysis
+
+   {PM's assessment of options and trade-offs}
+
+   ### Decision Needed
+
+   Options:
+   1. {Option A} - {description}
+   2. {Option B} - {description}
+   3. {Option C} - {description}
+
+   Please choose an option or provide guidance.
+   ```
+
+   Wait for user response
+   Record decision and continue
+```
+
+#### Status: findings (Internal Loop)
+
+Review is handling fixes internally. PM waits.
+
+```markdown
+**Note:** If you see status == `findings`, Review should be handling this internally.
+
+PM does NOT route to Dev/QA directly for review fixes. The fix loop is:
+  Review finds issues -> Review routes to Dev/QA -> Dev/QA fix -> Review verifies -> Repeat
+
+PM only sees final status (`clean` or `escalated`) when Review completes its loop.
+
+If Review returns `findings` status to PM, something is wrong. Check:
+- Did Review complete Step 7 (Route Fixes)?
+- Did the fix loop break prematurely?
+- Is this a Review bug?
+```
+
+</status_handling>
+
 ### Agent State Management
 
 <state_tracking>
