@@ -1,6 +1,26 @@
 ---
 name: sql-optimization-patterns
 description: Master SQL query optimization, indexing strategies, and EXPLAIN analysis to dramatically improve database performance and eliminate slow queries. Use when debugging slow queries, designing database schemas, or optimizing application performance.
+review-capable: true
+triggers:
+  files:
+    - "*.sql"
+    - "**/migrations/**"
+    - "**/prisma/**"
+    - "**/drizzle/**"
+    - "**/db/**"
+    - "schema.prisma"
+  patterns:
+    - "SELECT\\s+.*FROM"
+    - "INSERT\\s+INTO"
+    - "UPDATE\\s+.*SET"
+    - "DELETE\\s+FROM"
+    - "CREATE\\s+TABLE"
+    - "ALTER\\s+TABLE"
+    - "prisma\\."
+    - "drizzle\\."
+    - "\\.query\\("
+    - "\\.execute\\("
 ---
 
 # SQL Optimization Patterns
