@@ -97,6 +97,10 @@ When invoked with a feature description:
    last-agent: pm
    next-agent: analyst
    phase: triage
+   dev_iterations: 0
+   qa_iterations: 0
+   consecutive_minor_drifts: 0
+   total_corrections: 0
    ```
 
 5. **Route to first agent**: Invoke `/sf:analyst` with feature context
@@ -840,6 +844,27 @@ This bypasses detection and runs ONLY the specified skills.
 ```
 
 **Update pending_comms count** in Position section after each COMMS check.
+
+**Drift-related state updates:**
+
+| Trigger | Action |
+|---------|--------|
+| Checkpoint returns ALIGNED | Clear drift_status |
+| Checkpoint returns MINOR_DRIFT | Increment consecutive_minor_drifts |
+| Checkpoint returns MAJOR_DRIFT | Reset consecutive_minor_drifts, increment total_corrections |
+| Agent re-invoked for drift fix | Increment {agent}_iterations |
+| 3 consecutive MINOR_DRIFT | Escalate to user |
+| 5 total_corrections | Pause for user review |
+| User resolves escalation | Reset counters as appropriate |
+
+**drift_status values:**
+
+| Value | Meaning |
+|-------|---------|
+| (empty) | No active drift detection |
+| validating | Running checkpoint evaluation |
+| correcting | Correction file written, awaiting agent fix |
+| escalated | User decision required |
 </state_tracking>
 
 ### Pre-Execution Scope Checkpoint
