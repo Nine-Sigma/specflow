@@ -1,6 +1,29 @@
 ---
 name: e2e-testing-patterns
 description: Master end-to-end testing with Playwright and Cypress to build reliable test suites that catch bugs, improve confidence, and enable fast deployment. Use when implementing E2E tests, debugging flaky tests, or establishing testing standards.
+review-capable: true
+triggers:
+  files:
+    - "*.test.ts"
+    - "*.test.tsx"
+    - "*.test.js"
+    - "*.spec.ts"
+    - "*.spec.tsx"
+    - "*.spec.js"
+    - "**/e2e/**"
+    - "**/tests/**"
+    - "**/__tests__/**"
+    - "playwright.config.*"
+    - "cypress.config.*"
+  patterns:
+    - "describe\\("
+    - "it\\("
+    - "test\\("
+    - "expect\\("
+    - "playwright"
+    - "cypress"
+    - "page\\.goto"
+    - "page\\.click"
 ---
 
 # E2E Testing Patterns
