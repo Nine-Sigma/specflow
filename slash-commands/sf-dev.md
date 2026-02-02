@@ -258,8 +258,9 @@ Write to: .specflow/features/{slug}/{output_file}
    ```
 3. Update `.specflow/STATE.md`:
    - last-agent: dev
-   - next-agent: {from sequence in 0-triage.md}
-   - phase: execution
+   - next-agent: pm
+   - phase: checkpoint
+   - dev_iterations: {N} (if DRIFT_FIX_MODE, increment; else keep current)
 </output>
 
 ## TDD Workflow (Amelia's way)
@@ -374,10 +375,39 @@ Reference: `_bmad/expertise/review/feedback-loop.md` for fix context format.
 
 After completing all output updates:
 
-1. Read `.specflow/features/{slug}/0-triage.md`
-2. Find the "Agent Sequence" line
-3. Find your position (`dev`) and identify the next agent
-4. **Invoke `/sf-{next-agent}`** to continue the workflow
+**IMPORTANT: Dev ALWAYS returns to PM for checkpoint. Do NOT invoke QA directly.**
+
+1. Update STATE.md with:
+   - last-agent: dev
+   - next-agent: pm
+   - phase: checkpoint
+
+2. **End response with structured return format:**
+
+```markdown
+---
+**Execution Complete**
+
+Feature: {slug}
+Agent: dev
+Output: {6-dev-output.md or 6-dev-output-v{N}.md}
+Mode: {STANDARD | DRIFT_FIX}
+
+## Summary
+- FR-01: Implemented (file:line)
+- FR-02: Implemented (file:line)
+{...}
+
+Ready for PM checkpoint.
+---
+```
+
+3. **Do NOT invoke `/sf:qa`** - PM will run checkpoint and route appropriately.
+
+This enables PM to:
+- Validate Dev output against requirements lock
+- Catch drift before QA starts
+- Route corrections back to Dev if needed
 
 ## Returning After Fix Mode
 
