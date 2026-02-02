@@ -36,6 +36,11 @@
       "source": "skill",
       "invoke": "/Users/deanb/dev/ai/specflow/.specflow/skills/sql-optimization-patterns",
       "description": "Master SQL query optimization, indexing strategies, and EXPLAIN analysis to dramatically improve database performance and eliminate slow queries. Use when debugging slow queries, designing database schemas, or optimizing application performance."
+    },
+    "typescript-review": {
+      "source": "skill",
+      "invoke": "/Users/deanb/dev/ai/specflow/.specflow/skills/typescript-review",
+      "description": "Review TypeScript and JavaScript code changes for compliance with Metabase coding standards, style violations, and code quality issues. Use when reviewing pull requests or diffs containing TypeScript/JavaScript code."
     }
   },
   "_docs": {
