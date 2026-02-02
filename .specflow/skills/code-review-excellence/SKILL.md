@@ -1,6 +1,24 @@
 ---
 name: code-review-excellence
 description: Master effective code review practices to provide constructive feedback, catch bugs early, and foster knowledge sharing while maintaining team morale. Use when reviewing pull requests, establishing review standards, or mentoring developers.
+review-capable: true
+scope-minimum: small
+triggers:
+  files:
+    - "*.ts"
+    - "*.tsx"
+    - "*.js"
+    - "*.jsx"
+    - "*.py"
+    - "*.go"
+    - "*.rs"
+    - "*.java"
+    - "src/**/*"
+  patterns:
+    - "function\\s+"
+    - "class\\s+"
+    - "const\\s+\\w+\\s*="
+    - "export\\s+(default\\s+)?"
 ---
 
 # Code Review Excellence
