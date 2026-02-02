@@ -251,8 +251,9 @@ Write to: .specflow/features/{slug}/{output_file}
    ```
 3. Update `.specflow/STATE.md`:
    - last-agent: qa
-   - next-agent: pm-review
-   - phase: review
+   - next-agent: pm
+   - phase: checkpoint
+   - qa_iterations: {N} (if DRIFT_FIX_MODE, increment; else keep current)
 </output>
 
 ## Output Format (7-qa-output.md)
@@ -370,11 +371,44 @@ Source code changes require handoff to Dev.
 
 After completing all output updates:
 
-**Invoke `/sf-pm --review`** to trigger final PM review of all outputs.
+**IMPORTANT: QA ALWAYS returns to PM for checkpoint. Do NOT invoke PM review directly.**
 
-QA is the final execution agent. PM will review and either:
-- Mark feature as complete
-- Send back for revision
+1. Update STATE.md with:
+   - last-agent: qa
+   - next-agent: pm
+   - phase: checkpoint
+
+2. **End response with structured return format:**
+
+```markdown
+---
+**Execution Complete**
+
+Feature: {slug}
+Agent: qa
+Output: {7-qa-output.md or 7-qa-output-v{N}.md}
+Mode: {STANDARD | DRIFT_FIX}
+
+## Summary
+- AC-01: Tested (test file:line)
+- AC-02: Tested (test file:line)
+{...}
+
+## Test Results
+- Unit: X pass / Y total
+- Integration: X pass / Y total
+- E2E: X pass / Y total
+
+Ready for PM checkpoint.
+---
+```
+
+3. **Do NOT invoke `/sf:pm --review`** - PM will run checkpoint and route appropriately.
+
+This enables PM to:
+- Validate QA output against requirements lock
+- Catch test drift before Review starts
+- Route corrections back to QA (TEST_DRIFT) or Dev (CODE_ISSUE) if needed
 
 ## Returning After Fix Mode
 
