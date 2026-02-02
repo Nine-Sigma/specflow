@@ -65,6 +65,69 @@ Detect new imports that create dependency cycles.
 - Indirect cycles through intermediate modules
 - Runtime initialization order issues
 
+## Dependency Tracing
+
+Find all callers of modified exported functions to identify impact scope.
+
+### Step 1: Extract Exports from Modified Files
+
+For each modified file, identify exported symbols using Grep:
+
+**TypeScript/JavaScript:**
+```
+export (function|const|class|interface|type|enum) {name}
+export default (function|class|const)
+export { name1, name2 }
+export * from
+module.exports
+```
+
+**Python:**
+```
+from {module} import
+__all__ = [...]
+def {Name}  # PascalCase = likely public
+class {Name}
+```
+
+### Step 2: Find Callers of Exported Symbols
+
+For each exported symbol, find files that import and use it:
+
+**Find importers (Grep pattern):**
+```
+import .* from ['"].*{modulePath}['"]
+import { {symbolName} } from
+require(['"].*{modulePath}['"])
+from {modulePath} import {symbolName}
+```
+
+**Find usages in importers (Grep pattern):**
+```
+{symbolName}\s*\(              # Function call
+{symbolName}\.                 # Property access
+<{symbolName}                  # JSX component
+{symbolName}:                  # Type annotation
+```
+
+### Step 3: Build Caller List
+
+Output format:
+```markdown
+### Callers of `{symbolName}` from `{filePath}`
+
+| File | Line | Usage Type |
+|------|------|------------|
+| src/pages/profile.tsx | 23 | Function call |
+| src/services/auth.ts | 156 | Property access |
+
+Total: {N} callers in {M} files
+```
+
+**Limits:**
+- Max 20 callers listed per symbol (summarize if more)
+- Depth limit: Direct callers only (re-exports noted separately)
+
 ## Output Status
 
 After analysis, report one of:
