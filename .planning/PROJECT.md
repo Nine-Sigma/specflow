@@ -123,6 +123,20 @@ Core SpecFlow is already portable:
 - **No custom commands**: Use BMAD's existing slash commands only
 - **Portability**: Use AGENTS.md as primary instruction file, symlink for Claude
 
+## Recent Milestone: v2.2 Multi-Lens Review System (SHIPPED 2026-02-02)
+
+**Delivered:** Dynamic review layer where `/sf:review` discovers installed skills, analyzes code to determine relevance, and spawns only matching skills in parallel with fresh context.
+
+**Key features shipped:**
+- `/sf:review` as dynamic skill orchestrator (not hardcoded lenses)
+- Content-aware skill selection via triggers in SKILL.md frontmatter
+- Parallel Dev/QA fix routing when issues are independent
+- VERIFY_FIXES mode for focused re-review (iteration 2+)
+- PM integration with status handling (clean/findings/escalated)
+- 3 external skills installed (code-review-excellence, e2e-testing-patterns, sql-optimization-patterns)
+
+**Stats:** 5 phases, 14 plans, 38 requirements, 1 day
+
 ## Key Decisions
 
 | Decision | Rationale | Outcome |
@@ -131,6 +145,10 @@ Core SpecFlow is already portable:
 | Skills System required | Provides domain-specific knowledge without custom agents | — Pending |
 | AGENTS.md as primary instruction file | Industry standard, enables v2 LLM-agnostic support | — Pending |
 | Symlink CLAUDE.md → AGENTS.md | Backward compatibility while using universal format | — Pending |
+| Expertise layer as autonomy adapter | BMAD methodology minus interactivity for autonomous agents | ✓ Good |
+| Dynamic skill discovery | Skills declare triggers, Review matches to content | ✓ Good |
+| Parallel Dev/QA fixes | Independent issues run in parallel, dependent sequential | ✓ Good |
+| VERIFY_FIXES mode | Re-review only checks previous findings, not new issues | ✓ Good |
 
 ---
-*Last updated: 2026-01-26 after initialization*
+*Last updated: 2026-02-02 after v2.2 milestone complete*
