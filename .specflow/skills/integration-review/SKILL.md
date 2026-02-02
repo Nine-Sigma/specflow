@@ -189,23 +189,106 @@ Detect when function signatures change in ways that break callers.
 - Generic constraints not deeply analyzed
 - Overloads: each signature compared independently
 
-## Output Status
+## Circular Import Detection
 
-After analysis, report one of:
+Detect when new imports create circular dependencies.
 
-| Status | Meaning |
-|--------|---------|
-| SAFE | No breaking changes or integration risks detected |
-| RISKS_IDENTIFIED | Potential issues found that need review |
-| BREAKING | Definite breaking changes that will affect callers |
+### Detection Algorithm
+
+1. **For each new import added in modified files:**
+   - Extract imported module path
+   - Check if that module imports back to current file
+   - Check transitive imports (A -> B -> C -> A) with depth limit of 5
+
+2. **Using Grep to trace:**
+   ```
+   # In modified file (A), find new import of B
+   import .* from ['"].*{moduleB}['"]
+
+   # In B, check for import of A
+   import .* from ['"].*{moduleA}['"]
+   ```
+
+3. **Severity classification:**
+   - **HIGH:** Value imports creating runtime cycle
+   - **MEDIUM:** Mixed value and type imports
+   - **LOW:** Type-only imports (`import type`) - usually safe
+
+### Output Format
+
+```markdown
+### Circular Import: `{fileA}` <-> `{fileB}`
+
+**Severity:** HIGH | MEDIUM | LOW
+
+**Cycle Path:**
+1. `src/utils/index.ts` imports `src/helpers/format.ts`
+2. `src/helpers/format.ts` imports `src/utils/index.ts`
+
+**Risk:** May cause undefined at runtime depending on load order
+
+**Recommendation:**
+- Extract shared code to third module
+- Convert to type-only import if possible
+- Verify load order doesn't cause issues
+```
+
+### Limitations
+
+- Dynamic imports (`import()`) not traced
+- Re-exports via barrel files may obscure cycles
+- Monorepo workspace imports not resolved
+
+---
+
+## Output Format
+
+The skill produces a findings document for sf-review consolidation.
+
+### Status Determination
+
+| Findings | Status |
+|----------|--------|
+| No issues found | SAFE |
+| Warnings only (LOW severity circulars, indirect callers) | RISKS_IDENTIFIED |
+| Any BREAKING interface change | BREAKING |
+| Any HIGH severity circular | BREAKING |
+
+### Full Output Template
+
+```markdown
+# Integration Review Findings
+
+## Status: SAFE | RISKS_IDENTIFIED | BREAKING
+
+## Summary
+
+{1-2 sentences: X exports analyzed, Y callers found, Z interface changes detected}
+
+## Breaking Changes
+
+| ID | Location | Issue | Callers Affected |
+|----|----------|-------|------------------|
+| B-01 | src/api/users.ts:45 | Parameter removed from `getUser()` | 3 files |
+
+{For each breaking change, include detailed section}
+
+## Risks Identified
+
+| ID | Location | Issue | Severity |
+|----|----------|-------|----------|
+| R-01 | src/utils/index.ts | Circular import with src/helpers | MEDIUM |
+
+{For each risk, include detailed section}
+
+## Safe Changes
+
+{List of analyzed exports that are safe - no caller impact}
 
 ## Route Decision
 
-All findings from integration review route to **Dev** (not QA).
+**Route to:** Dev
+**Reason:** Integration issues are code issues, not test issues
 
-Integration issues are code structure problems that Dev must fix. QA cannot test around broken imports or circular dependencies.
-
-**Severity mapping:**
-- CRITICAL: Breaking change with known callers, circular import causing runtime error
-- MAJOR: Potential breaking change, possible cycle that may cause issues
-- MINOR: Style issues in exports, unnecessary re-exports
+{All integration review findings route to Dev, never QA}
+```
