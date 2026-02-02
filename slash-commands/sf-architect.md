@@ -37,6 +37,35 @@ Read and apply methodology from:
 - `_bmad/expertise/scoping/scope-levels.md` - Scope depth definitions
 </expertise>
 
+### Step 4: Extract Codebase Constraints
+
+<codebase_constraints>
+Read `1.5-codebase-constraints.md` and extract:
+
+**Technical Constraints (TC):**
+- Tech stack requirements (must use X, cannot use Y)
+- Pattern requirements (follow existing component/API/service patterns)
+- Configuration constraints (strict mode, module settings)
+
+**Integration Points (IP):**
+- Existing services to integrate with (auth, email, cache)
+- Shared utilities to reuse
+- Middleware that applies
+
+**Document these in your output under "Codebase Constraints Honored":**
+
+| Source | Constraint | How Honored |
+|--------|------------|-------------|
+| TC-01 from 1.5 | Use TypeScript strict mode | All new types are strict-compliant |
+| TC-02 from 1.5 | Follow service class pattern | Created AuthTokenService class |
+| IP-01 from 1.5 | Integrate with email service | Uses EmailProvider interface |
+
+**If codebase constraints conflict with proposed architecture:**
+1. Document the conflict
+2. Propose resolution or alternative
+3. Flag as uncertainty for PM review
+</codebase_constraints>
+
 ## Scope-Limited Output
 
 Your architecture output MUST match `arch_depth:` from `0-scope.md`.
