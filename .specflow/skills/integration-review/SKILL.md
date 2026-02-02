@@ -128,6 +128,67 @@ Total: {N} callers in {M} files
 - Max 20 callers listed per symbol (summarize if more)
 - Depth limit: Direct callers only (re-exports noted separately)
 
+## Interface Change Detection
+
+Detect when function signatures change in ways that break callers.
+
+### Breaking Change Rules
+
+**BREAKING - Must fix before merge:**
+
+| Change Type | Before | After | Why Breaking |
+|-------------|--------|-------|--------------|
+| Required param added | `foo(a: string)` | `foo(a: string, b: number)` | Existing callers pass wrong arity |
+| Param removed | `foo(a, b)` | `foo(a)` | Existing callers pass extra arg |
+| Return type changed | `foo(): string` | `foo(): number` | Callers expect string |
+| Export removed | `export function foo` | `function foo` (no export) | Callers can't import |
+| Renamed export | `export { foo }` | `export { bar }` | Callers import old name |
+
+**SAFE - No caller impact:**
+
+| Change Type | Before | After | Why Safe |
+|-------------|--------|-------|----------|
+| Optional param added | `foo(a: string)` | `foo(a: string, b?: number)` | Existing calls still valid |
+| Param default added | `foo(a, b)` | `foo(a, b = 10)` | Existing calls still valid |
+| Implementation change | `return a + b` | `return a + b + c` | Signature unchanged |
+| New export added | (nothing) | `export function bar` | New, no existing callers |
+
+### Detection Algorithm
+
+1. **For each modified file with exports:**
+   - Extract old signature (from git diff `---` lines)
+   - Extract new signature (from git diff `+++` lines)
+   - Compare: params (count, types, optionality), return type, export status
+
+2. **Flag as BREAKING if:**
+   - Required parameter count increased
+   - Required parameter count decreased
+   - Parameter type changed (strict: same name, different type)
+   - Return type changed
+   - Export statement removed
+
+3. **Output format:**
+```markdown
+### Interface Change: `{functionName}` in `{filePath}`
+
+**Status:** BREAKING | SAFE
+
+**Change:**
+- Before: `function foo(a: string): number`
+- After: `function foo(a: string, b: number): number`
+
+**Impact:** Required parameter added - {N} callers will fail
+
+**Callers to update:**
+{List from Dependency Tracing}
+```
+
+### Limitations
+
+- Type inference not performed (compare literal types only)
+- Generic constraints not deeply analyzed
+- Overloads: each signature compared independently
+
 ## Output Status
 
 After analysis, report one of:
