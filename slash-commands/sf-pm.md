@@ -721,6 +721,58 @@ If Review returns `findings` status to PM, something is wrong. Check:
 
 </status_handling>
 
+### Targeted Re-Review
+
+PM can invoke Review with specific skills when needed:
+
+<targeted_review>
+**Use cases:**
+- Spot-checking a specific concern after external changes
+- Re-reviewing security after a hotfix
+- PM override of skill selection for focused check
+
+**Invocation:**
+```bash
+/sf:review --skills skill1,skill2
+```
+
+This bypasses detection and runs ONLY the specified skills.
+
+**Available skills:**
+- `code-review-excellence` - Code quality and patterns
+- `e2e-testing-patterns` - End-to-end test coverage
+- `sql-optimization-patterns` - SQL and database queries
+- `security` - Security review (internal)
+- `architecture` - Architecture review (internal)
+
+**Example scenarios:**
+
+1. **After hotfix:** Security spot-check
+   ```
+   /sf:review --skills security
+   ```
+
+2. **Performance concern:** SQL and code review
+   ```
+   /sf:review --skills sql-optimization-patterns,code-review-excellence
+   ```
+
+3. **Test confidence:** E2E patterns check
+   ```
+   /sf:review --skills e2e-testing-patterns
+   ```
+
+**Targeted review output:**
+- Writes to next version (8-review-output-v{N+1}.md)
+- Only includes findings from specified skills
+- Follows same status handling (clean/escalated)
+
+**When NOT to use:**
+- For initial review (let detection choose skills)
+- When unsure which skills are relevant
+- As a replacement for full review on new code
+</targeted_review>
+
 ### Agent State Management
 
 <state_tracking>
@@ -857,6 +909,7 @@ After orchestration:
 - `--pillars <list>` - Override pillar selection (e.g., `--pillars security,testing`)
 - `--no-pillars` - Skip security and cost analysis entirely
 - `--info` - Show triage decision only, don't execute
+- `--review-skills <skills>` - Invoke targeted review with specific skills (e.g., `--review-skills security,code-review-excellence`)
 
 ## Example Sessions
 
