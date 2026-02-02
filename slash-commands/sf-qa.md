@@ -354,6 +354,89 @@ Content follows standard format but focuses on test fixes applied:
 
 Reference: `_bmad/expertise/review/feedback-loop.md` for fix context format.
 
+## Drift Fix Mode Output Format (7-qa-output-v{N}.md)
+
+When in DRIFT_FIX_MODE, use this frontmatter schema:
+
+```yaml
+---
+agent: qa
+created: {iso-timestamp}
+mode: drift-fix
+iteration: {version}
+correction_file: drift/correction-qa-{N}.md
+depends_on: ["5-requirements-lock.md", "drift/correction-qa-{N}.md"]
+status: draft
+---
+```
+
+Content focuses on addressing drift correction:
+
+```markdown
+# {Feature Name} - QA Drift Fix v{version}
+
+## Summary
+
+{Summary of test drift fixes applied - Quinn's practical style}
+
+## Correction Addressed
+
+From: `drift/correction-qa-{N}.md`
+
+| Item | Status | How Fixed |
+|------|--------|-----------|
+| AC-01 (missing coverage) | FIXED | Added test in {file} |
+| Wrong scenario (X) | FIXED | Updated test to match AC |
+
+## Test Files Modified
+
+| File | Change |
+|------|--------|
+| {test file path} | {description} |
+
+## AC Coverage (Updated)
+
+| AC | Test | Status |
+|----|------|--------|
+| AC-01 | {test name} | PASS |
+| AC-02 | {test name} | PASS |
+
+## Verification Notes
+
+{How to verify test drift is resolved}
+```
+
+**Returning After Drift Fix:**
+
+End response with structured return format (same as standard, but with mode indicator):
+
+```markdown
+---
+**Execution Complete**
+
+Feature: {slug}
+Agent: qa
+Output: 7-qa-output-v{N}.md
+Mode: DRIFT_FIX
+Correction: drift/correction-qa-{M}.md
+
+## Corrections Applied
+
+| Item | Status |
+|------|--------|
+| AC-01 (missing coverage) | FIXED |
+| Wrong scenario | UPDATED |
+
+## Test Results (Updated)
+- Unit: X pass / Y total
+- Coverage: X%
+
+Ready for PM checkpoint.
+---
+```
+
+**NOTE:** In DRIFT_FIX mode, QA returns to PM for re-checkpoint, NOT to Review. PM will verify the correction was successful before routing forward.
+
 ## Scope Enforcement (Quinn's rule)
 
 QA can only modify test files:
