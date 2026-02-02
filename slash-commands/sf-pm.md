@@ -310,8 +310,10 @@ architect -> [security?] -> [cost?] -> tea -> PM SYNTHESIS GATE -> dev -> qa
 | Test Plan | tea | 5-test-plan.md | PM |
 | **Synthesis Gate** | PM | 5-requirements-lock.md | User approval |
 | User Approval | User | APPROVE/EDIT/REJECT | dev |
-| Development | dev | 6-dev-output.md | qa |
-| QA | qa | 7-qa-output.md | PM -> Review |
+| Development | dev | 6-dev-output.md | PM (checkpoint) |
+| PM Checkpoint (Dev) | PM | drift/checkpoint-dev.md | qa (if aligned) or dev (if drift) |
+| QA | qa | 7-qa-output.md | PM (checkpoint) |
+| PM Checkpoint (QA) | PM | drift/checkpoint-qa.md | review (if aligned) or qa/dev (if drift) |
 
 **PM checkpoints before synthesis:**
 - After scope (0-scope.md): Approve scope level
@@ -534,9 +536,24 @@ After user provides decision:
 4. Resume agent execution
 </conflict_protocol>
 
-### After QA Completes - Route to Review
+### After Dev or QA Completes - Run Checkpoint
 
-When QA returns control to PM (STATE.md shows `last-agent: qa`):
+When Dev or QA returns control to PM:
+
+1. **Check STATE.md for phase:**
+   - `phase: checkpoint` indicates agent completed, checkpoint needed
+   - `last-agent: dev` or `last-agent: qa` indicates which checkpoint to run
+
+2. **Run drift checkpoint** per protocol above (see Drift Detection Checkpoint Protocol)
+
+3. **Route based on checkpoint result:**
+   - If Dev checkpoint passed: Update STATE.md, invoke `/sf:qa`
+   - If QA checkpoint passed: Update STATE.md, invoke `/sf:review`
+   - If checkpoint failed: Handle per severity (see Plan 23-03)
+
+### After QA Checkpoint Passes - Route to Review
+
+When QA checkpoint passes (severity = ALIGNED or MINOR_DRIFT):
 
 <review_routing>
 **1. Check if this is first QA completion or fix iteration:**
@@ -1227,6 +1244,7 @@ After orchestration:
 |--------|---------|
 | idle | No feature in progress |
 | in-progress | Feature being worked on |
+| checkpoint | Running drift validation |
 | completed | All outputs approved, feature done |
 | blocked | Awaiting user input |
 
