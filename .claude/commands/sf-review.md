@@ -753,6 +753,70 @@ After review:
 3. Return to PM with status: CLEAN | NEEDS_FIXES | ESCALATED
 </output>
 
+## Complete Review Flow
+
+The full review cycle with fix loop:
+
+```
+Initial Review (iteration 1):
+  Step 1: Load Context
+  Step 2: Check Manual Override
+  Step 3: Detect Relevant Skills
+  Step 4: Spawn Skills in Parallel
+  Step 5: Consolidate Findings
+  Step 5.5: Route Categorization
+  Step 6: Check Escalation
+    IF CLEAN: Return to PM
+    IF ESCALATED: Return to PM with escalation
+    IF NEEDS_FIXES: Continue to Step 7
+
+Fix Loop (iterations 2-3):
+  Step 7: Route Fixes
+    IF parallel_safe: Spawn Dev + QA in parallel
+    ELSE: Spawn Dev, then QA sequentially
+    Wait for fixes complete
+
+  Re-Review (iteration N+1):
+  Step 3: VERIFY_FIXES mode (only skills with findings)
+  Step 4: Spawn verification Tasks
+  Step 5: Consolidate verification results
+  Step 6: Check Escalation
+    IF CLEAN: Return to PM
+    IF ESCALATED (CRITICAL persists OR max iterations): Return to PM
+    IF NEEDS_FIXES AND iteration < 3: Loop back to Step 7
+```
+
+### Iteration Limits
+
+| Iteration | What Happens |
+|-----------|--------------|
+| 1 | Full review, findings written to v1 |
+| 2 | Focused re-review after fixes, v2 |
+| 3 | Final re-review, v3 OR escalate |
+
+After iteration 3 with findings: ESCALATE to PM (max iterations reached).
+
+### Status Meanings
+
+| Status | Definition | Next Action |
+|--------|------------|-------------|
+| CLEAN | No findings OR all previous findings FIXED | Return to PM, ready for merge |
+| NEEDS_FIXES | Has findings, iteration < 3 | Route to Step 7 (fix loop) |
+| ESCALATED | CRITICAL after iteration 2 OR iteration >= 3 with findings | Return to PM for decision |
+
+### Output Versioning (REV-05)
+
+Review writes versioned outputs to track iteration history:
+- `8-review-output-v1.md` - Initial review findings
+- `8-review-output-v2.md` - After first fix iteration
+- `8-review-output-v3.md` - After second fix iteration (or escalate)
+
+Each version includes:
+- status in frontmatter (clean | findings | escalated)
+- iteration number
+- skills_invoked list
+- Finding history reference
+
 ## Related
 
 - `/sf:pm` - PM orchestrator (routes review outputs)
