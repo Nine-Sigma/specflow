@@ -189,30 +189,99 @@ Spawn ALL skill Tasks at once (do not wait between them). The Task tool will exe
 
 After all Tasks complete, collect their outputs for consolidation (Step 5).
 
-### Re-Review Mode (iteration > 1)
+### Re-Review Mode (iteration > 1 OR --verify-fixes)
 
-When `--verify-fixes` is set or iteration > 1:
+When in re-review mode, the review is FOCUSED verification only.
+
+<verify_fixes_mode>
+**Trigger:** iteration > 1 OR --verify-fixes flag
+
+**Purpose:** Verify that specific previous findings are resolved. NOT a new full review.
+
+**Step A: Load Previous Findings**
 
 1. Read previous `8-review-output-v{N-1}.md`
 2. Extract skills_invoked from frontmatter
-3. Only spawn skills that had findings (status != clean for that skill)
-4. Pass additional context to each Task:
+3. Extract finding IDs that were NOT clean
+4. Filter to only skills that had findings
+
+**Step B: Spawn Only Relevant Skills**
+
+For each skill in skills_invoked WHERE that skill had findings:
+1. Check if skill had CRITICAL, MAJOR, or MINOR findings in v{N-1}
+2. If skill was clean in v{N-1}: DO NOT spawn (skip this skill)
+3. If skill had findings: Spawn with VERIFY_FIXES context
+
+Skills that were clean in previous iteration are NOT re-run. This focuses re-review on skills that actually found issues.
+
+**Step C: Pass Verification Context to Each Skill**
+
+When spawning skill Tasks in VERIFY_FIXES mode:
 
 ```markdown
+Task: {skill.name} - Verify Fixes
+
+<verification_context>
+## Mode: VERIFY_FIXES
+
+You are verifying that specific findings have been resolved.
+
 ## Previous Findings to Verify
 
-{List finding IDs from previous iteration for this skill}
+| ID | Severity | Original Issue |
+|----|----------|----------------|
+{For each finding from this skill in v{N-1}:}
+| {ID} | {severity} | {brief description} |
 
-Mode: VERIFY_FIXES
-- Only check that specific findings above are resolved
-- Do NOT look for new issues (unless CRITICAL severity discovered)
-- Mark each previous finding as: FIXED | PARTIAL | UNRESOLVED
+## Verification Instructions
+
+For each finding above:
+1. Check if the specific issue has been resolved
+2. Mark as: FIXED | PARTIAL | UNRESOLVED
+3. If FIXED: Explain how it was fixed
+4. If PARTIAL: Explain what remains
+5. If UNRESOLVED: Explain what's still wrong
+
+## Scope Restrictions
+
+- ONLY verify the findings listed above
+- Do NOT look for new issues
+- Do NOT review files outside the fix scope
+- EXCEPTION: If you discover a new CRITICAL issue while verifying, report it and note "NEW_CRITICAL_DISCOVERED"
+
+## Output Format
+
+### {skill.name} Verification Results
+
+| ID | Status | Notes |
+|----|--------|-------|
+| C-01 | FIXED | Parameterized query implemented |
+| M-01 | PARTIAL | Error handling added but missing retry |
+| M-02 | UNRESOLVED | Issue still present |
+
+{If new CRITICAL discovered:}
+### New Critical Finding
+
+| ID | Location | Issue |
+|----|----------|-------|
+| C-NEW | file:line | {description} |
+
+**ESCALATE:** New CRITICAL found during verification.
+</verification_context>
 ```
 
-**Re-review filtering:**
-- If a skill had no findings in v{N-1}, do NOT spawn it again
-- This focuses re-review on skills that actually found issues
-- Reduces unnecessary work and context bloat
+**Step D: Handle Verification Results**
+
+After skills return verification results:
+
+1. Consolidate into 8-review-output-v{N}.md
+2. Check for all FIXED: status = CLEAN
+3. Check for any PARTIAL or UNRESOLVED: status = findings (loop continues)
+4. Check for NEW_CRITICAL_DISCOVERED: status = ESCALATED (immediate PM escalation per REV-04)
+
+</verify_fixes_mode>
+
+**Important:** Re-review does NOT discover new issues. It verifies specific fixes. If you need a full new review, invoke `/sf:review` without --verify-fixes.
 
 </parallel_spawning>
 
