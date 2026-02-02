@@ -511,6 +511,60 @@ After user provides decision:
 4. Resume agent execution
 </conflict_protocol>
 
+### After QA Completes - Route to Review
+
+When QA returns control to PM (STATE.md shows `last-agent: qa`):
+
+<review_routing>
+**1. Check if this is first QA completion or fix iteration:**
+
+```
+Read .specflow/features/{slug}/ directory
+IF only 7-qa-output.md exists:
+    first_time = true
+    iteration = 1
+ELSE IF 7-qa-output-v{N}.md exists:
+    first_time = false
+    # Find highest version number
+    iteration = max(N) - 1  # Iteration matches review version
+```
+
+**2. Route to Review:**
+
+```
+IF first_time:
+    Invoke /sf:review
+ELSE:
+    Invoke /sf:review --iteration {iteration}
+```
+
+**3. Log Review Invocation:**
+
+Append to PROGRESS.md:
+```
+## {timestamp} - PM (/sf:pm)
+
+**Action:** Routing to Review
+**QA Output:** {7-qa-output.md or 7-qa-output-v{N}.md}
+**Iteration:** {N}
+
+Awaiting review results.
+
+---
+```
+
+**4. Wait for Review to Complete:**
+
+Review will:
+- Run skill detection (or VERIFY_FIXES if iteration > 1)
+- Spawn skills in parallel
+- Consolidate findings
+- Route fixes internally if NEEDS_FIXES
+- Return with final status when loop completes OR escalates
+
+PM does NOT need to route to Dev/QA for fixes. Review owns the fix loop internally.
+</review_routing>
+
 ### Agent State Management
 
 <state_tracking>
