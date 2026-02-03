@@ -159,11 +159,15 @@ Read `_bmad/agents/{agent}.agent.yaml` and adopt:
 ### Step 3: Load Expertise
 
 <expertise>
-Read and apply methodology from two sources:
+Read methodology from two source types:
 
-**Internal expertise (always loaded):**
-- `_bmad/expertise/{domain}/index.md` - Overview and scope-based depth
-- `_bmad/expertise/{domain}/{specific}.md` - Domain-specific methodology
+**BMAD Source (reference pattern):**
+- `_bmad/{source-path}.md#{methodology-id}` - BMAD methodology blocks
+- Apply loading rules: find ID, read block, skip orchestration
+- ERROR if methodology ID not found
+
+**SpecFlow-Specific (local files):**
+- `_bmad/expertise/{domain}/*.md` - SpecFlow-created content (synthesis, review, validation)
 - `_bmad/expertise/scoping/scope-levels.md` - Scope depth definitions
 
 **External skills (when applicable):**
@@ -171,20 +175,20 @@ Read and apply methodology from two sources:
 - Skill provides specialized techniques beyond baseline methodology
 
 **Loading order and precedence:**
-1. Internal expertise first (establishes baseline methodology)
-2. External skills layer on top (adds specialized techniques)
-3. Conflict resolution: explicit instructions > internal > external
-4. If skill not installed, use internal expertise only
+1. BMAD source methodology first (establishes domain expertise)
+2. SpecFlow expertise second (adds project-specific rules)
+3. External skills layer on top (adds specialized techniques)
+4. Conflict resolution: explicit instructions > BMAD source > SpecFlow > external
 
-**Example for review lens:**
+**Example for security agent:**
 ```markdown
-# Internal (always)
-- _bmad/expertise/review/index.md
-- _bmad/expertise/review/output-format.md
-- _bmad/expertise/review/feedback-loop.md
+# BMAD source (domain methodology)
+- _bmad/expansion-packs/cloud-architecture/agents/security-reviewer.md#stride-framework
+- _bmad/expansion-packs/cloud-architecture/agents/security-reviewer.md#compliance-frameworks
+- _bmad/expansion-packs/cloud-architecture/agents/security-reviewer.md#security-controls
 
-# External (if installed)
-- .specflow/skills/code-review-excellence/SKILL.md
+# SpecFlow expertise (project rules)
+- _bmad/expertise/scoping/scope-levels.md
 ```
 </expertise>
 
