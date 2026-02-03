@@ -1,6 +1,6 @@
 # Validation Expertise
 
-<!-- Source: _bmad/workflows/3-solutioning/check-implementation-readiness/ -->
+<!-- Source: SpecFlow validation methodology -->
 
 Extracted validation methodology for autonomous agent use. Agents read this content, apply it to their validation tasks, and return outputs to PM for review.
 
@@ -26,8 +26,8 @@ Ensure that PRD, Architecture, Epics, and Stories are complete and aligned befor
 
 ```markdown
 Load and apply:
-- `_bmad/expertise/validation/test-criteria.md` - Test quality standards
-- `_bmad/expertise/validation/traceability-matrix.md` - Ensure tests cover requirements
+- `.specflow-lib/expertise/validation/test-criteria.md` - Test quality standards
+- `.specflow-lib/expertise/validation/traceability-matrix.md` - Ensure tests cover requirements
 ```
 
 TEA uses test-criteria.md to:
@@ -39,8 +39,8 @@ TEA uses test-criteria.md to:
 
 ```markdown
 Load and apply:
-- `_bmad/expertise/validation/test-criteria.md` - Execution quality standards
-- `_bmad/expertise/validation/readiness-checklist.md` - Pre-execution validation
+- `.specflow-lib/expertise/validation/test-criteria.md` - Execution quality standards
+- `.specflow-lib/expertise/validation/readiness-checklist.md` - Pre-execution validation
 ```
 
 QA uses test-criteria.md to:
@@ -52,8 +52,8 @@ QA uses test-criteria.md to:
 
 ```markdown
 Load and apply:
-- `_bmad/expertise/validation/readiness-checklist.md` - Full readiness assessment
-- `_bmad/expertise/validation/traceability-matrix.md` - Coverage validation
+- `.specflow-lib/expertise/validation/readiness-checklist.md` - Full readiness assessment
+- `.specflow-lib/expertise/validation/traceability-matrix.md` - Coverage validation
 ```
 
 PM uses readiness-checklist.md to:

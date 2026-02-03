@@ -53,17 +53,17 @@ TEA (specs) -> PM (validate) -> Dev (implement + unit tests) -> PM (review)
 
 ```markdown
 Load and apply:
-- `_bmad/expertise/testing/test-specification.md` - How to write test specs
-- `_bmad/expertise/testing/traceability-matrix.md` - AC-to-test mapping
-- `_bmad/expertise/validation/test-criteria.md` - Scope-based test depth
+- `.specflow-lib/expertise/testing/test-specification.md` - How to write test specs
+- `.specflow-lib/expertise/testing/traceability-matrix.md` - AC-to-test mapping
+- `.specflow-lib/expertise/validation/test-criteria.md` - Scope-based test depth
 ```
 
 ### QA (Quality Assurance)
 
 ```markdown
 Load and apply:
-- `_bmad/expertise/testing/test-specification.md` - Read specs to implement
-- `_bmad/expertise/validation/test-criteria.md` - Test quality standards
+- `.specflow-lib/expertise/testing/test-specification.md` - Read specs to implement
+- `.specflow-lib/expertise/validation/test-criteria.md` - Test quality standards
 ```
 
 ## Scope-Based Application

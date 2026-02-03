@@ -1,6 +1,6 @@
 # Architecture Validation Checklist
 
-<!-- Source: _bmad/workflows/3-solutioning/create-architecture/steps/step-07-validation.md -->
+<!-- Source: SpecFlow architecture methodology -->
 
 Use after architecture document is complete to verify quality and completeness. This ensures the architecture is coherent, covers all requirements, and is ready for implementation.
 

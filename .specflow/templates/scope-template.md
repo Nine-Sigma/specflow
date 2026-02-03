@@ -15,9 +15,9 @@ arch_depth: ${none|light|standard|full|deep}
 
 <!--
 Methodology Reference:
-- Scope levels: _bmad/expertise/scoping/scope-levels.md
-- MVP strategies: _bmad/expertise/scoping/mvp-strategies.md
-- Risk assessment: _bmad/expertise/scoping/risk-assessment.md
+- Scope levels: .specflow-lib/expertise/scoping/scope-levels.md
+- MVP strategies: .specflow-lib/expertise/scoping/mvp-strategies.md
+- Risk assessment: .specflow-lib/expertise/scoping/risk-assessment.md
 -->
 
 ## Original Request
@@ -38,7 +38,7 @@ ${Quote the original request from 0-triage.md}
 
 ### Signals Detected
 
-<!-- Check signals that apply from _bmad/expertise/scoping/scope-levels.md -->
+<!-- Check signals that apply from .specflow-lib/expertise/scoping/scope-levels.md -->
 
 - [x] ${signal that applies}
 - [ ] ${signal that doesn't apply}
@@ -55,7 +55,7 @@ ${Quote the original request from 0-triage.md}
 
 ## Risk Assessment
 
-<!-- For medium+ scope, document per _bmad/expertise/scoping/risk-assessment.md -->
+<!-- For medium+ scope, document per .specflow-lib/expertise/scoping/risk-assessment.md -->
 
 | Risk Type | Level | Notes |
 |-----------|-------|-------|
@@ -65,7 +65,7 @@ ${Quote the original request from 0-triage.md}
 
 ## MVP Boundaries
 
-<!-- For medium+ scope, per _bmad/expertise/scoping/mvp-strategies.md -->
+<!-- For medium+ scope, per .specflow-lib/expertise/scoping/mvp-strategies.md -->
 
 ### In Scope (This Version)
 - ${essential capability}
@@ -78,7 +78,7 @@ ${Quote the original request from 0-triage.md}
 ## Pillar Selection
 
 <!--
-Methodology Reference: _bmad/expertise/scoping/pillar-selection.md
+Methodology Reference: .specflow-lib/expertise/scoping/pillar-selection.md
 -->
 
 ### Required Pillars

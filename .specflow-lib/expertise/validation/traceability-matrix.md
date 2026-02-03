@@ -1,6 +1,6 @@
 # Requirements Traceability Matrix
 
-<!-- Source: _bmad/workflows/3-solutioning/check-implementation-readiness/steps/step-03-epic-coverage-validation.md -->
+<!-- Source: SpecFlow validation methodology -->
 
 Ensure all requirements are covered by implementation artifacts.
 

@@ -1,6 +1,6 @@
 # Test Quality Criteria
 
-<!-- Source: _bmad/workflows/3-solutioning/check-implementation-readiness/ -->
+<!-- Source: SpecFlow testing methodology -->
 
 Quality standards for test plans and test execution.
 

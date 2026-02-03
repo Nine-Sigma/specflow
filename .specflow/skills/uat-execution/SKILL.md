@@ -29,7 +29,7 @@ triggers:
 
 Automate User Acceptance Testing by executing Gherkin scenarios from `5-test-plan.md` against a running application.
 
-**Expertise reference:** `_bmad/expertise/uat`
+**Expertise reference:** `.specflow-lib/expertise/uat`
 
 ## When to Use This Skill
 

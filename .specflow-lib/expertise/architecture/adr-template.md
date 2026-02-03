@@ -1,6 +1,6 @@
 # Architecture Decision Record Template
 
-<!-- Source: _bmad/workflows/3-solutioning/create-architecture/steps/step-04-decisions.md -->
+<!-- Source: SpecFlow architecture methodology -->
 
 Use this template to document significant architectural decisions. ADRs capture the context, decision, and consequences for future reference.
 

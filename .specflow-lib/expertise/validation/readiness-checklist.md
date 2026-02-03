@@ -1,6 +1,6 @@
 # Implementation Readiness Checklist
 
-<!-- Source: _bmad/workflows/3-solutioning/check-implementation-readiness/ -->
+<!-- Source: SpecFlow validation methodology -->
 
 Validate that specs, architecture, and plans are complete before implementation.
 

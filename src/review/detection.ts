@@ -161,7 +161,7 @@ export async function discoverReviewSkills(
 
   // 2. Discover internal expertise triggers (DIS-05)
   for (const dir of internalExpertiseDirs) {
-    const triggersPath = `_bmad/expertise/${dir}/triggers.yaml`;
+    const triggersPath = `.specflow-lib/expertise/${dir}/triggers.yaml`;
 
     try {
       if (!existsSync(triggersPath)) continue;

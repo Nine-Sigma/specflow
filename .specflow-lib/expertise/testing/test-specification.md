@@ -69,7 +69,7 @@ Select test types based on what needs verification:
 
 ## Scope-Based Test Count Guidance
 
-From `_bmad/expertise/validation/test-criteria.md`:
+From `.specflow-lib/expertise/validation/test-criteria.md`:
 
 | Scope | Unit | Integration | E2E/API | Total |
 |-------|------|-------------|---------|-------|

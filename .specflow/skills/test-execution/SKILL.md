@@ -47,7 +47,7 @@ Detect test framework from project files:
 
 ### 2. Smart Test Selection
 
-Only run tests affected by changed files (see `_bmad/expertise/test-execution/smart-selection.md`).
+Only run tests affected by changed files (see `.specflow-lib/expertise/test-execution/smart-selection.md`).
 
 **Key principle:** Run only affected tests for fast feedback.
 
@@ -61,7 +61,7 @@ vitest related $CHANGED_FILES --run --coverage
 
 ### 3. Staged Parallel Execution
 
-Run tests in stages (see `_bmad/expertise/test-execution/staged-parallel.md`):
+Run tests in stages (see `.specflow-lib/expertise/test-execution/staged-parallel.md`):
 
 1. **Unit tests** (parallel) - fast feedback
 2. **Integration tests** (parallel) - after unit passes
@@ -71,7 +71,7 @@ Run tests in stages (see `_bmad/expertise/test-execution/staged-parallel.md`):
 
 ### 4. Coverage Thresholds
 
-Enforce scope-based coverage (see `_bmad/expertise/test-execution/coverage-thresholds.md`):
+Enforce scope-based coverage (see `.specflow-lib/expertise/test-execution/coverage-thresholds.md`):
 
 | Scope | Threshold |
 |-------|-----------|
@@ -251,6 +251,6 @@ This skill is invoked by sf-review.md as part of the review phase:
 
 ## Expertise References
 
-- `_bmad/expertise/test-execution/smart-selection.md` - Affected test detection
-- `_bmad/expertise/test-execution/staged-parallel.md` - Stage execution order
-- `_bmad/expertise/test-execution/coverage-thresholds.md` - Threshold enforcement
+- `.specflow-lib/expertise/test-execution/smart-selection.md` - Affected test detection
+- `.specflow-lib/expertise/test-execution/staged-parallel.md` - Stage execution order
+- `.specflow-lib/expertise/test-execution/coverage-thresholds.md` - Threshold enforcement

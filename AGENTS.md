@@ -1,86 +1,178 @@
-# AGENTS.md
+# SpecFlow
 
 ## Project Overview
 
-SpecFlow is a security-first, cost-aware, test-driven AI development methodology. Every feature must address Security (STRIDE threat model), Cost (cloud cost estimate), and Testing (Gherkin scenarios) before code is written.
+SpecFlow is a **PM-orchestrated, BMAD-powered** AI development methodology. The PM agent orchestrates automated workflows while leveraging BMAD's expertise (methodology, frameworks, elicitation techniques) for high-quality outputs.
 
-## The Three Pillars
-
-| Pillar | Tagline | Agent | Output |
-|--------|---------|-------|--------|
-| Security | "Think before you ship" | /cloud-security (Jordan) | STRIDE threat model |
-| Cost | "Know before you spend" | /cloud-cost (Taylor) | Cost breakdown |
-| Testing | "Prove before you merge" | Gherkin | Test scenarios |
-
-## Commands
-
-```bash
-# Security scanning
-pre-commit run --all-files     # Run all security hooks
-trufflehog git file://. --since-commit HEAD --results=verified,unknown
-
-# Spec verification (Phase 3)
-./scripts/verify-spec.sh       # Validate spec completeness
-
-# Agent invocation (in Claude Code)
-#   /cloud-security - Generate STRIDE threat model
-#   /cloud-cost     - Generate cost breakdown
+**Core Architecture:**
 ```
+User → PM (orchestrator) → Agents (automated) → PM (review) → User (big decisions only)
+```
+
+## Key Concepts
+
+### PM as Brain
+- PM (`/sf:pm`) orchestrates all workflows
+- PM decides when to engage user (big decisions only)
+- PM routes work to agents automatically
+- PM reviews outputs before routing forward
+
+### Expertise Layer
+- SpecFlow provides methodology via `.specflow-lib/`
+- Agents read `.specflow-lib/expertise/` for frameworks and checklists
+- Agents adopt `.specflow-lib/personas/` for communication style
+- PM uses elicitation techniques when engaging users
+
+### Proportional Ceremony
+- Scope level (trivial → complex) determines depth of work
+- Small features skip security/cost analysis
+- Large features get full pillar coverage
+- PM confirms scope with user for medium+ features
+
+## The Pillars (Scope-Dependent)
+
+| Pillar | Agent | When Applied |
+|--------|-------|--------------|
+| Security | `/sf:security` (Jordan) | medium+ scope |
+| Cost | `/sf:cost` (Taylor) | medium+ scope |
+| Testing | `/sf:tea` | All scopes (depth varies) |
 
 ## Project Structure
 
 ```
-.specs/
-  templates/     # Spec templates
-  examples/      # Example specs (stripe-payments.md)
-scripts/
-  verify-spec.sh # Spec verification script
-docs/
-  workflow.md    # End-to-end workflow guide
-  security-assessment.md  # Agent output
-  cost-analysis.md        # Agent output
-_bmad/
-  expansion-packs/
-    cloud-architecture/
-      agents/
-        cloud-security.md  # Jordan agent
-        cloud-cost.md      # Taylor agent
+.specflow/                    # SpecFlow state and features
+├── STATE.md                  # Current session state
+├── config.json               # Configuration
+├── features/{slug}/          # Feature working directory
+│   ├── 0-triage.md           # PM triage output
+│   ├── 0-scope.md            # Scope assessment
+│   ├── 1-spec.md             # Analyst requirements
+│   ├── 1.5-codebase-constraints.md  # Analyst codebase analysis (TC, IP)
+│   ├── 2-architecture.md     # Architect design (reads 1.5)
+│   ├── 3-security.md         # Security analysis (if applicable)
+│   ├── 4-cost.md             # Cost analysis (if applicable)
+│   ├── 5-test-plan.md        # Test scenarios
+│   ├── 5-requirements-lock.md  # PM synthesized requirements (frozen)
+│   ├── 6-dev-output.md       # Dev implementation output
+│   ├── 7-qa-output.md        # QA test output
+│   ├── drift/                # Drift detection files (v2.3)
+│   ├── PROGRESS.md           # Work log
+│   └── STATUS.md             # Approval status
+
+.specflow-lib/                # SpecFlow methodology (immutable library)
+├── personas/                 # Agent personas (name, role, style, principles)
+├── methodology/              # Framework methodology (STRIDE, BOSS, etc.)
+└── expertise/                # Extracted methodology for agents
+    ├── agent-pattern.md      # Standard agent architecture
+    ├── scoping/              # Scope assessment methodology
+    ├── requirements/         # Requirements writing (BOSS criteria)
+    ├── elicitation/          # PM's toolkit for user engagement
+    ├── discovery/            # Project classification
+    └── synthesis/            # Requirements synthesis (v2.3)
+        ├── codebase-analysis.md   # Tech stack, patterns, integration points
+        └── requirements-lock.md   # Lock format (FR/TC/SC/AC/IP)
+
+.claude/commands/             # Slash commands
+├── sf-pm.md                  # PM orchestrator
+├── sf-analyst.md             # Requirements (Mary)
+├── sf-architect.md           # Architecture (Winston)
+├── sf-security.md            # Security (Jordan)
+├── sf-cost.md                # Cost (Taylor)
+├── sf-dev.md                 # Development (Amelia)
+├── sf-qa.md                  # Quality (Quinn)
+└── sf-tea.md                 # Test Engineering
+
+.planning/                    # GSD planning phases
+├── PROJECT.md                # Project definition
+├── ROADMAP.md                # Phase roadmap
+├── STATE.md                  # GSD state
+└── phases/                   # Phase plans and summaries
 ```
+
+## Commands
+
+### Primary Commands
+```bash
+/sf:pm              # Start PM orchestrator (main entry point)
+/sf:pm "feature"    # Start new feature workflow
+```
+
+### Agent Commands (PM routes to these)
+```bash
+/sf:analyst         # Requirements analysis
+/sf:architect       # Architecture design
+/sf:security        # Security analysis (STRIDE)
+/sf:cost            # Cost analysis
+/sf:tea             # Test engineering
+/sf:dev             # Development
+/sf:qa              # Quality assurance
+```
+
+### Utility Commands
+```bash
+/sf:agents          # List available agents
+/sf:sync            # Sync state with tracker
+```
+
+## Scope Levels
+
+| Level | Files | Pillars | Example |
+|-------|-------|---------|---------|
+| trivial | 1 | None | Fix typo |
+| small | 1-3 | Testing | Logout button |
+| medium | 3-10 | Security + Testing | New endpoint |
+| large | 10+ | All | Payment integration |
+| complex | Many | All + Research | New service |
+
+## Agent Pattern
+
+All agents follow the same pattern (see `.specflow-lib/expertise/agent-pattern.md`):
+
+1. **Load Context**: STATE.md, 0-triage.md, 0-scope.md
+2. **Load Persona**: From `.specflow-lib/personas/`
+3. **Load Expertise**: From `.specflow-lib/expertise/`
+4. **Execute Autonomously**: Apply methodology, match depth to scope
+5. **Write Output**: To `.specflow/features/{slug}/`
+6. **Return to PM**: PM reviews and routes
+
+### v2.3 Agent Enhancements
+
+- **Analyst**: Does codebase analysis (tech stack, patterns, integration points), writes `1.5-codebase-constraints.md`
+- **Architect**: Reads `1.5-codebase-constraints.md` as input, designs aligned with codebase reality
+- **PM**: Synthesizes all outputs into `5-requirements-lock.md`, runs drift checkpoints after Dev and QA
+- **Dev/QA**: Return to PM (not route directly) to enable drift detection
 
 ## Code Style
 
-- Shell scripts: Use bash, include `set -euo pipefail`
-- Markdown: Use ATX headers (#), include code fence language hints
-- Specs: Follow template structure exactly
+- Markdown: ATX headers (#), code fence language hints
+- Specs: Follow BOSS criteria (Binary, Observable, Specific, Scope-bound)
 - Commit format: `type(scope): description`
   - Types: feat, fix, docs, refactor, test, chore
-  - Scope: Optional, e.g., `docs(security): add STRIDE example`
 
 ## Git Workflow
 
-- Always run `pre-commit run --all-files` before committing
+- Run `pre-commit run --all-files` before committing
 - Never commit with `--no-verify`
 - Create PRs for all changes to main branch
-- Squash commits when merging PRs
 
 ## Boundaries
 
 ### Always Do
-- Run pre-commit hooks before every commit
-- Include all 6 STRIDE categories in security assessments
-- Include assumptions in cost estimates
-- Use Gherkin format for test scenarios
-- Follow the Three Pillars for every feature
+- Use PM as entry point for features (`/sf:pm`)
+- Match ceremony depth to scope level
+- Return agent outputs to PM for review
+- Use BOSS criteria for acceptance criteria
+- Apply STRIDE for security analysis (medium+ scope)
 
 ### Ask First
-- Creating files outside .specs/, scripts/, docs/
-- Modifying pre-commit configuration
-- Adding new dependencies
-- Changes to _bmad/ directory structure
+- Modifying `.specflow-lib/` content
+- Adding new agents
+- Changing scope level definitions
+- Modifying PM routing logic
 
 ### Never Do
+- Bypass PM orchestration (agents route back to PM)
+- Skip scope assessment for features
+- Over-engineer trivial/small scope features
 - Commit secrets or credentials
-- Bypass security hooks (--no-verify)
-- Create specs without all three pillars
-- Modify _bmad/ expansion pack agent contents
-- Skip security assessment for any feature
+- Bypass security hooks

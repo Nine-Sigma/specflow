@@ -90,7 +90,7 @@ Internal expertise declares triggers via pillar-based overrides:
 ```yaml
 # Security pillar binding (triggers security review)
 # Activated when 0-scope.md has pillars.required includes "security"
-# Uses methodology from: _bmad/expansion-packs/cloud-architecture/agents/security-reviewer.md#stride-framework
+# Uses methodology from: .specflow-lib/methodology/stride-framework.md
 
 # File patterns that suggest security review:
 files:
@@ -141,9 +141,9 @@ When a pillar is selected in `0-scope.md`, the related skill is always included:
 
 <expertise>
 Read and apply:
-- `_bmad/expertise/review/index.md` - This overview (dynamic architecture)
-- `_bmad/expertise/review/output-format.md` - Consolidated output structure
-- `_bmad/expertise/review/escalation-rules.md` - When to escalate vs route to fix loop
+- `.specflow-lib/expertise/review/index.md` - This overview (dynamic architecture)
+- `.specflow-lib/expertise/review/output-format.md` - Consolidated output structure
+- `.specflow-lib/expertise/review/escalation-rules.md` - When to escalate vs route to fix loop
 </expertise>
 ```
 
