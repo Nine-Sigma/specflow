@@ -19,6 +19,22 @@ Read and adopt the persona from `_bmad/agents/quinn.agent.yaml`:
 <mode_detection>
 Examine the context provided to this invocation.
 
+**Priority 0: Check for TDD Mode (tests before Dev)**
+
+```bash
+# TDD mode conditions:
+# 1. 5-test-plan.md exists with recommended_flow: qa-first
+# 2. 6-dev-output.md does NOT exist (Dev hasn't implemented yet)
+test -f .specflow/features/{slug}/5-test-plan.md && \
+  grep -q "recommended_flow: qa-first" .specflow/features/{slug}/5-test-plan.md && \
+  ! test -f .specflow/features/{slug}/6-dev-output.md
+```
+
+IF all conditions met:
+  mode = TDD_MODE
+  # QA writes failing tests BEFORE Dev implements
+  # This is the "red" phase of TDD
+
 **Priority 1: Check for Drift Correction Mode**
 
 ```bash
@@ -95,6 +111,48 @@ Do NOT:
 - Exceed scope of fix request
 - Refactor tests unrelated to findings
 </fix_context>
+
+### Step 1d: TDD Mode Context Loading (if TDD_MODE)
+
+<tdd_context>
+Read in order:
+
+1. `.specflow/STATE.md` - Get current feature slug
+2. `.specflow/features/{slug}/5-test-plan.md` - TEA's test specifications (your blueprint)
+3. `.specflow/features/{slug}/1-spec.md` - Acceptance criteria to reference
+4. `.specflow/features/{slug}/2-architecture.md` - Component structure (if exists)
+
+**TDD Mode Purpose:**
+You are writing failing tests BEFORE Dev implements the feature. This is the "red" phase of TDD.
+
+**Load TDD Expertise:**
+Read `_bmad/expertise/testing/tdd-methodology.md` for:
+- QA's role in TDD (what to write, what NOT to write)
+- Test-first principles
+- Anti-patterns to avoid
+
+**TDD Rules:**
+1. Write integration, E2E, and API tests ONLY (per TEA's test_levels)
+2. Do NOT write unit tests (Dev writes those during implementation)
+3. Tests must be behavior-focused (WHAT, not HOW)
+4. Tests WILL FAIL - that's expected (no implementation yet)
+5. Every test must reference AC-XX from spec
+6. Follow TEA's test specifications exactly
+
+**What to Write:**
+- Integration tests: Service interactions, database operations
+- E2E tests: Full user flows (if UI involved)
+- API tests: HTTP contracts, request/response validation
+
+**What NOT to Write:**
+- Unit tests (Dev's responsibility)
+- Implementation-specific tests
+- Tests that assume internal structure
+- Mock configurations (Dev decides mocking strategy)
+
+**Output File:**
+Write to `5-qa-tests.md` (NOT 7-qa-output.md - that's for post-Dev verification)
+</tdd_context>
 
 ### Step 2: Load Context
 
@@ -436,6 +494,162 @@ Ready for PM checkpoint.
 ```
 
 **NOTE:** In DRIFT_FIX mode, QA returns to PM for re-checkpoint, NOT to Review. PM will verify the correction was successful before routing forward.
+
+## TDD Mode Output Format (5-qa-tests.md)
+
+When in TDD_MODE (writing tests before Dev implements), use this output format.
+
+**Output file:** `5-qa-tests.md` (NOT 7-qa-output.md)
+
+```yaml
+---
+agent: qa
+created: {iso-timestamp}
+mode: tdd
+test_status: failing
+depends_on: ["5-test-plan.md", "1-spec.md"]
+status: draft
+---
+```
+
+Content focuses on tests written per TEA specifications:
+
+```markdown
+# {Feature Name} - TDD Tests (Red Phase)
+
+## Summary
+
+{2-3 sentences - practical summary of tests written, expected to fail}
+
+## Tests Written
+
+| Test File | Test Name | AC Ref | Type | Expected Status |
+|-----------|-----------|--------|------|-----------------|
+| {path} | {test name} | AC-XX | {integration/e2e/api} | FAILING |
+| {path} | {test name} | AC-XX | {integration/e2e/api} | FAILING |
+
+## Test Specifications Implemented
+
+Per TEA's 5-test-plan.md specifications:
+
+### Integration Tests
+
+| Spec | Test File | Implementation Notes |
+|------|-----------|---------------------|
+| {from TEA} | {path} | {how implemented} |
+
+### E2E Tests (if applicable)
+
+| Spec | Test File | User Flow |
+|------|-----------|-----------|
+| {from TEA} | {path} | {steps covered} |
+
+### API Tests (if applicable)
+
+| Spec | Test File | Contract |
+|------|-----------|----------|
+| {from TEA} | {path} | {request/response} |
+
+## Expected Failures
+
+All tests should fail with:
+
+| Test | Expected Error | Reason |
+|------|----------------|--------|
+| {test} | {error type} | {not implemented yet} |
+
+## Traceability
+
+| AC | Tests | Coverage |
+|----|-------|----------|
+| AC-01 | test1, test2 | FULL |
+| AC-02 | test3 | FULL |
+
+## Constraints for Dev
+
+**Test files are the contract.** Dev must:
+- Do NOT modify test files
+- Implement code until all tests pass
+- Tests define expected behavior
+
+**Test locations:**
+| Test Type | Location |
+|-----------|----------|
+| Integration | {path} |
+| E2E | {path} |
+| API | {path} |
+
+## Files Created
+
+| File | Description |
+|------|-------------|
+| {test file path} | {what it tests} |
+```
+
+### TDD Mode Routing
+
+After completing TDD tests:
+
+1. Write `5-qa-tests.md` to feature folder
+2. Update PROGRESS.md:
+   ```
+   ## {timestamp} - QA (/sf:qa) - TDD MODE
+
+   **Work Done:**
+   - Wrote failing tests per TEA specifications
+   - Tests: {count} integration, {count} e2e, {count} api
+
+   **Output:** `5-qa-tests.md`
+   **Mode:** TDD (red phase)
+   **Test Status:** All tests expected to FAIL
+
+   **Constraints Honored:**
+   - TEA specifications from 5-test-plan.md
+   - AC references from 1-spec.md
+
+   ---
+   ```
+
+3. Update STATE.md:
+   - last-agent: qa
+   - next-agent: pm
+   - phase: tdd-checkpoint
+
+4. **Return to PM with TDD checkpoint format:**
+
+```markdown
+---
+**TDD Tests Complete (Red Phase)**
+
+Feature: {slug}
+Agent: qa
+Output: 5-qa-tests.md
+Mode: TDD
+
+## Tests Written
+
+| Type | Count | Status |
+|------|-------|--------|
+| Integration | {N} | FAILING (expected) |
+| E2E | {N} | FAILING (expected) |
+| API | {N} | FAILING (expected) |
+
+## AC Coverage
+
+| AC | Tests |
+|----|-------|
+| AC-01 | {test names} |
+| AC-02 | {test names} |
+
+## Ready for Dev
+
+Tests define the contract. Dev should implement until all tests pass.
+
+Ready for PM checkpoint -> route to Dev.
+---
+```
+
+**NOTE:** In TDD mode, QA returns to PM for checkpoint validation BEFORE routing to Dev. PM validates tests match TEA specs, then routes to Dev.
 
 ## Scope Enforcement (Quinn's rule)
 
