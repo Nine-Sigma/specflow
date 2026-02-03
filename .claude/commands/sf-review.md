@@ -112,31 +112,53 @@ For each matched skill from detection, spawn a Task with fresh context.
 
 ### Loading Skill Methodology
 
-Each skill has a source type that determines where to load methodology:
+Skill-detector returns `source` for each matched skill. Use this to load methodology:
 
 **External skills (source: "skill"):**
 - Load from `.specflow/skills/{skill.name}/SKILL.md`
 - Read SKILL.md content and pass as methodology context
-- Example: code-review-excellence, e2e-testing-patterns, sql-optimization-patterns
+- Example: code-review-excellence, integration-review, sql-optimization-patterns
 
 **Internal expertise (source: "internal"):**
+- These are pillar-bound skills without SKILL.md
 - Load from BMAD source using reference pattern
 - For security: load `_bmad/expansion-packs/cloud-architecture/agents/security-reviewer.md#stride-framework`
 - For architecture: load `_bmad/expertise/architecture/adr-template.md` (SpecFlow-specific)
 
+**Loading steps:**
+1. For each matched skill from skill-detector:
+2. Check skill.source
+3. If "skill": Read `.specflow/skills/{skill.name}/SKILL.md`
+4. If "internal": Use BMAD reference pattern for the pillar
+5. Pass loaded methodology to skill Task context
+
+### Build Per-Skill Context
+
+For each skill in matched[]:
+1. Get relevant files from skill-detector's detail field:
+   - If reason is "file_pattern": Extract file from detail (e.g., "src/auth/login.ts matched *.ts")
+   - If reason is "pillar_binding" or "scope_minimum": Use all changed_files
+   - If reason is "code_pattern": Extract file from detail
+2. Read file contents for those files only
+3. Extract AC section from 1-spec.md
+4. Load methodology based on skill.source (see above)
+5. Load output format from _bmad/expertise/review/output-format.md
+
 ### File Filtering for Skills
 
-Not all files go to all skills. Filter based on detection results.
+Not all files go to all skills. Filter based on skill-detector's reason and detail.
 
-**Detection provides:**
+**Skill-detector provides:**
 - skill.name: Which skill
-- skill.triggers.files[]: File patterns this skill cares about
-- skill.triggers.patterns[]: Code patterns this skill cares about
+- skill.source: "skill" or "internal"
+- skill.reason: Why matched (pillar_binding, scope_minimum, file_pattern, code_pattern)
+- skill.detail: Match specifics (e.g., which file matched which pattern)
 
-**Filter logic:**
-1. Take changed files from 6-dev-output.md
-2. For each skill, keep only files that match its triggers
-3. If a skill has no matching files, still include but note "triggered by scope/pillar"
+**Filter logic by reason:**
+1. **pillar_binding**: Skill applies to all changed files (holistic review)
+2. **scope_minimum**: Skill applies to all changed files (scope-triggered)
+3. **file_pattern**: Skill applies to files listed in detail (e.g., "src/api.ts matched *.ts")
+4. **code_pattern**: Skill applies to files listed in detail (content matched)
 
 Example:
 - sql-optimization-patterns: Only receives .sql files and files with prisma code
