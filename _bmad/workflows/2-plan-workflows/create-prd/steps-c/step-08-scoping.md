@@ -11,9 +11,20 @@ advancedElicitationTask: '{project-root}/_bmad/core/workflows/advanced-elicitati
 partyModeWorkflow: '{project-root}/_bmad/core/workflows/party-mode/workflow.md'
 ---
 
+<!--
+BMAD Methodology IDs exposed in this file:
+- scope-assessment: Scoping decision framework (must-have vs nice-to-have analysis)
+- mvp-strategies: MVP philosophy options and phase roadmap structure
+
+SpecFlow agents reference via: {file}#methodology-id
+Note: boss-criteria is SpecFlow-specific and lives in _bmad/expertise/requirements/boss-criteria.md
+-->
+
 # Step 8: Scoping Exercise - MVP & Future Features
 
 **Progress: Step 8 of 11** - Next: Functional Requirements
+
+<bmad-orchestration>
 
 ## MANDATORY EXECUTION RULES (READ FIRST):
 
@@ -44,6 +55,8 @@ partyModeWorkflow: '{project-root}/_bmad/core/workflows/party-mode/workflow.md'
 - Focus on strategic scope decisions, not feature details
 - Balance between user value and implementation feasibility
 
+</bmad-orchestration>
+
 ## YOUR TASK:
 
 Conduct comprehensive scoping exercise to define MVP boundaries and prioritize features across development phases.
@@ -58,6 +71,8 @@ Analyze everything documented so far:
 - Evaluate scope implications: simple MVP, medium, or complex project
 - Ask if initial assessment feels right or if they see it differently
 
+<bmad-methodology id="mvp-strategies">
+
 ### 2. Define MVP Strategy
 
 Facilitate strategic MVP decisions:
@@ -68,24 +83,80 @@ Facilitate strategic MVP decisions:
   - What's the fastest path to validated learning?
 - Guide toward appropriate MVP approach for their product
 
+## MVP Strategy Options
+
+### MVP Philosophy Types
+- **Problem-Solving MVP**: Solve one core problem exceptionally well
+- **Experience MVP**: Deliver a compelling experience for a narrow use case
+- **Platform MVP**: Minimal viable platform enabling user-generated value
+- **Revenue MVP**: Fastest path to validated revenue model
+
+### Critical MVP Questions
+- What's the minimum that would make users say 'this is useful'?
+- What would make investors/partners say 'this has potential'?
+- What's the fastest path to validated learning?
+
+## Progressive Feature Roadmap
+
+### Phase 1: MVP
+- Core user value delivery
+- Essential user journeys
+- Basic functionality that works reliably
+
+### Phase 2: Growth
+- Additional user types
+- Enhanced features
+- Scale improvements
+
+### Phase 3: Expansion
+- Advanced capabilities
+- Platform features
+- New markets or use cases
+
+</bmad-methodology>
+
+<bmad-methodology id="scope-assessment">
+
 ### 3. Scoping Decision Framework
 
 Use structured decision-making for scope:
 
-**Must-Have Analysis:**
-- Guide identification of absolute MVP necessities
+## Scoping Decision Framework
+
+### Must-Have Analysis
+Guide identification of absolute MVP necessities:
 - For each journey and success criterion, ask:
   - Without this, does the product fail?
   - Can this be manual initially?
   - Is this a deal-breaker for early adopters?
 - Analyze journeys for MVP essentials
 
-**Nice-to-Have Analysis:**
-- Identify what could be added later:
-  - Features that enhance but aren't essential
-  - User types that can be added later
-  - Advanced functionality that builds on MVP
+### Nice-to-Have Analysis
+Identify what could be added later:
+- Features that enhance but aren't essential
+- User types that can be added later
+- Advanced functionality that builds on MVP
 - Ask what features could be added in versions 2, 3, etc.
+
+### Risk-Based Scoping
+Identify and mitigate scoping risks:
+
+**Technical Risks:**
+- What's the most technically challenging aspect?
+- Could we simplify the initial implementation?
+- What's the riskiest assumption about technology feasibility?
+
+**Market Risks:**
+- What's the biggest market risk?
+- How does the MVP address this?
+- What learning do we need to de-risk this?
+
+**Resource Risks:**
+- What if we have fewer resources than planned?
+- What's the absolute minimum team size needed?
+- Can we launch with a smaller feature set?
+
+</bmad-methodology>
 
 ### 4. Progressive Feature Roadmap
 
@@ -94,48 +165,11 @@ Create phased development approach:
 - Structure as Phase 1 (MVP), Phase 2 (Growth), Phase 3 (Vision)
 - Ensure clear progression and dependencies
 
-- Core user value delivery
-- Essential user journeys
-- Basic functionality that works reliably
+**Where does your current vision fit in this development sequence?**
 
-**Phase 2: Growth**
+<bmad-orchestration>
 
-- Additional user types
-- Enhanced features
-- Scale improvements
-
-**Phase 3: Expansion**
-
-- Advanced capabilities
-- Platform features
-- New markets or use cases
-
-**Where does your current vision fit in this development sequence?**"
-
-### 5. Risk-Based Scoping
-
-Identify and mitigate scoping risks:
-
-**Technical Risks:**
-"Looking at your innovation and domain requirements:
-
-- What's the most technically challenging aspect?
-- Could we simplify the initial implementation?
-- What's the riskiest assumption about technology feasibility?"
-
-**Market Risks:**
-
-- What's the biggest market risk?
-- How does the MVP address this?
-- What learning do we need to de-risk this?"
-
-**Resource Risks:**
-
-- What if we have fewer resources than planned?
-- What's the absolute minimum team size needed?
-- Can we launch with a smaller feature set?"
-
-### 6. Generate Scoping Content
+### 5. Generate Scoping Content
 
 Prepare comprehensive scoping section:
 
@@ -172,10 +206,10 @@ Prepare comprehensive scoping section:
 **Resource Risks:** {{contingency_approach}}
 ```
 
-### 7. Present MENU OPTIONS
+### 6. Present MENU OPTIONS
 
 Present the scoping decisions for review, then display menu:
-- Show strategic scoping plan (using structure from step 6)
+- Show strategic scoping plan (using structure from step 5)
 - Highlight MVP boundaries and phased roadmap
 - Ask if they'd like to refine further, get other perspectives, or proceed
 - Present menu options naturally as part of conversation
@@ -195,7 +229,7 @@ Display: "**Select:** [A] Advanced Elicitation [P] Party Mode [C] Continue to Fu
 
 ## APPEND TO DOCUMENT:
 
-When user selects 'C', append the content directly to the document using the structure from step 6.
+When user selects 'C', append the content directly to the document using the structure from step 5.
 
 ## SUCCESS METRICS:
 
@@ -226,3 +260,5 @@ When user selects 'C', append the content directly to the document using the str
 After user selects 'C' and content is saved to document, load {nextStepFile}.
 
 Remember: Do NOT proceed to step-09 until user explicitly selects 'C' from the A/P/C menu and content is saved!
+
+</bmad-orchestration>
