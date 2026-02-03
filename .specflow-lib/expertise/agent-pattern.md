@@ -5,16 +5,16 @@ This document defines the standard architecture for all `/sf:*` agents.
 ## Core Principle
 
 ```
-SpecFlow Agent = BMAD Persona + BMAD Methodology + SpecFlow Protocol
+SpecFlow Agent = Persona + Methodology + SpecFlow Protocol
 ```
 
-- **BMAD Persona**: Communication style, principles (from BMAD source agents)
-- **BMAD Methodology**: Reusable frameworks, checklists (referenced via `_bmad/path#methodology-id`)
+- **Persona**: Communication style, principles (from `.specflow-lib/personas/`)
+- **Methodology**: Reusable frameworks, checklists (from `.specflow-lib/methodology/`)
 - **SpecFlow Protocol**: File locations, state tracking, PM routing (from `.specflow/`)
-- **SpecFlow Expertise**: SpecFlow-specific content (from `_bmad/expertise/`)
+- **SpecFlow Expertise**: SpecFlow-specific content (from `.specflow-lib/expertise/`)
 
-**Key Architecture Change (v2.4):**
-Agents reference BMAD source files directly using content extraction markers instead of maintaining duplicate copies in `_bmad/expertise/`. Markers separate interactive BMAD workflows (`<bmad-orchestration>`) from reusable methodology (`<bmad-methodology id="...">`) that SpecFlow agents can safely read.
+**Key Architecture (v2.5):**
+All methodology is loaded directly from `.specflow-lib/` as standalone files. Personas are extracted (~20 lines each), methodology is self-contained, and expertise is domain-specific. No fragment parsing required.
 
 ## Agent Execution Flow
 
@@ -28,11 +28,12 @@ Agents reference BMAD source files directly using content extraction markers ins
 │     └─ Read 0-scope.md (scope level, depth guidance)         │
 │                                                              │
 │  2. LOAD PERSONA                                             │
-│     └─ Read _bmad/agents/{agent}.agent.yaml                  │
+│     └─ Read .specflow-lib/personas/{agent}.md                │
 │        (adopt communication style, principles)               │
 │                                                              │
 │  3. LOAD EXPERTISE                                           │
-│     └─ Read _bmad/expertise/{domain}/*.md                    │
+│     └─ Read .specflow-lib/methodology/{domain}/*.md          │
+│        Read .specflow-lib/expertise/{domain}/*.md            │
 │        (methodology for this agent's work)                   │
 │                                                              │
 │  4. EXECUTE AUTONOMOUSLY                                     │
@@ -51,81 +52,60 @@ Agents reference BMAD source files directly using content extraction markers ins
 └─────────────────────────────────────────────────────────────┘
 ```
 
-## BMAD Reference Loading Pattern
+## Methodology Loading Pattern
 
-SpecFlow agents reference BMAD source methodology using a fragment-style reference pattern. This eliminates duplication while preventing agents from triggering BMAD's interactive workflows.
+SpecFlow agents load methodology directly from `.specflow-lib/`.
 
-### Reference Syntax
+### Direct File Loading
 
 ```
-_bmad/{path-to-file}.md#{methodology-id}
+.specflow-lib/personas/{persona-name}.md
+.specflow-lib/methodology/{methodology-name}.md
+.specflow-lib/expertise/{domain}/{file}.md
 ```
 
-**Examples:**
-- `_bmad/expansion-packs/cloud-architecture/agents/security-reviewer.md#stride-framework`
-- `_bmad/expansion-packs/cloud-architecture/agents/cost-optimizer.md#cost-methodology`
+### Personas
 
-### Content Markers in BMAD Source
+Located at `.specflow-lib/personas/`:
+- `pm.md` - John, Product Manager
+- `analyst.md` - Mary, Business Analyst
+- `architect.md` - Winston, Architect
+- `dev.md` - Amelia, Developer
+- `qa.md` - Quinn, QA Engineer
+- `security.md` - Jordan, Security Reviewer
+- `cost.md` - Taylor, Cost Optimizer
 
-BMAD source files use XML-style markers to segment content:
+### Methodology
 
-```markdown
-<!-- In BMAD source file -->
+Located at `.specflow-lib/methodology/`:
+- Security: `stride-framework.md`, `compliance-frameworks.md`, `security-controls.md`
+- Cost: `cost-methodology.md`, `optimization-strategies.md`, `pricing-models.md`
+- Architecture: `decision-categories.md`, `validation-checklist.md`
+- PRD: `scope-assessment.md`, `mvp-strategies.md`
+- Readiness: `traceability-matrix.md`, `readiness-checklist.md`
 
-<bmad-orchestration>
-<!-- Interactive workflow content: YAML blocks, activation instructions, commands -->
-<!-- SpecFlow agents SKIP this entirely -->
-</bmad-orchestration>
+### Expertise
 
-<bmad-methodology id="methodology-name">
-<!-- Reusable methodology content -->
-<!-- SpecFlow agents READ this when referenced -->
-</bmad-methodology>
-```
+Located at `.specflow-lib/expertise/`:
+- `scoping/` - Scope levels, pillar selection
+- `synthesis/` - Codebase analysis, requirements lock
+- `review/` - Review system, skill loading
+- `testing/` - Test specification, TDD methodology
+- `validation/` - Readiness checklist, test criteria
+- `uat/` - Browser mode, API mode, Gherkin patterns
+- `skills/` - Skill detection, capabilities
 
 ### Loading Rules
 
-When an agent specifies a reference like `_bmad/path.md#methodology-id`:
-
-1. **Read the file** at the path before the `#`
-2. **Find the methodology block** with `<bmad-methodology id="{id-after-hash}">`
-3. **Read content** within that block only
-4. **SKIP orchestration** - never execute content inside `<bmad-orchestration>` blocks
-5. **Error on missing ID** - if the requested ID is not found, flag as ERROR (do not silently continue)
-
-### Multiple References from Same File
-
-Agents can reference multiple methodology blocks from a single source file:
-
-```markdown
-<expertise>
-Read methodology from BMAD source:
-- `_bmad/expansion-packs/cloud-architecture/agents/security-reviewer.md#stride-framework`
-- `_bmad/expansion-packs/cloud-architecture/agents/security-reviewer.md#compliance-frameworks`
-- `_bmad/expansion-packs/cloud-architecture/agents/security-reviewer.md#security-controls`
-</expertise>
-```
-
-This reads three distinct methodology blocks from security-reviewer.md.
-
-### Error Handling
-
-| Condition | Behavior |
-|-----------|----------|
-| File not found | ERROR - cannot execute without methodology |
-| Methodology ID not found | ERROR - flag missing methodology, halt |
-| Orchestration block read | NEVER - agents must skip these blocks |
-| Empty methodology block | WARNING - continue but log concern |
-
-**Why ERROR on missing ID:**
-Silent fallback would cause methodology drift - agents would operate without intended expertise, producing lower quality output. Fail-fast ensures issues are caught during development, not in production.
+1. **Read file directly** - no fragment parsing needed
+2. **Personas are ~20 lines** - load entire file
+3. **Methodology is self-contained** - no orchestration content
+4. **Expertise is domain-specific** - load relevant files only
 
 ### What NOT to Do
 
-- **Never** execute content inside `<bmad-orchestration>` blocks
 - **Never** present A/P/C menus or numbered command lists to users
 - **Never** halt for interactive input except via PM-controlled gates
-- **Never** fallback silently when methodology is missing
 
 ## Standard Agent Template
 
@@ -149,7 +129,7 @@ Read in order:
 ### Step 2: Load Persona
 
 <persona>
-Read `_bmad/agents/{agent}.agent.yaml` and adopt:
+Read `.specflow-lib/personas/{agent}.md` and adopt:
 - **Name**: {Persona name}
 - **Role**: {Role description}
 - **Style**: {Communication style}
@@ -159,36 +139,34 @@ Read `_bmad/agents/{agent}.agent.yaml` and adopt:
 ### Step 3: Load Expertise
 
 <expertise>
-Read methodology from two source types:
+Read methodology from `.specflow-lib/`:
 
-**BMAD Source (reference pattern):**
-- `_bmad/{source-path}.md#{methodology-id}` - BMAD methodology blocks
-- Apply loading rules: find ID, read block, skip orchestration
-- ERROR if methodology ID not found
+**Methodology (domain expertise):**
+- `.specflow-lib/methodology/{domain}/*.md` - Domain-specific frameworks
 
-**SpecFlow-Specific (local files):**
-- `_bmad/expertise/{domain}/*.md` - SpecFlow-created content (synthesis, review, validation)
-- `_bmad/expertise/scoping/scope-levels.md` - Scope depth definitions
+**Expertise (SpecFlow-specific):**
+- `.specflow-lib/expertise/{domain}/*.md` - SpecFlow-created content (synthesis, review, validation)
+- `.specflow-lib/expertise/scoping/scope-levels.md` - Scope depth definitions
 
 **External skills (when applicable):**
 - `.specflow/skills/{skill-name}/SKILL.md` - Skill-provided methodology
 - Skill provides specialized techniques beyond baseline methodology
 
 **Loading order and precedence:**
-1. BMAD source methodology first (establishes domain expertise)
-2. SpecFlow expertise second (adds project-specific rules)
+1. Methodology first (establishes domain expertise)
+2. Expertise second (adds SpecFlow-specific rules)
 3. External skills layer on top (adds specialized techniques)
-4. Conflict resolution: explicit instructions > BMAD source > SpecFlow > external
+4. Conflict resolution: explicit instructions > methodology > expertise > external
 
 **Example for security agent:**
 ```markdown
-# BMAD source (domain methodology)
-- _bmad/expansion-packs/cloud-architecture/agents/security-reviewer.md#stride-framework
-- _bmad/expansion-packs/cloud-architecture/agents/security-reviewer.md#compliance-frameworks
-- _bmad/expansion-packs/cloud-architecture/agents/security-reviewer.md#security-controls
+# Methodology (domain expertise)
+- .specflow-lib/methodology/stride-framework.md
+- .specflow-lib/methodology/compliance-frameworks.md
+- .specflow-lib/methodology/security-controls.md
 
-# SpecFlow expertise (project rules)
-- _bmad/expertise/scoping/scope-levels.md
+# Expertise (SpecFlow rules)
+- .specflow-lib/expertise/scoping/scope-levels.md
 ```
 </expertise>
 
@@ -256,12 +234,12 @@ PM will:
 
 ## Expertise Mapping by Agent
 
-| Agent | Persona | BMAD Source + SpecFlow Expertise | Primary Output |
-|-------|---------|----------------------------------|----------------|
-| `/sf:analyst` | Mary | BMAD PRD workflow + `scoping/`, `discovery/`, `requirements/`, `synthesis/` | 0-scope.md, 1.5-codebase-constraints.md, 1-spec.md |
-| `/sf:architect` | Winston | BMAD architecture workflow + `architecture/adr-template.md`, `scoping/` | 2-architecture.md |
-| `/sf:security` | Jordan | BMAD security-reviewer agent + `scoping/` | 3-security.md |
-| `/sf:cost` | Taylor | BMAD cost-optimizer agent + `scoping/` | 4-cost.md |
+| Agent | Persona | Methodology + Expertise | Primary Output |
+|-------|---------|-------------------------|----------------|
+| `/sf:analyst` | Mary | PRD methodology + `scoping/`, `discovery/`, `requirements/`, `synthesis/` | 0-scope.md, 1.5-codebase-constraints.md, 1-spec.md |
+| `/sf:architect` | Winston | Architecture methodology + `architecture/adr-template.md`, `scoping/` | 2-architecture.md |
+| `/sf:security` | Jordan | Security methodology + `scoping/` | 3-security.md |
+| `/sf:cost` | Taylor | Cost methodology + `scoping/` | 4-cost.md |
 | `/sf:tea` | (SpecFlow) | `validation/`, `scoping/` | 5-test-plan.md |
 | `/sf:dev` | Amelia | `requirements/` (constraints) | Implementation |
 | `/sf:qa` | Quinn | `validation/` | Test execution |
@@ -269,7 +247,7 @@ PM will:
 
 **Note:** `/sf:review` is a dynamic skill orchestrator, not a fixed agent. It discovers review-capable skills, matches them to code content, and spawns relevant skills in parallel. See Review Lenses section below.
 
-**v2.4 Architecture:** Agents reference BMAD source files directly using `_bmad/path#methodology-id` pattern. SpecFlow-specific expertise remains in `_bmad/expertise/`.
+**v2.5 Architecture:** Agents load methodology directly from `.specflow-lib/methodology/` and `.specflow-lib/expertise/`. No fragment parsing required.
 
 ## Agent Expertise Loading
 
@@ -278,82 +256,82 @@ Detailed mapping of which specific files each agent loads in Step 3.
 ### sf-analyst.md
 
 ```markdown
-# BMAD source (domain methodology)
-- _bmad/workflows/2-plan-workflows/create-prd/steps-c/step-08-scoping.md#scope-assessment
-- _bmad/workflows/2-plan-workflows/create-prd/steps-c/step-08-scoping.md#mvp-strategies
+# Methodology (domain expertise)
+- .specflow-lib/methodology/scope-assessment.md
+- .specflow-lib/methodology/mvp-strategies.md
 
-# SpecFlow expertise (Mode 1 - Scope Assessment)
-- _bmad/expertise/scoping/scope-levels.md
-- _bmad/expertise/scoping/pillar-selection.md
-- _bmad/expertise/scoping/risk-assessment.md
-- _bmad/expertise/discovery/project-classification.md
+# Expertise (Mode 1 - Scope Assessment)
+- .specflow-lib/expertise/scoping/scope-levels.md
+- .specflow-lib/expertise/scoping/pillar-selection.md
+- .specflow-lib/expertise/scoping/risk-assessment.md
+- .specflow-lib/expertise/discovery/project-classification.md
 
-# SpecFlow expertise (Mode 1.5 - Codebase Analysis)
-- _bmad/expertise/synthesis/codebase-analysis.md
+# Expertise (Mode 1.5 - Codebase Analysis)
+- .specflow-lib/expertise/synthesis/codebase-analysis.md
 
-# SpecFlow expertise (Mode 2 - Spec Creation)
-- _bmad/expertise/requirements/boss-criteria.md
+# Expertise (Mode 2 - Spec Creation)
+- .specflow-lib/expertise/requirements/boss-criteria.md
 ```
 
 ### sf-architect.md
 
 ```markdown
-# BMAD source (domain methodology)
-- _bmad/workflows/3-solutioning/create-architecture/steps/step-04-decisions.md#decision-categories
-- _bmad/workflows/3-solutioning/create-architecture/steps/step-07-validation.md#validation-checklist
+# Methodology (domain expertise)
+- .specflow-lib/methodology/decision-categories.md
+- .specflow-lib/methodology/validation-checklist.md
 
-# SpecFlow expertise
-- _bmad/expertise/architecture/adr-template.md
-- _bmad/expertise/scoping/scope-levels.md
+# Expertise
+- .specflow-lib/expertise/architecture/adr-template.md
+- .specflow-lib/expertise/scoping/scope-levels.md
 ```
 
 ### sf-security.md
 
 ```markdown
-# BMAD source (domain methodology)
-- _bmad/expansion-packs/cloud-architecture/agents/security-reviewer.md#stride-framework
-- _bmad/expansion-packs/cloud-architecture/agents/security-reviewer.md#compliance-frameworks
-- _bmad/expansion-packs/cloud-architecture/agents/security-reviewer.md#security-controls
+# Methodology (domain expertise)
+- .specflow-lib/methodology/stride-framework.md
+- .specflow-lib/methodology/compliance-frameworks.md
+- .specflow-lib/methodology/security-controls.md
 
-# SpecFlow expertise
-- _bmad/expertise/scoping/scope-levels.md
+# Expertise
+- .specflow-lib/expertise/scoping/scope-levels.md
 ```
 
 ### sf-cost.md
 
 ```markdown
-# BMAD source (domain methodology)
-- _bmad/expansion-packs/cloud-architecture/agents/cost-optimizer.md#cost-methodology
-- _bmad/expansion-packs/cloud-architecture/agents/cost-optimizer.md#optimization-strategies
-- _bmad/expansion-packs/cloud-architecture/agents/cost-optimizer.md#pricing-models
+# Methodology (domain expertise)
+- .specflow-lib/methodology/cost-methodology.md
+- .specflow-lib/methodology/optimization-strategies.md
+- .specflow-lib/methodology/pricing-models.md
 
-# SpecFlow expertise
-- _bmad/expertise/scoping/scope-levels.md
+# Expertise
+- .specflow-lib/expertise/scoping/scope-levels.md
 ```
 
 ### sf-tea.md (Test Engineering)
 
 ```markdown
-- _bmad/expertise/validation/index.md             # Overview, agent usage
-- _bmad/expertise/validation/test-criteria.md     # Quality standards, depth tables
-- _bmad/expertise/validation/traceability-matrix.md  # Requirements coverage
-- _bmad/expertise/scoping/scope-levels.md         # Match depth to scope
+- .specflow-lib/expertise/validation/index.md             # Overview, agent usage
+- .specflow-lib/expertise/validation/test-criteria.md     # Quality standards, depth tables
+- .specflow-lib/expertise/validation/traceability-matrix.md  # Requirements coverage
+- .specflow-lib/expertise/scoping/scope-levels.md         # Match depth to scope
 ```
 
 ### sf-qa.md
 
 ```markdown
-- _bmad/expertise/validation/index.md             # Overview, agent usage
-- _bmad/expertise/validation/test-criteria.md     # Execution quality standards
-- _bmad/expertise/validation/readiness-checklist.md  # Pre-execution validation
+- .specflow-lib/expertise/validation/index.md             # Overview, agent usage
+- .specflow-lib/expertise/validation/test-criteria.md     # Execution quality standards
+- .specflow-lib/expertise/validation/readiness-checklist.md  # Pre-execution validation
 ```
 
 ### sf-pm.md (when gating)
 
 ```markdown
-- _bmad/expertise/validation/readiness-checklist.md  # Full readiness assessment
-- _bmad/expertise/validation/traceability-matrix.md  # Coverage validation
-- _bmad/expertise/elicitation/when-to-use.md         # User engagement decisions
+- .specflow-lib/expertise/validation/readiness-checklist.md  # Full readiness assessment
+- .specflow-lib/expertise/validation/traceability-matrix.md  # Coverage validation
+- .specflow-lib/expertise/elicitation/when-to-use.md         # User engagement decisions
 ```
 
 ### Dynamic Review System (/sf:review)
@@ -362,9 +340,9 @@ The review system is a **dynamic skill orchestrator**, not a fixed set of lenses
 
 **Review Orchestrator:**
 ```markdown
-- _bmad/expertise/review/index.md              # Dynamic architecture overview
-- _bmad/expertise/review/output-format.md      # Consolidated output structure
-- _bmad/expertise/review/escalation-rules.md   # PM escalation triggers
+- .specflow-lib/expertise/review/index.md              # Dynamic architecture overview
+- .specflow-lib/expertise/review/output-format.md      # Consolidated output structure
+- .specflow-lib/expertise/review/escalation-rules.md   # PM escalation triggers
 ```
 
 **Skill Discovery:**
@@ -396,8 +374,8 @@ triggers:
 **Internal Expertise Triggers (via pillar binding):**
 
 When a pillar is selected in `0-scope.md`, the related review skill is invoked:
-- Security pillar → Uses `_bmad/expansion-packs/cloud-architecture/agents/security-reviewer.md#stride-framework`
-- Architecture pillar → Uses `_bmad/workflows/3-solutioning/create-architecture/` methodology
+- Security pillar → Uses `.specflow-lib/methodology/stride-framework.md`
+- Architecture pillar → Uses `.specflow-lib/methodology/decision-categories.md`
 
 **Parallel Execution:**
 - Each matched skill spawned via Task tool with fresh context
@@ -428,19 +406,19 @@ Here's how an agent loads expertise (from sf-security.md):
 ### Step 3: Load Expertise
 
 <expertise>
-Read methodology from BMAD source (skip orchestration blocks):
-- `_bmad/expansion-packs/cloud-architecture/agents/security-reviewer.md#stride-framework` - STRIDE threat modeling
-- `_bmad/expansion-packs/cloud-architecture/agents/security-reviewer.md#compliance-frameworks` - GDPR, HIPAA, PCI-DSS, SOX, ISO 27001
-- `_bmad/expansion-packs/cloud-architecture/agents/security-reviewer.md#security-controls` - Identity, network, data protection controls
+Read methodology:
+- `.specflow-lib/methodology/stride-framework.md` - STRIDE threat modeling
+- `.specflow-lib/methodology/compliance-frameworks.md` - GDPR, HIPAA, PCI-DSS, SOX, ISO 27001
+- `.specflow-lib/methodology/security-controls.md` - Identity, network, data protection controls
 
-Read SpecFlow-specific expertise:
-- `_bmad/expertise/scoping/scope-levels.md` - Scope depth definitions
+Read expertise:
+- `.specflow-lib/expertise/scoping/scope-levels.md` - Scope depth definitions
 
 **Loading rules:**
-1. Find `<bmad-methodology id="{requested-id}">` block in the source file
-2. Read content within that block only
-3. SKIP any `<bmad-orchestration>` blocks entirely
-4. If methodology ID not found, flag as ERROR (do not silently continue)
+1. Read file directly - no fragment parsing needed
+2. Personas are ~20 lines - load entire file
+3. Methodology is self-contained - no orchestration content
+4. Expertise is domain-specific - load relevant files only
 </expertise>
 ```
 
@@ -495,8 +473,9 @@ On receiving agent output:
 
 ## Implementing a New Agent
 
-1. **Identify BMAD persona** in `_bmad/agents/`
-2. **Extract expertise** into `_bmad/expertise/{domain}/`
-3. **Create sf-{agent}.md** following template above
-4. **Add to PM routing** in sf-pm.md
-5. **Define scope-depth mapping** for the agent's output type
+1. **Create persona** in `.specflow-lib/personas/{agent}.md`
+2. **Extract methodology** into `.specflow-lib/methodology/{domain}/`
+3. **Add expertise** to `.specflow-lib/expertise/{domain}/`
+4. **Create sf-{agent}.md** following template above
+5. **Add to PM routing** in sf-pm.md
+6. **Define scope-depth mapping** for the agent's output type
