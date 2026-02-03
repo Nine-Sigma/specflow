@@ -1,32 +1,12 @@
 {
-  "version": "1.0",
+  "version": "2.0",
   "tracker": {
     "type": "local",
     "repo": null,
-    "sync": {
-      "auto": true,
-      "notify": true,
-      "checkpoints": ["starting", "before_spec", "after_completion", "scope_change"]
-    },
     "github": {
       "use_sub_issues": true,
       "fallback_to_task_list": true,
-      "project_id": null,
-      "story_points_field_id": null
-    }
-  },
-  "ticket_management": {
-    "auto_create_tickets": true,
-    "embed_full_spec": true,
-    "story_point_calculation": "criteria_count",
-    "story_point_cap": 8,
-    "auto_complete_on_close": true,
-    "labels": {
-      "epic": "specflow:epic",
-      "story": "specflow:story",
-      "pillar_security": "security",
-      "pillar_cost": "cost",
-      "pillar_testing": "testing"
+      "project_id": null
     }
   },
   "classification": {
@@ -39,21 +19,57 @@
       "docs": { "pillars": [] }
     }
   },
-  "size_mapping": {
-    "quick": ["trivial", "xs", "1", "small"],
-    "standard": ["medium", "m", "2", "3"],
-    "complex": ["large", "xl", "5", "8", "13"]
-  },
   "labels": {
     "prefix": "specflow:",
     "managed": ["in-progress", "spec-ready", "completed"]
   },
-  "swarms": {
-    "spec": { "enabled": true, "skip_research": false },
-    "review": { "enabled": true },
-    "execution": { "enabled": true, "mode": "adaptive" },
-    "release": { "enabled": true }
+  "context": {
+    "fresh_window_threshold": 50000,
+    "auto_clear_suggestion": true
   },
-  "handoff_archive": true,
-  "pause_before_execution": true
+  "testing": {
+    "enforcement": "strict",
+    "coverage_thresholds": {
+      "trivial": null,
+      "small": null,
+      "medium": 70,
+      "large": 80,
+      "complex": 90
+    },
+    "test_directory": "auto",
+    "smart_selection": true,
+    "parallel": true,
+    "staged_execution": true,
+    "retries": {
+      "flaky": 2,
+      "timeout": 1
+    },
+    "uat": {
+      "enabled": true,
+      "app_url": "http://localhost:3000",
+      "headless": "auto",
+      "timeout_per_scenario": 30000,
+      "screenshot_on_failure": true,
+      "screenshot_on_success": false,
+      "dependencies": {
+        "browser_use": {
+          "status": "pending",
+          "installed_at": null,
+          "version": null,
+          "declined_reason": null
+        }
+      }
+    },
+    "regression_detection": true,
+    "fail_fast": false
+  },
+  "_docs": {
+    "tracker.type": "local | github | jira | linear",
+    "tracker.repo": "owner/repo for github, project key for jira/linear",
+    "classification.confidence_threshold": "Below this, escalate to user",
+    "context.fresh_window_threshold": "Suggest /clear when context exceeds this (tokens)",
+    "testing.enforcement": "strict = fail on threshold miss, lenient = warn only",
+    "testing.coverage_thresholds": "Minimum coverage % by scope level, null = no requirement",
+    "testing.uat.dependencies.browser_use.status": "pending | installed | declined"
+  }
 }
