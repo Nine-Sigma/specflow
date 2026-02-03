@@ -1,11 +1,32 @@
 # SpecFlow planning docs (local only)
 .planning/
-plan-docs/
+
+# TypeScript build output
+dist/
+
+# Dependencies
+node_modules/
 
 # CLAUDE.md symlink (create locally with: ln -sf AGENTS.md CLAUDE.md)
 CLAUDE.md
 **/CLAUDE.md
 
+# SpecFlow secrets (UAT credentials)
+.specflow/secrets.json
+
+# Runtime state (generated during execution)
+.specflow/issues/*.json
+.specflow/execution/*
+!.specflow/execution/.gitkeep
+.specflow/tickets/*
+!.specflow/tickets/.gitkeep
+.specflow/handoffs/*
+!.specflow/handoffs/.gitkeep
+!.specflow/handoffs/archive/.gitkeep
+.specflow/specs/*
+!.specflow/specs/.gitkeep
+*.log
+
 # OS files
 .DS_Store
-**/DS_Store
+**/.DS_Store
