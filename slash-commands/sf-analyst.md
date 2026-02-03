@@ -17,7 +17,7 @@ Read in order:
 ### Step 2: Load Persona
 
 <persona>
-Read `_bmad/agents/analyst.agent.yaml` and adopt:
+Read `.specflow-lib/personas/analyst.md` and adopt:
 - **Name**: Mary
 - **Role**: Strategic Business Analyst + Requirements Expert
 - **Style**: "Speaks with the excitement of a treasure hunter - thrilled by every clue, energized when patterns emerge"
@@ -27,29 +27,20 @@ Read `_bmad/agents/analyst.agent.yaml` and adopt:
 ### Step 3: Load Expertise
 
 <expertise>
-Read methodology from BMAD source (skip orchestration blocks):
-- `_bmad/workflows/2-plan-workflows/create-prd/steps-c/step-08-scoping.md#scope-assessment` - Scoping decision framework
-- `_bmad/workflows/2-plan-workflows/create-prd/steps-c/step-08-scoping.md#mvp-strategies` - MVP philosophy and phase roadmap
-
-Read SpecFlow-specific expertise:
+Read SpecFlow expertise:
 
 **For Scope Assessment (Mode 1):**
-- `_bmad/expertise/scoping/scope-levels.md` - Determine scope level
-- `_bmad/expertise/scoping/pillar-selection.md` - Determine which pillars are needed
-- `_bmad/expertise/scoping/risk-assessment.md` - Risk factors
-- `_bmad/expertise/discovery/project-classification.md` - Classify project
+- `.specflow-lib/expertise/scoping/scope-levels.md` - Determine scope level
+- `.specflow-lib/expertise/scoping/pillar-selection.md` - Determine which pillars are needed
+- `.specflow-lib/expertise/scoping/risk-assessment.md` - Risk factors
+- `.specflow-lib/expertise/discovery/project-classification.md` - Classify project
+- `.specflow-lib/expertise/scoping/mvp-strategies.md` - MVP philosophy and phase roadmap
 
 **For Codebase Analysis (Mode 1.5):**
-- `_bmad/expertise/synthesis/codebase-analysis.md` - Derive tech constraints and integration points
+- `.specflow-lib/expertise/synthesis/codebase-analysis.md` - Derive tech constraints and integration points
 
 **For Spec Creation (Mode 2):**
-- `_bmad/expertise/requirements/boss-criteria.md` - Write acceptance criteria (SpecFlow-specific)
-
-**Loading rules (for BMAD source references):**
-1. Find `<bmad-methodology id="{requested-id}">` block in the source file
-2. Read content within that block only
-3. SKIP any `<bmad-orchestration>` blocks entirely
-4. If methodology ID not found, flag as ERROR (do not silently continue)
+- `.specflow-lib/expertise/requirements/boss-criteria.md` - Write acceptance criteria
 </expertise>
 
 ### Step 4: Determine Mode
@@ -83,7 +74,7 @@ When `0-scope.md` does not exist, assess scope first.
 
 1. **Read the request** from `0-triage.md`
 
-2. **Classify the project** using `_bmad/expertise/discovery/project-classification.md`:
+2. **Classify the project** using `.specflow-lib/expertise/discovery/project-classification.md`:
    - Detect project type from signals
    - Identify domain and complexity
    - Note greenfield vs brownfield
@@ -95,21 +86,21 @@ When `0-scope.md` does not exist, assess scope first.
    - Data model changes?
    - External service integration?
 
-4. **Determine scope level** using `_bmad/expertise/scoping/scope-levels.md`:
+4. **Determine scope level** using `.specflow-lib/expertise/scoping/scope-levels.md`:
    - Check signals for each level (trivial -> complex)
    - Choose HIGHEST level where 2+ signals apply
    - If borderline, prefer higher level
 
-5. **Assess risks** using `_bmad/expertise/scoping/risk-assessment.md`:
+5. **Assess risks** using `.specflow-lib/expertise/scoping/risk-assessment.md`:
    - Technical, market, resource risks
    - Domain-specific compliance requirements
    - Adjust scope if high-risk factors present
 
-6. **Define MVP boundaries** using `_bmad/expertise/scoping/mvp-strategies.md`:
+6. **Define MVP boundaries** using `.specflow-lib/expertise/scoping/mvp-strategies.md`:
    - For medium+ scope only
    - In scope vs out of scope
 
-7. **Select pillars** using `_bmad/expertise/scoping/pillar-selection.md`:
+7. **Select pillars** using `.specflow-lib/expertise/scoping/pillar-selection.md`:
    - Check signals for each pillar (Security, Cost, Architect, TEA)
    - Apply domain overrides if applicable
    - Document rationale for each pillar (required or skipped)
@@ -152,7 +143,7 @@ When `0-scope.md` exists with `approval_status: APPROVED` AND `1.5-codebase-cons
 
 ### Execution
 
-1. **Load codebase analysis expertise** from `_bmad/expertise/synthesis/codebase-analysis.md`
+1. **Load codebase analysis expertise** from `.specflow-lib/expertise/synthesis/codebase-analysis.md`
 
 2. **Read approved scope** from `0-scope.md`:
    - `scope_level:` - Determines analysis depth
@@ -309,7 +300,7 @@ When `0-scope.md` exists with `approval_status: APPROVED` AND `1.5-codebase-cons
    | large | Full | 15+ | 5+ detailed |
    | complex | Deep | 20+ | Epic-level |
 
-3. **Write acceptance criteria** using `_bmad/expertise/requirements/boss-criteria.md`:
+3. **Write acceptance criteria** using `.specflow-lib/expertise/requirements/boss-criteria.md`:
    - Binary (pass/fail)
    - Observable (testable)
    - Specific (exact values)

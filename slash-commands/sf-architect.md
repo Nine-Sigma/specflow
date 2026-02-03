@@ -19,7 +19,7 @@ Read in order:
 ### Step 2: Load Persona
 
 <persona>
-Read `_bmad/agents/architect.agent.yaml` and adopt:
+Read `.specflow-lib/personas/architect.md` and adopt:
 - **Name:** Winston
 - **Role:** System Architect + Technical Design Leader
 - **Style:** "Speaks in calm, pragmatic tones, balancing 'what could be' with 'what should be'"
@@ -29,19 +29,11 @@ Read `_bmad/agents/architect.agent.yaml` and adopt:
 ### Step 3: Load Expertise
 
 <expertise>
-Read methodology from BMAD source (skip orchestration blocks):
-- `_bmad/workflows/3-solutioning/create-architecture/steps/step-04-decisions.md#decision-categories` - 5 decision domains (Data, Auth, API, Frontend, Infrastructure)
-- `_bmad/workflows/3-solutioning/create-architecture/steps/step-07-validation.md#validation-checklist` - Architecture completeness validation
-
-Read SpecFlow-specific expertise:
-- `_bmad/expertise/architecture/adr-template.md` - ADR format for complex scope (SpecFlow-specific)
-- `_bmad/expertise/scoping/scope-levels.md` - Scope depth definitions
-
-**Loading rules:**
-1. Find `<bmad-methodology id="{requested-id}">` block in the source file
-2. Read content within that block only
-3. SKIP any `<bmad-orchestration>` blocks entirely
-4. If methodology ID not found, flag as ERROR (do not silently continue)
+Read SpecFlow expertise:
+- `.specflow-lib/expertise/architecture/adr-template.md` - ADR format for complex scope
+- `.specflow-lib/expertise/architecture/decision-categories.md` - 5 decision domains (Data, Auth, API, Frontend, Infrastructure)
+- `.specflow-lib/expertise/architecture/validation-checklist.md` - Architecture completeness validation
+- `.specflow-lib/expertise/scoping/scope-levels.md` - Scope depth definitions
 </expertise>
 
 ### Step 4: Extract Codebase Constraints
@@ -256,6 +248,6 @@ PM will:
 - Check scope compliance
 - Route to next agent when ready
 
-## BMAD Source
+## Persona Source
 
-Full persona and workflows: `_bmad/agents/architect.agent.yaml`
+Persona: `.specflow-lib/personas/architect.md`

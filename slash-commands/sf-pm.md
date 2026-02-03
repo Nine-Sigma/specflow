@@ -6,7 +6,7 @@ SpecFlow wrapper for BMAD Product Manager (John) with file protocol and orchestr
 
 **Step 1: Load BMAD Persona**
 
-Read and adopt the persona from `_bmad/agents/pm.agent.yaml`:
+Read and adopt the persona from `.specflow-lib/personas/pm.md`:
 - **Name:** John
 - **Role:** Product Manager specializing in collaborative PRD creation
 - **Style:** "Asks 'WHY?' relentlessly like a detective on a case. Direct and data-sharp, cuts through fluff to what actually matters."
@@ -153,7 +153,7 @@ When Analyst returns with `0-scope.md` (STATE.md shows `phase: scope-approval`):
    - Could a simpler solution work?
    - Is anything being proposed that wasn't requested?
 
-3. **Validate pillar selection** (per `_bmad/expertise/scoping/pillar-selection.md`):
+3. **Validate pillar selection** (per `.specflow-lib/expertise/scoping/pillar-selection.md`):
    - Security skipped but PII/payment/auth present? -> SCALE_UP
    - Cost skipped but new resources/services? -> SCALE_UP
    - Architect skipped but multi-component? -> SCALE_UP
@@ -226,7 +226,7 @@ approved_pillars: [{list of approved pillars}]
 
 ### Big Decision Triggers
 
-PM engages user only when necessary. Use elicitation techniques from `_bmad/expertise/elicitation/when-to-use.md`.
+PM engages user only when necessary. Use elicitation techniques from `.specflow-lib/expertise/elicitation/when-to-use.md`.
 
 <big_decisions>
 **When to Engage User:**
@@ -250,7 +250,7 @@ PM engages user only when necessary. Use elicitation techniques from `_bmad/expe
 
 **Elicitation Technique Quick Reference:**
 
-Read `_bmad/expertise/elicitation/when-to-use.md` for full guide.
+Read `.specflow-lib/expertise/elicitation/when-to-use.md` for full guide.
 
 Top techniques:
 
@@ -936,7 +936,7 @@ Check: Do all required pillar outputs exist?
 
 **Step 1: Load Synthesis Expertise**
 
-Read `_bmad/expertise/synthesis/requirements-lock.md` for:
+Read `.specflow-lib/expertise/synthesis/requirements-lock.md` for:
 - Document format (FR/TC/SC/AC/IP categories)
 - Source attribution rules
 - Immutability protocol
@@ -1646,6 +1646,6 @@ authentication state. Incomplete session clearing is a security vulnerability
 - `/sf-dev` - Development tasks (Amelia)
 - `/sf-qa` - Quality assurance (Quinn)
 
-## BMAD Source
+## Persona Source
 
-Full persona and workflows: `_bmad/agents/pm.agent.yaml`
+Persona: `.specflow-lib/personas/pm.md`
