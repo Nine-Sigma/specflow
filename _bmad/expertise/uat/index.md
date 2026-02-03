@@ -47,28 +47,106 @@ Before UAT execution:
 3. Required tools installed (browser-use for UI, Node.js for API)
 4. Credentials available (env vars, secrets.json, or prompt)
 
-## Fallback: Manual Checklist
+## Fallback: Manual UAT
 
-When automation unavailable (tools not installed, user declines install):
+When automated UAT is unavailable, generate a manual checklist for human verification.
 
-Generate checklist for human verification:
+### When Manual Fallback Applies
+
+| Condition | Trigger | Fallback Action |
+|-----------|---------|-----------------|
+| browser-use not installed | User declines install prompt | Generate checklist |
+| browser-use install fails | npm/pip error | Generate checklist |
+| Node.js unavailable | API mode, no Node | Generate checklist |
+| CI without browser | Headless not supported | Generate checklist |
+| Complex visual verification | AI cannot assess design | Mark for human review |
+
+### STATUS.md Format
+
+When manual UAT is required, STATUS.md shows:
+
+```markdown
+## UAT Status
+
+**Mode:** MANUAL_REQUIRED
+**Reason:** browser-use not installed (user declined)
+**Generated:** 2026-02-03T10:00:00Z
+
+See: Manual UAT Checklist below
+```
+
+### Generating Manual Checklist from Gherkin
+
+Transform Gherkin scenarios into step-by-step human instructions:
+
+**Input (Gherkin):**
+```gherkin
+Scenario: User logs in successfully
+  Given I am on the login page
+  When I enter "test@example.com" in the email field
+  And I enter "password123" in the password field
+  And I click the "Login" button
+  Then I should be redirected to "/dashboard"
+```
+
+**Output (Manual Checklist):**
 ```markdown
 ## Manual UAT Checklist
 
-- [ ] Scenario: User logs in successfully
-  - Visit /login
-  - Enter email: test@example.com
-  - Enter password: password123
-  - Click "Login"
-  - Verify: Redirected to /dashboard
+| # | Scenario | Steps | Status |
+|---|----------|-------|--------|
+| 1 | User logs in successfully | See below | [ ] |
 
-- [ ] Scenario: Invalid password rejected
-  - Visit /login
-  - Enter email: test@example.com
-  - Enter password: wrong
-  - Click "Login"
-  - Verify: Error message "Invalid credentials"
+### Scenario 1: User logs in successfully
+
+1. Visit: http://localhost:3000/login
+2. Enter email: `test@example.com`
+3. Enter password: `password123`
+4. Click button: "Login"
+5. **Verify:** URL changes to `/dashboard`
+
+**Result:** [ ] PASS / [ ] FAIL
+
+**Notes:** _______________
 ```
+
+### Evidence Required
+
+For manual UAT, document evidence of verification:
+
+| Scope | Evidence Required |
+|-------|------------------|
+| small | Text confirmation ("tested on DATE") |
+| medium | Screenshot of final state |
+| large | Screenshot per scenario |
+| complex | Video or screenshot series |
+
+### Marking Complete
+
+After manual verification, update STATUS.md:
+
+```markdown
+## UAT Status
+
+**Mode:** MANUAL_COMPLETED
+**Verified by:** Dean
+**Verified at:** 2026-02-03T14:30:00Z
+
+### Results
+| Scenario | Result | Notes |
+|----------|--------|-------|
+| User logs in | PASS | Redirected correctly |
+| Invalid password | PASS | Error shown |
+```
+
+### Manual Findings Status
+
+| Status | Meaning | Next Step |
+|--------|---------|-----------|
+| PASS | All scenarios verified | Proceed to approval |
+| FAIL | Scenario failed verification | Create bug issue |
+| BLOCKED | Cannot test (env issue) | Fix environment |
+| SKIPPED | Out of scope for manual | Document reason |
 
 ## Related Files
 
