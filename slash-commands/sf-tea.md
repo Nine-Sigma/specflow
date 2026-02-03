@@ -35,6 +35,8 @@ Read and apply methodology from:
 - `_bmad/expertise/validation/test-criteria.md` - Test quality standards, scope-based depth tables
 - `_bmad/expertise/validation/traceability-matrix.md` - Requirements coverage format
 - `_bmad/expertise/scoping/scope-levels.md` - Scope depth definitions
+- `_bmad/expertise/testing/test-specification.md` - Test specification format for QA
+- `_bmad/expertise/testing/traceability-matrix.md` - AC-to-test mapping format
 </expertise>
 
 ## Scope-Limited Coverage
@@ -70,10 +72,10 @@ Your test plan MUST match scope from `0-scope.md`.
 ### Minimal Output (trivial scope)
 
 For trivial scope, test plan can be inline:
-```markdown
+\`\`\`markdown
 ## Verification
 - [ ] {single verification step}
-```
+\`\`\`
 
 Only create separate `5-test-plan.md` for small+ scope.
 
@@ -97,6 +99,28 @@ For medium scope:
 
 Use complete output format below.
 
+## Test Directory Detection
+
+Before writing test plan, detect existing test patterns in the codebase:
+
+\`\`\`bash
+# Find existing test files
+find . -name "*.test.ts" -o -name "*.spec.ts" -o -name "*.test.js" -o -name "*.spec.js" 2>/dev/null | head -10
+
+# Check for test directories
+ls -d tests/ __tests__/ src/__tests__/ test/ 2>/dev/null
+
+# Check package.json for test framework
+grep -E '"vitest"|"jest"|"mocha"' package.json 2>/dev/null
+\`\`\`
+
+**Detection outputs:**
+- `test_framework`: vitest | jest | pytest | go | none
+- `test_directory`: Detected path (e.g., `src/__tests__/`, `tests/`)
+- `naming_convention`: Detected pattern (e.g., `*.test.ts`, `*.spec.ts`)
+
+Include in output frontmatter and Test Directory Detection section.
+
 ## Execution
 
 <execution>
@@ -105,15 +129,17 @@ Before completing, check:
 - [ ] Test count matches scope level guidance
 - [ ] Every AC from 1-spec.md has at least one test
 - [ ] BOSS criteria are applied to assertions
+- [ ] Traceability matrix shows no MISSING coverage
+- [ ] recommended_flow is appropriate for scope and test levels
 
 **Uncertainty Flagging:**
 If confidence < 80% on test coverage, add to output:
-```yaml
+\`\`\`yaml
 uncertainty:
   - section: {section name}
     reason: {why uncertain}
     options: [{possible approaches}]
-```
+\`\`\`
 </execution>
 
 ## Output
@@ -123,15 +149,17 @@ After completing analysis:
 
 1. Write to `.specflow/features/{slug}/5-test-plan.md`
 2. Append to `.specflow/features/{slug}/PROGRESS.md`:
-   ```
+   \`\`\`
    ## {timestamp} - TEA (/sf:tea)
 
    **Work Done:**
    - [Summary of test planning]
 
-   **Output:** `5-test-plan.md`
+   **Output:** \`5-test-plan.md\`
 
    **Scope Honored:** {scope_level} -> {test count} tests
+
+   **Flow Recommendation:** {recommended_flow}
 
    **Constraints Honored:**
    - [List constraints from prior outputs]
@@ -139,16 +167,16 @@ After completing analysis:
    **Uncertainties:** {any flagged, or "None"}
 
    ---
-   ```
+   \`\`\`
 3. Update `.specflow/STATE.md`:
    - last-agent: tea
    - next-agent: pm
-   - phase: review
+   - phase: checkpoint
 </output>
 
 ## Output Format (5-test-plan.md)
 
-```markdown
+\`\`\`markdown
 ---
 agent: tea
 created: {iso-timestamp}
@@ -156,6 +184,14 @@ depends_on: ["0-scope.md", "1-spec.md", "2-architecture.md", "3-security.md", "4
 status: draft
 scope_level: {from 0-scope.md}
 test_count: {actual count}
+recommended_flow: {qa-first | dev-only}
+test_levels:
+  - unit
+  - integration  # if qa-first
+  - e2e          # if qa-first and UI
+  - api          # if qa-first and API
+test_framework: {vitest | jest | pytest | go | none}
+test_directory: {detected path or "TBD"}
 ---
 
 # {Feature Name} Test Plan
@@ -163,6 +199,28 @@ test_count: {actual count}
 ## Summary
 
 {2-3 sentence summary of test strategy}
+
+## Flow Recommendation
+
+**recommended_flow:** {qa-first | dev-only}
+
+**Determination:**
+- If test_levels includes integration/e2e/api: **qa-first** (QA writes these tests before Dev implements)
+- If test_levels is unit-only: **dev-only** (Dev does internal TDD)
+- If scope is trivial: **dev-only**
+
+**Rationale:** {1-2 sentences explaining the choice}
+
+## Test Directory Detection
+
+**Detected pattern:** \`{pattern}\`
+**Framework:** \`{framework}\`
+
+QA should write tests to: \`{directory}\`
+Naming convention: \`{convention}\`
+
+{If no existing tests:}
+**No existing tests detected.** QA should establish test infrastructure following project conventions.
 
 ## Test Coverage Matrix
 
@@ -178,47 +236,101 @@ test_count: {actual count}
 
 ### Happy Path
 
-```gherkin
+\`\`\`gherkin
 Feature: {Feature Name}
 
+  @AC-XX
   Scenario: {Happy path scenario}
     Given {precondition}
     When {action}
     Then {expected result}
-```
+\`\`\`
 
 ### Error Cases
 
 {Skip for trivial scope}
 
-```gherkin
+\`\`\`gherkin
+  @AC-XX
   Scenario: {Error case}
     Given {precondition}
     When {invalid action}
     Then {error handling}
-```
+\`\`\`
 
 ### Security Tests (from 3-security.md)
 
 {Skip for trivial/small scope}
 
-```gherkin
+\`\`\`gherkin
+  @AC-XX @security
   Scenario: {Security test for STRIDE mitigation}
     Given {precondition}
     When {attack attempt}
     Then {mitigation works}
-```
+\`\`\`
 
 ### Edge Cases
 
 {Skip for trivial/small scope}
 
-```gherkin
+\`\`\`gherkin
+  @AC-XX @edge
   Scenario: {Edge case}
     Given {boundary condition}
     When {action}
     Then {correct handling}
-```
+\`\`\`
+
+## Test Specifications (for QA)
+
+{Skip for trivial scope or dev-only flow}
+
+QA should implement tests matching these specifications.
+
+### Unit Tests (Dev implements)
+
+| Test | AC Ref | Description | Assertions |
+|------|--------|-------------|------------|
+| {test name} | AC-XX | {what to test} | {expected outcomes} |
+
+### Integration Tests (QA implements)
+
+| Test | AC Ref | Description | Dependencies |
+|------|--------|-------------|--------------|
+| {test name} | AC-XX | {behavior to test} | {required setup} |
+
+### E2E Tests (QA implements, if UI)
+
+| Test | AC Ref | Description | User Flow |
+|------|--------|-------------|-----------|
+| {test name} | AC-XX | {scenario} | {steps} |
+
+### API Tests (QA implements, if API)
+
+| Test | AC Ref | Description | Contract |
+|------|--------|-------------|----------|
+| {test name} | AC-XX | {endpoint behavior} | {request/response} |
+
+## Traceability Matrix
+
+| AC | Unit Spec | Integration Spec | E2E Spec | API Spec | Gherkin | Coverage |
+|----|-----------|------------------|----------|----------|---------|----------|
+| AC-01 | {spec} | {spec} | {spec} | {spec} | S1, S2 | FULL |
+| AC-02 | {spec} | - | - | - | S1 | FULL |
+| AC-03 | - | - | - | - | - | MISSING |
+
+### Coverage Summary
+
+- Total ACs: {count}
+- FULL coverage: {count} ({percent}%)
+- PARTIAL coverage: {count} ({percent}%)
+- MISSING coverage: {count} ({percent}%)
+
+{If any MISSING:}
+### Missing Coverage
+
+**AC-XX:** {reason missing, recommendation}
 
 ## Test Types Summary
 
@@ -229,21 +341,24 @@ Feature: {Feature Name}
 | Unit | {N} | {focus area} |
 | Integration | {N} | {focus area} |
 | E2E | {N} | {focus area} |
+| API | {N} | {focus area} |
 
 ## Constraints for Downstream
 
 ### For Dev (Amelia)
 - {Test patterns to follow}
 - {Mocking requirements}
+- {If dev-only: unit test expectations}
 
 ### For QA (Quinn)
+- {If qa-first: test implementation priorities}
 - {Test execution order}
 - {Coverage expectations}
 
 ## Open Questions
 
 - {Any unresolved items for PM review}
-```
+\`\`\`
 
 ## BOSS Criteria to Assertions
 
@@ -253,16 +368,37 @@ All acceptance criteria must be:
 - **S**pecific: Exact values in assertion
 - **S**cope-bound: Tests this feature only
 
+## PM Validation (Drift Checkpoint)
+
+After TEA completes, PM validates the test plan against requirements lock:
+
+**Completeness Check:**
+- Every AC from 1-spec.md has at least one test specification
+- Every AC has at least one Gherkin scenario
+- Traceability matrix shows no MISSING coverage
+
+**Scope Compliance:**
+- Test count within scope guidance
+- recommended_flow appropriate for scope (trivial = dev-only)
+
+**If validation fails:**
+PM writes \`drift/correction-tea-{N}.md\` with:
+- Missing ACs that need test coverage
+- Wrong specifications that don't match requirements
+- Scope violations to correct
+
+TEA re-runs in DRIFT_FIX mode addressing corrections.
+
 ## Routing
 
-**Always return to PM.** Do not route directly to next agent.
+**Always return to PM.** Do not route directly to QA.
 
-Update `STATE.md`:
+Update \`STATE.md\`:
 - last-agent: tea
 - next-agent: pm
-- phase: review
+- phase: checkpoint
 
 PM will:
-- Review output quality
-- Check scope compliance
-- Route to next agent when ready
+- Run drift checkpoint (compare plan to requirements lock)
+- Verify all ACs have test coverage
+- Route to QA (if qa-first) or Dev (if dev-only) based on recommended_flow
