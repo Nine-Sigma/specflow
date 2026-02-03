@@ -256,12 +256,12 @@ PM will:
 
 ## Expertise Mapping by Agent
 
-| Agent | Persona | Expertise Folders | Primary Output |
-|-------|---------|-------------------|----------------|
-| `/sf:analyst` | Mary | `discovery/`, `requirements/`, `scoping/` | 0-scope.md, 1-spec.md |
-| `/sf:architect` | Winston | `architecture/`, `scoping/` | 2-architecture.md |
-| `/sf:security` | Jordan | `security/`, `scoping/` | 3-security.md |
-| `/sf:cost` | Taylor | `cost/`, `scoping/` | 4-cost.md |
+| Agent | Persona | BMAD Source + SpecFlow Expertise | Primary Output |
+|-------|---------|----------------------------------|----------------|
+| `/sf:analyst` | Mary | BMAD PRD workflow + `scoping/`, `discovery/`, `requirements/`, `synthesis/` | 0-scope.md, 1.5-codebase-constraints.md, 1-spec.md |
+| `/sf:architect` | Winston | BMAD architecture workflow + `architecture/adr-template.md`, `scoping/` | 2-architecture.md |
+| `/sf:security` | Jordan | BMAD security-reviewer agent + `scoping/` | 3-security.md |
+| `/sf:cost` | Taylor | BMAD cost-optimizer agent + `scoping/` | 4-cost.md |
 | `/sf:tea` | (SpecFlow) | `validation/`, `scoping/` | 5-test-plan.md |
 | `/sf:dev` | Amelia | `requirements/` (constraints) | Implementation |
 | `/sf:qa` | Quinn | `validation/` | Test execution |
@@ -269,54 +269,66 @@ PM will:
 
 **Note:** `/sf:review` is a dynamic skill orchestrator, not a fixed agent. It discovers review-capable skills, matches them to code content, and spawns relevant skills in parallel. See Review Lenses section below.
 
+**v2.4 Architecture:** Agents reference BMAD source files directly using `_bmad/path#methodology-id` pattern. SpecFlow-specific expertise remains in `_bmad/expertise/`.
+
 ## Agent Expertise Loading
 
 Detailed mapping of which specific files each agent loads in Step 3.
 
 ### sf-analyst.md
 
-**Mode 1 (Scope Assessment):**
 ```markdown
-- _bmad/expertise/scoping/scope-levels.md      # Determine scope level
-- _bmad/expertise/scoping/pillar-selection.md  # Which pillars needed
-- _bmad/expertise/scoping/mvp-strategies.md    # MVP boundaries
-- _bmad/expertise/scoping/risk-assessment.md   # Risk factors
-- _bmad/expertise/discovery/project-classification.md  # Classify project
-```
+# BMAD source (domain methodology)
+- _bmad/workflows/2-plan-workflows/create-prd/steps-c/step-08-scoping.md#scope-assessment
+- _bmad/workflows/2-plan-workflows/create-prd/steps-c/step-08-scoping.md#mvp-strategies
 
-**Mode 2 (Spec Creation):**
-```markdown
-- _bmad/expertise/requirements/boss-criteria.md  # Write acceptance criteria
+# SpecFlow expertise (Mode 1 - Scope Assessment)
+- _bmad/expertise/scoping/scope-levels.md
+- _bmad/expertise/scoping/pillar-selection.md
+- _bmad/expertise/scoping/risk-assessment.md
+- _bmad/expertise/discovery/project-classification.md
+
+# SpecFlow expertise (Mode 1.5 - Codebase Analysis)
+- _bmad/expertise/synthesis/codebase-analysis.md
+
+# SpecFlow expertise (Mode 2 - Spec Creation)
+- _bmad/expertise/requirements/boss-criteria.md
 ```
 
 ### sf-architect.md
 
 ```markdown
-- _bmad/expertise/architecture/index.md            # Overview, scope-based depth
-- _bmad/expertise/architecture/decision-categories.md  # 5 decision domains
-- _bmad/expertise/architecture/adr-template.md     # ADR format (complex scope)
-- _bmad/expertise/architecture/validation-checklist.md  # 40-item validation
-- _bmad/expertise/scoping/scope-levels.md          # Match depth to scope
+# BMAD source (domain methodology)
+- _bmad/workflows/3-solutioning/create-architecture/steps/step-04-decisions.md#decision-categories
+- _bmad/workflows/3-solutioning/create-architecture/steps/step-07-validation.md#validation-checklist
+
+# SpecFlow expertise
+- _bmad/expertise/architecture/adr-template.md
+- _bmad/expertise/scoping/scope-levels.md
 ```
 
 ### sf-security.md
 
 ```markdown
-- _bmad/expertise/security/index.md           # Overview, scope-based depth
-- _bmad/expertise/security/stride-framework.md    # STRIDE threat categories
-- _bmad/expertise/security/security-controls.md   # 5 control checklists
-- _bmad/expertise/security/compliance-patterns.md # GDPR, HIPAA, PCI-DSS, etc.
-- _bmad/expertise/scoping/scope-levels.md         # Match depth to scope
+# BMAD source (domain methodology)
+- _bmad/expansion-packs/cloud-architecture/agents/security-reviewer.md#stride-framework
+- _bmad/expansion-packs/cloud-architecture/agents/security-reviewer.md#compliance-frameworks
+- _bmad/expansion-packs/cloud-architecture/agents/security-reviewer.md#security-controls
+
+# SpecFlow expertise
+- _bmad/expertise/scoping/scope-levels.md
 ```
 
 ### sf-cost.md
 
 ```markdown
-- _bmad/expertise/cost/index.md               # Overview, scope-based depth
-- _bmad/expertise/cost/cost-methodology.md    # 5-step analysis process
-- _bmad/expertise/cost/optimization-strategies.md  # Compute, storage, network
-- _bmad/expertise/cost/pricing-models.md      # AWS, Azure, GCP patterns
-- _bmad/expertise/scoping/scope-levels.md     # Match depth to scope
+# BMAD source (domain methodology)
+- _bmad/expansion-packs/cloud-architecture/agents/cost-optimizer.md#cost-methodology
+- _bmad/expansion-packs/cloud-architecture/agents/cost-optimizer.md#optimization-strategies
+- _bmad/expansion-packs/cloud-architecture/agents/cost-optimizer.md#pricing-models
+
+# SpecFlow expertise
+- _bmad/expertise/scoping/scope-levels.md
 ```
 
 ### sf-tea.md (Test Engineering)
@@ -381,14 +393,11 @@ triggers:
 ---
 ```
 
-**Internal Expertise Triggers:**
-```yaml
-# In _bmad/expertise/security/triggers.yaml
-review-capable: true
-triggers:
-  files: ["*auth*", "*payment*"]
-  patterns: ["password", "token", "bcrypt"]
-```
+**Internal Expertise Triggers (via pillar binding):**
+
+When a pillar is selected in `0-scope.md`, the related review skill is invoked:
+- Security pillar → Uses `_bmad/expansion-packs/cloud-architecture/agents/security-reviewer.md#stride-framework`
+- Architecture pillar → Uses `_bmad/workflows/3-solutioning/create-architecture/` methodology
 
 **Parallel Execution:**
 - Each matched skill spawned via Task tool with fresh context
@@ -419,12 +428,19 @@ Here's how an agent loads expertise (from sf-security.md):
 ### Step 3: Load Expertise
 
 <expertise>
-Read and apply methodology from:
-- `_bmad/expertise/security/index.md` - Overview and scope-based analysis depth
-- `_bmad/expertise/security/stride-framework.md` - STRIDE threat categories and analysis process
-- `_bmad/expertise/security/security-controls.md` - 5 control category checklists
-- `_bmad/expertise/security/compliance-patterns.md` - GDPR, HIPAA, PCI-DSS, SOX, ISO 27001 (if applicable)
+Read methodology from BMAD source (skip orchestration blocks):
+- `_bmad/expansion-packs/cloud-architecture/agents/security-reviewer.md#stride-framework` - STRIDE threat modeling
+- `_bmad/expansion-packs/cloud-architecture/agents/security-reviewer.md#compliance-frameworks` - GDPR, HIPAA, PCI-DSS, SOX, ISO 27001
+- `_bmad/expansion-packs/cloud-architecture/agents/security-reviewer.md#security-controls` - Identity, network, data protection controls
+
+Read SpecFlow-specific expertise:
 - `_bmad/expertise/scoping/scope-levels.md` - Scope depth definitions
+
+**Loading rules:**
+1. Find `<bmad-methodology id="{requested-id}">` block in the source file
+2. Read content within that block only
+3. SKIP any `<bmad-orchestration>` blocks entirely
+4. If methodology ID not found, flag as ERROR (do not silently continue)
 </expertise>
 ```
 

@@ -93,9 +93,9 @@ Each skill has a source type that determines where to load methodology:
 - Example: code-review-excellence, e2e-testing-patterns, sql-optimization-patterns
 
 **Internal expertise (source: "internal"):**
-- Load from `_bmad/expertise/{skill.name}/`
-- For security: load `_bmad/expertise/security/stride-framework.md`
-- For architecture: load `_bmad/expertise/architecture/adr-template.md`
+- Load from BMAD source using reference pattern
+- For security: load `_bmad/expansion-packs/cloud-architecture/agents/security-reviewer.md#stride-framework`
+- For architecture: load `_bmad/expertise/architecture/adr-template.md` (SpecFlow-specific)
 
 ### File Filtering for Skills
 

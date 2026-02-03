@@ -85,20 +85,22 @@ triggers:
 ---
 ```
 
-Internal expertise declares triggers in `triggers.yaml`:
+Internal expertise declares triggers via pillar-based overrides:
 
 ```yaml
-# In _bmad/expertise/security/triggers.yaml
-review-capable: true
-triggers:
-  files:
-    - "*auth*"
-    - "*login*"
-    - "*payment*"
-  patterns:
-    - "password"
-    - "token"
-    - "bcrypt"
+# Security pillar binding (triggers security review)
+# Activated when 0-scope.md has pillars.required includes "security"
+# Uses methodology from: _bmad/expansion-packs/cloud-architecture/agents/security-reviewer.md#stride-framework
+
+# File patterns that suggest security review:
+files:
+  - "*auth*"
+  - "*login*"
+  - "*payment*"
+patterns:
+  - "password"
+  - "token"
+  - "bcrypt"
 ```
 
 ## Currently Installed Skills
