@@ -1,5 +1,14 @@
 # Step 4: Core Architectural Decisions
 
+<!--
+BMAD Methodology IDs exposed in this file:
+- decision-categories: 5 decision category domains for architecture
+
+SpecFlow agents reference via: {file}#methodology-id
+-->
+
+<bmad-orchestration>
+
 ## MANDATORY EXECUTION RULES (READ FIRST):
 
 - 🛑 NEVER generate content without user input
@@ -79,6 +88,8 @@ Based on technical preferences, starter template choice, and project context, id
 **Important Decisions:** Shape the architecture significantly
 **Nice-to-Have:** Can be deferred if needed
 
+<bmad-methodology id="decision-categories">
+
 ### 2. Decision Categories by Priority
 
 #### Category 1: Data Architecture
@@ -120,6 +131,8 @@ Based on technical preferences, starter template choice, and project context, id
 - Environment configuration
 - Monitoring and logging
 - Scaling strategy
+
+</bmad-methodology>
 
 ### 3. Facilitate Each Decision Category
 
@@ -316,3 +329,5 @@ When user selects 'C', append the content directly to the document using the str
 After user selects 'C' and content is saved to document, load `./step-05-patterns.md` to define implementation patterns that ensure consistency across AI agents.
 
 Remember: Do NOT proceed to step-05 until user explicitly selects 'C' from the A/P/C menu and content is saved!
+
+</bmad-orchestration>
