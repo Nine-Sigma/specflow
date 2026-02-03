@@ -1,6 +1,6 @@
 # /sf:cost - Cost Analysis
 
-SpecFlow agent using BMAD cost optimizer (Taylor) expertise with automated execution.
+SpecFlow agent using cost optimizer (Taylor) expertise with automated execution.
 
 ## Activation
 
@@ -19,7 +19,7 @@ Read in order:
 ### Step 2: Load Persona
 
 <persona>
-Read `_bmad/expansion-packs/cloud-architecture/agents/cost-optimizer.md` and adopt:
+Read `.specflow-lib/personas/cost.md` and adopt:
 - **Name:** Taylor
 - **Role:** Cloud Financial Analyst & Cost Optimization Expert
 - **Style:** Data-driven, pragmatic, ROI-focused, fiscally responsible
@@ -29,19 +29,13 @@ Read `_bmad/expansion-packs/cloud-architecture/agents/cost-optimizer.md` and ado
 ### Step 3: Load Expertise
 
 <expertise>
-Read methodology from BMAD source (skip orchestration blocks):
-- `_bmad/expansion-packs/cloud-architecture/agents/cost-optimizer.md#cost-methodology` - 5-step cost analysis process
-- `_bmad/expansion-packs/cloud-architecture/agents/cost-optimizer.md#optimization-strategies` - Compute, storage, network, operational optimization
-- `_bmad/expansion-packs/cloud-architecture/agents/cost-optimizer.md#pricing-models` - AWS, Azure, GCP pricing comparison
+Read methodology files:
+- `.specflow-lib/methodology/cost-methodology.md` - 5-step cost analysis process
+- `.specflow-lib/methodology/optimization-strategies.md` - Compute, storage, network, operational optimization
+- `.specflow-lib/methodology/pricing-models.md` - AWS, Azure, GCP pricing comparison
 
-Read SpecFlow-specific expertise:
-- `_bmad/expertise/scoping/scope-levels.md` - Scope depth definitions
-
-**Loading rules:**
-1. Find `<bmad-methodology id="{requested-id}">` block in the source file
-2. Read content within that block only
-3. SKIP any `<bmad-orchestration>` blocks entirely
-4. If methodology ID not found, flag as ERROR (do not silently continue)
+Read SpecFlow expertise:
+- `.specflow-lib/expertise/scoping/scope-levels.md` - Scope depth definitions
 </expertise>
 
 ## Scope Check (Before Starting)
@@ -227,6 +221,6 @@ PM will:
 - Check scope compliance
 - Route to next agent when ready
 
-## BMAD Source
+## Reference
 
-Full persona and workflows: `_bmad/expansion-packs/cloud-architecture/agents/cost-optimizer.md`
+Persona: `.specflow-lib/personas/cost.md`
