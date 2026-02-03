@@ -51,6 +51,82 @@ Agents reference BMAD source files directly using content extraction markers ins
 └─────────────────────────────────────────────────────────────┘
 ```
 
+## BMAD Reference Loading Pattern
+
+SpecFlow agents reference BMAD source methodology using a fragment-style reference pattern. This eliminates duplication while preventing agents from triggering BMAD's interactive workflows.
+
+### Reference Syntax
+
+```
+_bmad/{path-to-file}.md#{methodology-id}
+```
+
+**Examples:**
+- `_bmad/expansion-packs/cloud-architecture/agents/security-reviewer.md#stride-framework`
+- `_bmad/expansion-packs/cloud-architecture/agents/cost-optimizer.md#cost-methodology`
+
+### Content Markers in BMAD Source
+
+BMAD source files use XML-style markers to segment content:
+
+```markdown
+<!-- In BMAD source file -->
+
+<bmad-orchestration>
+<!-- Interactive workflow content: YAML blocks, activation instructions, commands -->
+<!-- SpecFlow agents SKIP this entirely -->
+</bmad-orchestration>
+
+<bmad-methodology id="methodology-name">
+<!-- Reusable methodology content -->
+<!-- SpecFlow agents READ this when referenced -->
+</bmad-methodology>
+```
+
+### Loading Rules
+
+When an agent specifies a reference like `_bmad/path.md#methodology-id`:
+
+1. **Read the file** at the path before the `#`
+2. **Find the methodology block** with `<bmad-methodology id="{id-after-hash}">`
+3. **Read content** within that block only
+4. **SKIP orchestration** - never execute content inside `<bmad-orchestration>` blocks
+5. **Error on missing ID** - if the requested ID is not found, flag as ERROR (do not silently continue)
+
+### Multiple References from Same File
+
+Agents can reference multiple methodology blocks from a single source file:
+
+```markdown
+<expertise>
+Read methodology from BMAD source:
+- `_bmad/expansion-packs/cloud-architecture/agents/security-reviewer.md#stride-framework`
+- `_bmad/expansion-packs/cloud-architecture/agents/security-reviewer.md#compliance-frameworks`
+- `_bmad/expansion-packs/cloud-architecture/agents/security-reviewer.md#security-controls`
+</expertise>
+```
+
+This reads three distinct methodology blocks from security-reviewer.md.
+
+### Error Handling
+
+| Condition | Behavior |
+|-----------|----------|
+| File not found | ERROR - cannot execute without methodology |
+| Methodology ID not found | ERROR - flag missing methodology, halt |
+| Orchestration block read | NEVER - agents must skip these blocks |
+| Empty methodology block | WARNING - continue but log concern |
+
+**Why ERROR on missing ID:**
+Silent fallback would cause methodology drift - agents would operate without intended expertise, producing lower quality output. Fail-fast ensures issues are caught during development, not in production.
+
+### What NOT to Do
+
+- **Never** execute content inside `<bmad-orchestration>` blocks
+- **Never** present A/P/C menus or numbered command lists to users
+- **Never** halt for interactive input except via PM-controlled gates
+- **Never** fallback silently when methodology is missing
+
 ## Standard Agent Template
 
 ```markdown
