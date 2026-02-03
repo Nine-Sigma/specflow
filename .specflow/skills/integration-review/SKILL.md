@@ -2,6 +2,7 @@
 name: integration-review
 description: Detect breaking changes, circular imports, and integration issues in modified code. Use when reviewing PRs that modify exported functions, types, or module boundaries.
 review-capable: true
+report-capable: false
 scope-minimum: small
 triggers:
   files:
