@@ -238,6 +238,84 @@ Spawn ALL skill Tasks at once (do not wait between them). The Task tool will exe
 
 After all Tasks complete, collect their outputs for consolidation (Step 5).
 
+### Step 4.5: Test Skills Special Handling
+
+When `test-execution` or `uat-execution` skills are matched, apply special handling.
+
+<test_skill_handling>
+
+**Test Skills Requirements:**
+
+| Skill | When Matched | Required Inputs | Special Context |
+|-------|--------------|-----------------|-----------------|
+| test-execution | All scopes (scope-minimum: trivial) | 6-dev-output.md (changed files) | Scope level for coverage threshold |
+| uat-execution | Small+ scopes (scope-minimum: small) | 5-test-plan.md (Gherkin scenarios), 6-dev-output.md | Mode detection (browser/api) |
+
+**Building Test Skill Context:**
+
+For test-execution:
+1. Extract changed files from 6-dev-output.md "Files Modified" table
+2. Pass scope level for coverage threshold lookup
+3. No additional AC mapping needed (tests verify AC indirectly)
+
+For uat-execution:
+1. Read 5-test-plan.md for Gherkin scenarios
+2. Analyze changed files for mode detection (browser vs API)
+3. Include prerequisite check (server running, tools available)
+
+**Test skill spawn context:**
+
+```markdown
+Task: test-execution
+
+<test_context>
+## Scope
+scope_level: {scope from 0-scope.md}
+
+## Changed Files
+{From 6-dev-output.md Files Modified table}
+- src/auth.ts
+- src/session.ts
+
+## Instructions
+1. Detect test framework (vitest/jest/pytest/go)
+2. Run tests related to changed files
+3. Check coverage against scope threshold
+4. Report findings in standard format
+</test_context>
+```
+
+```markdown
+Task: uat-execution
+
+<uat_context>
+## Scope
+scope_level: {scope from 0-scope.md}
+
+## Changed Files
+{From 6-dev-output.md}
+- src/pages/login.tsx
+- src/api/auth.ts
+
+## Test Plan Gherkin
+{Extract from 5-test-plan.md}
+
+## Mode Detection
+{Analyze files + Gherkin patterns}
+browser_indicators: {count}
+api_indicators: {count}
+mode: browser | api | mixed
+
+## Instructions
+1. Check prerequisites (server, tools)
+2. Execute Gherkin scenarios
+3. Capture evidence
+4. Report findings with severity
+</uat_context>
+```
+
+</test_skill_handling>
+
 ### Re-Review Mode (iteration > 1 OR --verify-fixes)
 
 When in re-review mode, the review is FOCUSED verification only.
@@ -464,6 +542,64 @@ ELSE:
 **Dependencies:** {list or "None"}
 ```
 </routing>
+
+### 5.5b: Test Skill Finding Integration
+
+<test_skill_findings>
+When consolidating findings from test-execution and uat-execution skills, apply special severity mapping.
+
+**Test Execution Severity Mapping:**
+
+| Finding Type | Severity | Rationale |
+|--------------|----------|-----------|
+| Test failure | CRITICAL | Code does not pass tests - blocks merge |
+| Coverage below threshold | MAJOR | New code lacks test coverage |
+| Flaky test (passes on retry) | MINOR | Test stability concern |
+| Framework detection failure | MAJOR | Cannot run tests at all |
+
+**UAT Execution Severity Mapping:**
+
+| Finding Type | Severity | Rationale |
+|--------------|----------|-----------|
+| Happy path scenario fails | CRITICAL | Core user journey broken |
+| Error path scenario fails | MAJOR | Error handling incomplete |
+| Scenario execution blocked | MAJOR | Cannot verify acceptance |
+| Flaky scenario | MINOR | Test environment instability |
+
+**ID Format:**
+- T-{NN} for test-execution findings (e.g., T-01, T-02)
+- UAT-{NN} for uat-execution findings (e.g., UAT-01, UAT-02)
+
+**Test Finding Routing:**
+
+All test-execution and uat-execution findings route to **Dev** (never QA):
+
+- **Test failures** = code issue (Dev must make tests pass)
+- **Coverage gaps** = missing unit tests (Dev writes them)
+- **UAT failures** = application logic issue (Dev fixes)
+- **Flaky tests** = code or test instability (Dev investigates)
+
+**Rationale:** Even if QA wrote the failing tests (TDD mode), Dev is responsible for making them pass. Tests are the spec; code must conform.
+
+**Consolidation with other skills:**
+
+When test findings overlap with code review findings:
+1. Test failure takes precedence (concrete evidence)
+2. Code review finding becomes "supporting context"
+3. Merge fix instructions (test provides verification, code review provides fix approach)
+
+Example:
+```markdown
+### C-01: Authentication returns wrong status code
+
+**Found by:** test-execution, code-review-excellence
+**Test Evidence:** T-01 - `should return 401 for invalid credentials` FAIL
+**Code Analysis:** Login function returns 500 instead of 401
+**How to fix:** Update error handling in src/auth/login.ts to return proper status
+**Verification:** Run test `npm test -- src/auth/login.test.ts`
+```
+
+</test_skill_findings>
 
 **Step 6: Check Escalation and Return**
 
@@ -790,6 +926,101 @@ IF parallel_safe == false:
     Wait for completion
     Proceed to re-review
 ```
+
+### 7.3b: Test Skill Re-Run in Verify Fixes Mode
+
+<test_skill_rerun>
+When re-running test-execution or uat-execution skills in verify-fixes mode, apply targeted verification.
+
+**Test-execution Verify Fixes:**
+
+```markdown
+Task: test-execution - Verify Fixes
+
+<verification_context>
+## Mode: VERIFY_FIXES
+
+## Previous Test Findings
+| ID | Severity | Original Issue |
+|----|----------|----------------|
+| T-01 | CRITICAL | Test 'should logout' failed |
+| T-02 | MAJOR | Coverage 58% below 70% threshold |
+
+## Verification Steps
+1. Run ONLY the affected tests (from previous T-* findings)
+2. Check if each previously failing test now passes
+3. Re-check coverage on changed files
+4. Report status for each finding
+
+## Output Format
+| ID | Status | Notes |
+|----|--------|-------|
+| T-01 | FIXED | Test now passes |
+| T-02 | FIXED | Coverage 72% meets threshold |
+
+OR
+
+| ID | Status | Notes |
+|----|--------|-------|
+| T-01 | UNRESOLVED | Test still fails: expected 200, got 401 |
+| T-02 | PARTIAL | Coverage 65%, improved but still below 70% |
+</verification_context>
+```
+
+**UAT-execution Verify Fixes:**
+
+```markdown
+Task: uat-execution - Verify Fixes
+
+<verification_context>
+## Mode: VERIFY_FIXES
+
+## Previous UAT Findings
+| ID | Severity | Scenario | Issue |
+|----|----------|----------|-------|
+| UAT-01 | CRITICAL | User logs in successfully | Wrong redirect |
+| UAT-03 | MAJOR | Invalid password rejected | No error message |
+
+## Verification Steps
+1. Re-run ONLY the previously failing scenarios
+2. Do NOT run passing scenarios (avoid flaky noise)
+3. Capture fresh evidence for comparison
+4. Report status for each finding
+
+## Output Format
+| ID | Status | Notes | Evidence |
+|----|--------|-------|----------|
+| UAT-01 | FIXED | Correct redirect to /dashboard | evidence/v2/login-01.png |
+| UAT-03 | FIXED | Error message "Invalid credentials" shown | evidence/v2/login-02.png |
+</verification_context>
+```
+
+**New Findings During Re-Run:**
+
+Test skills in verify-fixes mode may discover NEW failures that were not in the original findings. This happens when:
+- Dev's fix broke something else (regression)
+- New test coverage reveals new bug
+- Previously passing scenario now fails
+
+Handle as:
+```
+IF test skill reports NEW_CRITICAL_DISCOVERED:
+    Add to findings as NEW_CRITICAL
+    Status = NEEDS_FIXES (not ESCALATED on first occurrence)
+    Note: "Regression discovered during verification"
+```
+
+**Re-Run Scope Control:**
+
+Test skills in verify-fixes mode ONLY verify previous findings. They do not:
+- Run full test suite (only affected tests)
+- Run all Gherkin scenarios (only failed ones)
+- Check coverage on unrelated files
+- Look for new issues (except obvious regressions)
+
+This keeps re-review fast and focused.
+
+</test_skill_rerun>
 
 ### 7.4: After Fixes Complete
 
