@@ -30,23 +30,50 @@ If invoked with `--skills skill1,skill2`:
 - Continue to Step 4 with provided skills
 - Detection step is NOT called when --skills is provided
 
-Important: When --skills is provided, do NOT call `sf review detect`. The detection is completely bypassed.
+Important: When --skills is provided, do NOT spawn skill-detector. The detection is completely bypassed.
 
 **Step 3: Detect Relevant Skills** (only if --skills not provided)
 
 <detection>
-Call detection via Bash tool:
+Spawn skill-detector agent with context:
 
-```bash
-sf review detect --files "{comma-separated-file-list}" --scope {scope_level} --pillars "{comma-separated-pillars}"
+```markdown
+Task: skill-detector
+
+<detection_context>
+## Input
+
+capability_filter: review-capable
+scope: {scope_level from 0-scope.md}
+pillars: {pillars.required from 0-scope.md, as list}
+changed_files:
+{For each file in 6-dev-output.md Files Modified table:}
+  - {file_path}
+</detection_context>
 ```
 
-Parse JSON output:
-- matched[] - Skills to spawn (name, source, path, reason, detail)
-- skipped[] - Skills not relevant (for transparency log)
-- context - Detection parameters used
+### Parse Detection Results
 
-If matched is empty:
+Skill-detector returns markdown tables. Parse the results:
+
+**Parsing algorithm:**
+1. Find "### Matched Skills" section in output
+2. Locate the table after that header (starts with | Skill |)
+3. Skip the header row and separator row (| --- |)
+4. For each data row:
+   - Split on | character
+   - Extract columns: skill name (col 1), source (col 2), reason (col 3), detail (col 4)
+   - Trim whitespace from each value
+   - Add to matched[] array as {name, source, reason, detail}
+
+5. Find "### Skipped Skills" section
+6. Parse table rows same way (for transparency logging)
+
+**Example parsing:**
+Input row: `| integration-review | skill | file_pattern | src/api/users.ts matched **/*.ts |`
+Output: {name: "integration-review", source: "skill", reason: "file_pattern", detail: "src/api/users.ts matched **/*.ts"}
+
+If matched is empty (table shows "(0)"):
 - Log: "No skills matched for this content"
 - Write 8-review-output.md with status: clean
 - Return to PM with: "Review complete - no skills triggered"
