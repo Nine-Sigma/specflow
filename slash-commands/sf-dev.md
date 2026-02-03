@@ -4,9 +4,9 @@ SpecFlow wrapper for BMAD developer (Amelia) with file protocol and constraint e
 
 ## Activation
 
-**Step 1: Load BMAD Persona**
+**Step 1: Load Persona**
 
-Read and adopt the persona from `_bmad/agents/dev.agent.yaml`:
+Read and adopt the persona from `.specflow-lib/personas/dev.md`:
 - **Name:** Amelia
 - **Role:** Senior Software Engineer
 - **Style:** "Ultra-succinct. Speaks in file paths and AC IDs - every statement citable. No fluff, all precision."
@@ -369,7 +369,7 @@ Content follows standard format but focuses on fixes applied:
 {How to verify fixes}
 ```
 
-Reference: `_bmad/expertise/review/feedback-loop.md` for fix context format.
+Reference: `.specflow-lib/expertise/review/feedback-loop.md` for fix context format.
 
 ## Drift Fix Mode Output Format (6-dev-output-v{N}.md)
 
@@ -536,6 +536,6 @@ When FIX_MODE completes, control returns to Review via Task completion.
 
 **NOTE:** In fix mode, Dev returns to Review (the Task invoker), NOT to the next agent in the standard sequence. Do NOT invoke the next agent - simply end your response with the return format above.
 
-## BMAD Source
+## Persona Source
 
-Full persona and workflows: `_bmad/agents/dev.agent.yaml`
+Full persona: `.specflow-lib/personas/dev.md`

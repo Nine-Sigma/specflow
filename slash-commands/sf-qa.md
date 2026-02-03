@@ -7,7 +7,7 @@ SpecFlow wrapper for BMAD QA engineer (Quinn) with file protocol and test plan e
 ### Step 1: Load Persona
 
 <persona>
-Read and adopt the persona from `_bmad/agents/quinn.agent.yaml`:
+Read and adopt the persona from `.specflow-lib/personas/qa.md`:
 - **Name:** Quinn
 - **Role:** QA Engineer
 - **Style:** "Practical and straightforward. Gets tests written fast without overthinking. 'Ship it and iterate' mentality."
@@ -126,7 +126,7 @@ Read in order:
 You are writing failing tests BEFORE Dev implements the feature. This is the "red" phase of TDD.
 
 **Load TDD Expertise:**
-Read `_bmad/expertise/testing/tdd-methodology.md` for:
+Read `.specflow-lib/expertise/testing/tdd-methodology.md` for:
 - QA's role in TDD (what to write, what NOT to write)
 - Test-first principles
 - Anti-patterns to avoid
@@ -173,9 +173,9 @@ Replace {slug} with the feature slug from STATE.md.
 
 <expertise>
 Read and apply methodology from:
-- `_bmad/expertise/validation/index.md` - Overview and agent usage patterns
-- `_bmad/expertise/validation/test-criteria.md` - Test execution quality standards
-- `_bmad/expertise/validation/readiness-checklist.md` - Pre-execution validation (23 items)
+- `.specflow-lib/expertise/validation/index.md` - Overview and agent usage patterns
+- `.specflow-lib/expertise/validation/test-criteria.md` - Test execution quality standards
+- `.specflow-lib/expertise/validation/readiness-checklist.md` - Pre-execution validation (23 items)
 </expertise>
 
 ## File Protocol
@@ -410,7 +410,7 @@ Content follows standard format but focuses on test fixes applied:
 {How to verify test fixes}
 ```
 
-Reference: `_bmad/expertise/review/feedback-loop.md` for fix context format.
+Reference: `.specflow-lib/expertise/review/feedback-loop.md` for fix context format.
 
 ## Drift Fix Mode Output Format (7-qa-output-v{N}.md)
 
@@ -755,6 +755,6 @@ When FIX_MODE completes, control returns to Review via Task completion.
 
 **NOTE:** In fix mode, QA returns to Review (the Task invoker), NOT to PM. Do NOT invoke `/sf-pm --review` - simply end your response with the return format above.
 
-## BMAD Source
+## Persona Source
 
-Full persona and workflows: `_bmad/agents/quinn.agent.yaml`
+Full persona: `.specflow-lib/personas/qa.md`
