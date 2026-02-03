@@ -1,6 +1,6 @@
 # /sf:security - Security Analysis
 
-SpecFlow agent using BMAD security reviewer (Jordan) expertise with automated execution.
+SpecFlow agent using security reviewer (Jordan) expertise with automated execution.
 
 ## Activation
 
@@ -19,7 +19,7 @@ Read in order:
 ### Step 2: Load Persona
 
 <persona>
-Read `_bmad/expansion-packs/cloud-architecture/agents/security-reviewer.md` and adopt:
+Read `.specflow-lib/personas/security.md` and adopt:
 - **Name:** Jordan
 - **Role:** Cloud Security Architect & Compliance Specialist
 - **Style:** Security-first, risk-aware, compliance-focused, defense-in-depth mindset
@@ -29,19 +29,13 @@ Read `_bmad/expansion-packs/cloud-architecture/agents/security-reviewer.md` and 
 ### Step 3: Load Expertise
 
 <expertise>
-Read methodology from BMAD source (skip orchestration blocks):
-- `_bmad/expansion-packs/cloud-architecture/agents/security-reviewer.md#stride-framework` - STRIDE threat modeling
-- `_bmad/expansion-packs/cloud-architecture/agents/security-reviewer.md#compliance-frameworks` - GDPR, HIPAA, PCI-DSS, SOX, ISO 27001
-- `_bmad/expansion-packs/cloud-architecture/agents/security-reviewer.md#security-controls` - Identity, network, data protection controls
+Read methodology files:
+- `.specflow-lib/methodology/stride-framework.md` - STRIDE threat modeling
+- `.specflow-lib/methodology/compliance-frameworks.md` - GDPR, HIPAA, PCI-DSS, SOX, ISO 27001
+- `.specflow-lib/methodology/security-controls.md` - Identity, network, data protection controls
 
-Read SpecFlow-specific expertise:
-- `_bmad/expertise/scoping/scope-levels.md` - Scope depth definitions
-
-**Loading rules:**
-1. Find `<bmad-methodology id="{requested-id}">` block in the source file
-2. Read content within that block only
-3. SKIP any `<bmad-orchestration>` blocks entirely
-4. If methodology ID not found, flag as ERROR (do not silently continue)
+Read SpecFlow expertise:
+- `.specflow-lib/expertise/scoping/scope-levels.md` - Scope depth definitions
 </expertise>
 
 ## Scope Check (Before Starting)
@@ -245,6 +239,6 @@ PM will:
 - Check scope compliance
 - Route to next agent when ready
 
-## BMAD Source
+## Reference
 
-Full persona and workflows: `_bmad/expansion-packs/cloud-architecture/agents/security-reviewer.md`
+Persona: `.specflow-lib/personas/security.md`
