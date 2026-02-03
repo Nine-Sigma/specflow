@@ -12,7 +12,16 @@ workflowFile: '{workflow_path}/workflow.md'
 outputFile: '{planning_artifacts}/implementation-readiness-report-{{date}}.md'
 ---
 
+<!--
+BMAD Methodology IDs exposed in this file:
+- traceability-matrix: FR coverage analysis format and gap identification
+
+SpecFlow agents reference via: {file}#methodology-id
+-->
+
 # Step 3: Epic Coverage Validation
+
+<bmad-orchestration>
 
 ## STEP GOAL:
 
@@ -22,32 +31,32 @@ To validate that all Functional Requirements from the PRD are captured in the ep
 
 ### Universal Rules:
 
-- 🛑 NEVER generate content without user input
-- 📖 CRITICAL: Read the complete step file before taking any action
-- 🔄 CRITICAL: When loading next step with 'C', ensure entire file is read
-- 📋 YOU ARE A FACILITATOR, not a content generator
-- ✅ YOU MUST ALWAYS SPEAK OUTPUT In your Agent communication style with the config `{communication_language}`
+- NEVER generate content without user input
+- CRITICAL: Read the complete step file before taking any action
+- CRITICAL: When loading next step with 'C', ensure entire file is read
+- YOU ARE A FACILITATOR, not a content generator
+- YOU MUST ALWAYS SPEAK OUTPUT In your Agent communication style with the config `{communication_language}`
 
 ### Role Reinforcement:
 
-- ✅ You are an expert Product Manager and Scrum Master
-- ✅ Your expertise is in requirements traceability
-- ✅ You ensure no requirements fall through the cracks
-- ✅ Success is measured in complete FR coverage
+- You are an expert Product Manager and Scrum Master
+- Your expertise is in requirements traceability
+- You ensure no requirements fall through the cracks
+- Success is measured in complete FR coverage
 
 ### Step-Specific Rules:
 
-- 🎯 Focus ONLY on FR coverage validation
-- 🚫 Don't analyze story quality (that's later)
-- 💬 Compare PRD FRs against epic coverage list
-- 🚪 Document every missing FR
+- Focus ONLY on FR coverage validation
+- Don't analyze story quality (that's later)
+- Compare PRD FRs against epic coverage list
+- Document every missing FR
 
 ## EXECUTION PROTOCOLS:
 
-- 🎯 Load epics document completely
-- 💾 Extract FR coverage from epics
-- 📖 Compare against PRD FR list
-- 🚫 FORBIDDEN to proceed without documenting gaps
+- Load epics document completely
+- Extract FR coverage from epics
+- Compare against PRD FR list
+- FORBIDDEN to proceed without documenting gaps
 
 ## EPIC COVERAGE VALIDATION PROCESS:
 
@@ -90,31 +99,27 @@ FR3: Covered in Epic Z
 Total FRs in epics: [count]
 ```
 
-### 4. Compare Coverage Against PRD
+</bmad-orchestration>
 
-Using the PRD FR list from step 2:
+<bmad-methodology id="traceability-matrix">
 
-- Check each PRD FR against epic coverage
-- Identify FRs NOT covered in epics
-- Note any FRs in epics but NOT in PRD
+## FR Coverage Traceability Matrix
 
-Create coverage matrix:
+### Coverage Matrix Format
 
-```
-## FR Coverage Analysis
+Create coverage matrix comparing PRD requirements against implementation:
 
 | FR Number | PRD Requirement | Epic Coverage  | Status    |
 | --------- | --------------- | -------------- | --------- |
-| FR1       | [PRD text]      | Epic X Story Y | ✓ Covered |
-| FR2       | [PRD text]      | **NOT FOUND**  | ❌ MISSING |
-| FR3       | [PRD text]      | Epic Z Story A | ✓ Covered |
-```
+| FR1       | [PRD text]      | Epic X Story Y | Covered   |
+| FR2       | [PRD text]      | **NOT FOUND**  | MISSING   |
+| FR3       | [PRD text]      | Epic Z Story A | Covered   |
 
-### 5. Document Missing Coverage
+### Gap Documentation Format
 
-List all FRs not covered:
+For each missing FR:
 
-```
+```markdown
 ## Missing FR Coverage
 
 ### Critical Missing FRs
@@ -125,8 +130,20 @@ FR#: [Full requirement text from PRD]
 
 ### High Priority Missing FRs
 
-[List any other uncovered FRs]
+[List any other uncovered FRs with same format]
 ```
+
+### Coverage Statistics
+
+Document coverage metrics:
+- Total PRD FRs: [count]
+- FRs covered in epics: [count]
+- Coverage percentage: [percentage]
+- Gap count by priority: Critical / High / Medium
+
+</bmad-methodology>
+
+<bmad-orchestration>
 
 ### 6. Add to Assessment Report
 
@@ -160,16 +177,16 @@ Epic coverage validation complete. Loading next step for UX alignment.
 
 ---
 
-## 🚨 SYSTEM SUCCESS/FAILURE METRICS
+## SYSTEM SUCCESS/FAILURE METRICS
 
-### ✅ SUCCESS:
+### SUCCESS:
 
 - Epics document loaded completely
 - FR coverage extracted accurately
 - All gaps identified and documented
 - Coverage matrix created
 
-### ❌ SYSTEM FAILURE:
+### FAILURE:
 
 - Not reading complete epics document
 - Missing FRs in comparison
@@ -177,3 +194,5 @@ Epic coverage validation complete. Loading next step for UX alignment.
 - Incomplete coverage analysis
 
 **Master Rule:** Every FR must have a traceable implementation path.
+
+</bmad-orchestration>
