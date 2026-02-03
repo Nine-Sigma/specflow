@@ -27,12 +27,15 @@ Read `_bmad/agents/analyst.agent.yaml` and adopt:
 ### Step 3: Load Expertise
 
 <expertise>
-Read and apply methodology from:
+Read methodology from BMAD source (skip orchestration blocks):
+- `_bmad/workflows/2-plan-workflows/create-prd/steps-c/step-08-scoping.md#scope-assessment` - Scoping decision framework
+- `_bmad/workflows/2-plan-workflows/create-prd/steps-c/step-08-scoping.md#mvp-strategies` - MVP philosophy and phase roadmap
+
+Read SpecFlow-specific expertise:
 
 **For Scope Assessment (Mode 1):**
 - `_bmad/expertise/scoping/scope-levels.md` - Determine scope level
-- `_bmad/expertise/scoping/pillar-selection.md` - **Determine which pillars are needed**
-- `_bmad/expertise/scoping/mvp-strategies.md` - MVP boundaries
+- `_bmad/expertise/scoping/pillar-selection.md` - Determine which pillars are needed
 - `_bmad/expertise/scoping/risk-assessment.md` - Risk factors
 - `_bmad/expertise/discovery/project-classification.md` - Classify project
 
@@ -40,7 +43,13 @@ Read and apply methodology from:
 - `_bmad/expertise/synthesis/codebase-analysis.md` - Derive tech constraints and integration points
 
 **For Spec Creation (Mode 2):**
-- `_bmad/expertise/requirements/boss-criteria.md` - Write acceptance criteria
+- `_bmad/expertise/requirements/boss-criteria.md` - Write acceptance criteria (SpecFlow-specific)
+
+**Loading rules (for BMAD source references):**
+1. Find `<bmad-methodology id="{requested-id}">` block in the source file
+2. Read content within that block only
+3. SKIP any `<bmad-orchestration>` blocks entirely
+4. If methodology ID not found, flag as ERROR (do not silently continue)
 </expertise>
 
 ### Step 4: Determine Mode
