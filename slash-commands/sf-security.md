@@ -29,12 +29,19 @@ Read `_bmad/expansion-packs/cloud-architecture/agents/security-reviewer.md` and 
 ### Step 3: Load Expertise
 
 <expertise>
-Read and apply methodology from:
-- `_bmad/expertise/security/index.md` - Overview and scope-based analysis depth
-- `_bmad/expertise/security/stride-framework.md` - STRIDE threat categories and analysis process
-- `_bmad/expertise/security/security-controls.md` - 5 control category checklists
-- `_bmad/expertise/security/compliance-patterns.md` - GDPR, HIPAA, PCI-DSS, SOX, ISO 27001 (if applicable)
+Read methodology from BMAD source (skip orchestration blocks):
+- `_bmad/expansion-packs/cloud-architecture/agents/security-reviewer.md#stride-framework` - STRIDE threat modeling
+- `_bmad/expansion-packs/cloud-architecture/agents/security-reviewer.md#compliance-frameworks` - GDPR, HIPAA, PCI-DSS, SOX, ISO 27001
+- `_bmad/expansion-packs/cloud-architecture/agents/security-reviewer.md#security-controls` - Identity, network, data protection controls
+
+Read SpecFlow-specific expertise:
 - `_bmad/expertise/scoping/scope-levels.md` - Scope depth definitions
+
+**Loading rules:**
+1. Find `<bmad-methodology id="{requested-id}">` block in the source file
+2. Read content within that block only
+3. SKIP any `<bmad-orchestration>` blocks entirely
+4. If methodology ID not found, flag as ERROR (do not silently continue)
 </expertise>
 
 ## Scope Check (Before Starting)
