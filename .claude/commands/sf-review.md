@@ -121,15 +121,15 @@ Skill-detector returns `source` for each matched skill. Use this to load methodo
 
 **Internal expertise (source: "internal"):**
 - These are pillar-bound skills without SKILL.md
-- Load from BMAD source using reference pattern
-- For security: load `_bmad/expansion-packs/cloud-architecture/agents/security-reviewer.md#stride-framework`
-- For architecture: load `_bmad/expertise/architecture/adr-template.md` (SpecFlow-specific)
+- Load from expertise library using reference pattern
+- For security: load `.specflow-lib/expertise/security/stride-framework.md`
+- For architecture: load `.specflow-lib/expertise/architecture/adr-template.md`
 
 **Loading steps:**
 1. For each matched skill from skill-detector:
 2. Check skill.source
 3. If "skill": Read `.specflow/skills/{skill.name}/SKILL.md`
-4. If "internal": Use BMAD reference pattern for the pillar
+4. If "internal": Use expertise library pattern for the pillar
 5. Pass loaded methodology to skill Task context
 
 ### Build Per-Skill Context
@@ -142,7 +142,7 @@ For each skill in matched[]:
 2. Read file contents for those files only
 3. Extract AC section from 1-spec.md
 4. Load methodology based on skill.source (see above)
-5. Load output format from _bmad/expertise/review/output-format.md
+5. Load output format from .specflow-lib/expertise/review/output-format.md
 
 ### File Filtering for Skills
 
@@ -172,7 +172,7 @@ For each skill in matched[]:
 2. Read file contents for those files only
 3. Extract AC section from 1-spec.md
 4. Load methodology (SKILL.md or expertise files based on source)
-5. Load output format from _bmad/expertise/review/output-format.md
+5. Load output format from .specflow-lib/expertise/review/output-format.md
 
 ### Spawn Task for Each Skill
 
@@ -186,7 +186,7 @@ Task: {skill.name} Review
 {Content of .specflow/skills/{skill.name}/SKILL.md}
 
 {For internal expertise:}
-{Content of relevant _bmad/expertise/{skill.name}/ files}
+{Content of relevant .specflow-lib/expertise/{skill.name}/ files}
 
 ## Files to Review
 
@@ -1051,10 +1051,10 @@ On every invocation, read:
 
 <expertise>
 Load review methodology:
-- `_bmad/expertise/review/index.md` - Dynamic architecture overview
-- `_bmad/expertise/review/output-format.md` - Output structure
-- `_bmad/expertise/review/escalation-rules.md` - When to escalate
-- `_bmad/expertise/review/feedback-loop.md` - Fix routing protocol
+- `.specflow-lib/expertise/review/index.md` - Dynamic architecture overview
+- `.specflow-lib/expertise/review/output-format.md` - Output structure
+- `.specflow-lib/expertise/review/escalation-rules.md` - When to escalate
+- `.specflow-lib/expertise/review/feedback-loop.md` - Fix routing protocol
 </expertise>
 
 ## Output Frontmatter
@@ -1283,4 +1283,4 @@ This keeps the fix loop fast (no PM round-trip) while preserving PM oversight fo
 - `/sf:pm` - PM orchestrator (routes review outputs)
 - `/sf:dev` - Development (receives fix requests)
 - `/sf:qa` - Quality assurance (receives test fix requests)
-- `_bmad/expertise/review/` - Review expertise folder
+- `.specflow-lib/expertise/review/` - Review expertise folder
