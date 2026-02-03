@@ -5,12 +5,16 @@ This document defines the standard architecture for all `/sf:*` agents.
 ## Core Principle
 
 ```
-SpecFlow Agent = BMAD Persona + BMAD Expertise + SpecFlow Protocol
+SpecFlow Agent = BMAD Persona + BMAD Methodology + SpecFlow Protocol
 ```
 
-- **BMAD Persona**: Communication style, principles (from `_bmad/agents/*.yaml`)
-- **BMAD Expertise**: Methodology, frameworks, checklists (from `_bmad/expertise/`)
+- **BMAD Persona**: Communication style, principles (from BMAD source agents)
+- **BMAD Methodology**: Reusable frameworks, checklists (referenced via `_bmad/path#methodology-id`)
 - **SpecFlow Protocol**: File locations, state tracking, PM routing (from `.specflow/`)
+- **SpecFlow Expertise**: SpecFlow-specific content (from `_bmad/expertise/`)
+
+**Key Architecture Change (v2.4):**
+Agents reference BMAD source files directly using content extraction markers instead of maintaining duplicate copies in `_bmad/expertise/`. Markers separate interactive BMAD workflows (`<bmad-orchestration>`) from reusable methodology (`<bmad-methodology id="...">`) that SpecFlow agents can safely read.
 
 ## Agent Execution Flow
 
@@ -181,11 +185,9 @@ PM will:
 | `/sf:tea` | (SpecFlow) | `validation/`, `scoping/` | 5-test-plan.md |
 | `/sf:dev` | Amelia | `requirements/` (constraints) | Implementation |
 | `/sf:qa` | Quinn | `validation/` | Test execution |
-| `/sf:review-code` | (SpecFlow) | `review/` + code-review-excellence skill | 8-review-output.md |
-| `/sf:review-test` | (SpecFlow) | `review/` + e2e-testing-patterns skill | 8-review-output.md |
-| `/sf:review-security` | Jordan | `review/`, `security/` | 8-review-output.md |
-| `/sf:review-arch` | Winston | `review/`, `architecture/` | 8-review-output.md |
-| `/sf:review-perf` | (SpecFlow) | `review/` + sql-optimization-patterns skill | 8-review-output.md |
+| `/sf:review` | (SpecFlow) | `review/` + dynamic skill discovery | 8-review-output-vN.md |
+
+**Note:** `/sf:review` is a dynamic skill orchestrator, not a fixed agent. It discovers review-capable skills, matches them to code content, and spawns relevant skills in parallel. See Review Lenses section below.
 
 ## Agent Expertise Loading
 
@@ -262,51 +264,72 @@ Detailed mapping of which specific files each agent loads in Step 3.
 - _bmad/expertise/elicitation/when-to-use.md         # User engagement decisions
 ```
 
-### Review Lenses (sf-review-*.md)
+### Dynamic Review System (/sf:review)
 
-All review lenses load the base review expertise:
+The review system is a **dynamic skill orchestrator**, not a fixed set of lenses. It discovers review-capable skills, matches them to code content, and spawns relevant skills in parallel.
 
-**Common (all lenses):**
+**Review Orchestrator:**
 ```markdown
-- _bmad/expertise/review/index.md              # Overview, lenses, scope usage
-- _bmad/expertise/review/output-format.md      # 8-review-output.md structure
-- _bmad/expertise/review/feedback-loop.md      # Dev/QA routing protocol
+- _bmad/expertise/review/index.md              # Dynamic architecture overview
+- _bmad/expertise/review/output-format.md      # Consolidated output structure
 - _bmad/expertise/review/escalation-rules.md   # PM escalation triggers
 ```
 
-**sf-review-code.md (external skill):**
-```markdown
-- Common review expertise (above)
-- .specflow/skills/code-review-excellence/SKILL.md  # Code review methodology
+**Skill Discovery:**
+1. Read `agents.json` → find all `source: "skill"` entries
+2. For each skill, read `SKILL.md` frontmatter for `review-capable: true` and `triggers`
+3. Read internal expertise `triggers.yaml` files (security, architecture)
+
+**Content Matching:**
+```python
+for skill in review_capable_skills:
+    if file_matches(changed_files, skill.triggers.files):
+        select(skill)
+    elif content_matches(changed_files, skill.triggers.patterns):
+        select(skill)
 ```
 
-**sf-review-test.md (external skill):**
-```markdown
-- Common review expertise (above)
-- .specflow/skills/e2e-testing-patterns/SKILL.md  # E2E testing methodology
+**Skill Trigger Declaration:**
+```yaml
+# In SKILL.md frontmatter
+---
+name: sql-optimization-patterns
+review-capable: true
+triggers:
+  files: ["*.sql", "**/migrations/**"]
+  patterns: ["SELECT\\s+.*FROM", "prisma\\."]
+---
 ```
 
-**sf-review-security.md (internal expertise):**
-```markdown
-- Common review expertise (above)
-- _bmad/expertise/security/index.md            # Fresh security review perspective
-- _bmad/expertise/security/stride-framework.md # STRIDE re-validation
+**Internal Expertise Triggers:**
+```yaml
+# In _bmad/expertise/security/triggers.yaml
+review-capable: true
+triggers:
+  files: ["*auth*", "*payment*"]
+  patterns: ["password", "token", "bcrypt"]
 ```
 
-**sf-review-arch.md (internal expertise):**
-```markdown
-- Common review expertise (above)
-- _bmad/expertise/architecture/index.md        # Fresh arch review perspective
-- _bmad/expertise/architecture/validation-checklist.md  # ADR validation
+**Parallel Execution:**
+- Each matched skill spawned via Task tool with fresh context
+- Context includes: relevant files only + spec + output format
+- Dev + QA fixes spawned in parallel when issues are independent
+
+**Focused Re-Review:**
+- Iteration 2+ only re-spawns skills that had findings
+- Mode: VERIFY_FIXES (check specific findings, don't look for new)
+
+**Selection Algorithm:**
+```
+matched = content_triggers ∪ scope_minimum ∪ pillar_required
 ```
 
-**sf-review-perf.md (external skill):**
-```markdown
-- Common review expertise (above)
-- .specflow/skills/sql-optimization-patterns/SKILL.md # SQL optimization patterns
-```
-
-**Note:** Review lenses with external skills fall back to internal-only review expertise if skill is not installed. The lens still functions but without specialized methodology.
+**Currently Installed Review Skills:**
+| Skill | File Triggers | Pattern Triggers |
+|-------|---------------|------------------|
+| code-review-excellence | `*.ts, *.tsx, *.js` | Always for code |
+| e2e-testing-patterns | `*.test.*, *.spec.*` | `describe(`, `it(` |
+| sql-optimization-patterns | `*.sql, **/migrations/**` | `SELECT`, `prisma.` |
 
 ## Loading Example
 
