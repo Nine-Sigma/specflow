@@ -11,7 +11,16 @@ workflowFile: '{workflow_path}/workflow.md'
 outputFile: '{planning_artifacts}/implementation-readiness-report-{{date}}.md'
 ---
 
+<!--
+BMAD Methodology IDs exposed in this file:
+- readiness-checklist: Final assessment and recommendation format
+
+SpecFlow agents reference via: {file}#methodology-id
+-->
+
 # Step 6: Final Assessment
+
+<bmad-orchestration>
 
 ## STEP GOAL:
 
@@ -21,32 +30,32 @@ To provide a comprehensive summary of all findings and give the report a final p
 
 ### Universal Rules:
 
-- 🛑 NEVER generate content without user input
-- 📖 CRITICAL: Read the complete step file before taking any action
-- 📖 You are at the final step - complete the assessment
-- 📋 YOU ARE A FACILITATOR, not a content generator
-- ✅ YOU MUST ALWAYS SPEAK OUTPUT In your Agent communication style with the config `{communication_language}`
+- NEVER generate content without user input
+- CRITICAL: Read the complete step file before taking any action
+- You are at the final step - complete the assessment
+- YOU ARE A FACILITATOR, not a content generator
+- YOU MUST ALWAYS SPEAK OUTPUT In your Agent communication style with the config `{communication_language}`
 
 ### Role Reinforcement:
 
-- ✅ You are delivering the FINAL ASSESSMENT
-- ✅ Your findings are objective and backed by evidence
-- ✅ Provide clear, actionable recommendations
-- ✅ Success is measured by value of findings
+- You are delivering the FINAL ASSESSMENT
+- Your findings are objective and backed by evidence
+- Provide clear, actionable recommendations
+- Success is measured by value of findings
 
 ### Step-Specific Rules:
 
-- 🎯 Compile and summarize all findings
-- 🚫 Don't soften the message - be direct
-- 💬 Provide specific examples for problems
-- 🚪 Add final section to the report
+- Compile and summarize all findings
+- Don't soften the message - be direct
+- Provide specific examples for problems
+- Add final section to the report
 
 ## EXECUTION PROTOCOLS:
 
-- 🎯 Review all findings from previous steps
-- 💾 Add summary and recommendations
-- 📖 Determine overall readiness status
-- 🚫 Complete and present final report
+- Review all findings from previous steps
+- Add summary and recommendations
+- Determine overall readiness status
+- Complete and present final report
 
 ## FINAL ASSESSMENT PROCESS:
 
@@ -69,31 +78,47 @@ Check the {outputFile} for sections added by previous steps:
 - UX Alignment issues
 - Epic Quality violations
 
-### 3. Add Final Assessment Section
+</bmad-orchestration>
 
-Append to {outputFile}:
+<bmad-methodology id="readiness-checklist">
 
-```markdown
-## Summary and Recommendations
+## Implementation Readiness Assessment
 
 ### Overall Readiness Status
 
-[READY/NEEDS WORK/NOT READY]
+Determine one of:
+- **READY**: All critical requirements covered, no blocking issues
+- **NEEDS WORK**: Some issues require attention before implementation
+- **NOT READY**: Critical gaps prevent implementation
 
 ### Critical Issues Requiring Immediate Action
 
-[List most critical issues that must be addressed]
+List issues that must be addressed before proceeding:
+- [Specific blocking issue 1]
+- [Specific blocking issue 2]
 
 ### Recommended Next Steps
 
+Provide actionable recommendations:
 1. [Specific action item 1]
 2. [Specific action item 2]
 3. [Specific action item 3]
 
-### Final Note
+### Assessment Summary
 
-This assessment identified [X] issues across [Y] categories. Address the critical issues before proceeding to implementation. These findings can be used to improve the artifacts or you may choose to proceed as-is.
-```
+Format: "This assessment identified [X] issues across [Y] categories. Address the critical issues before proceeding to implementation."
+
+### Evidence Required
+
+For each finding:
+- Document source (which artifact, which section)
+- Specific gap or issue
+- Impact level (critical/high/medium)
+- Recommended resolution
+
+</bmad-methodology>
+
+<bmad-orchestration>
 
 ### 4. Complete the Report
 
@@ -119,17 +144,19 @@ Implementation Readiness complete. Read fully and follow: `_bmad/core/tasks/bmad
 
 ---
 
-## 🚨 SYSTEM SUCCESS/FAILURE METRICS
+## SYSTEM SUCCESS/FAILURE METRICS
 
-### ✅ SUCCESS:
+### SUCCESS:
 
 - All findings compiled and summarized
 - Clear recommendations provided
 - Readiness status determined
 - Final report saved
 
-### ❌ SYSTEM FAILURE:
+### FAILURE:
 
 - Not reviewing previous findings
 - Incomplete summary
 - No clear recommendations
+
+</bmad-orchestration>
