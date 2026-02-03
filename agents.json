@@ -51,6 +51,20 @@
       "source": "skill",
       "invoke": ".specflow/skills/integration-review",
       "description": "Detect breaking changes, circular imports, and integration issues in modified code. Use when reviewing PRs that modify exported functions, types, or module boundaries."
+    },
+    "test-execution": {
+      "source": "skill",
+      "invoke": ".specflow/skills/test-execution",
+      "description": "Run tests and enforce coverage gates. Detects framework, runs affected tests with staged parallel execution, and checks scope-based coverage thresholds.",
+      "review-capable": true,
+      "scope-minimum": "trivial"
+    },
+    "uat-execution": {
+      "source": "skill",
+      "invoke": ".specflow/skills/uat-execution",
+      "description": "Execute Gherkin scenarios using browser-use (UI) or Node.js fetch (API) for automated User Acceptance Testing.",
+      "review-capable": true,
+      "scope-minimum": "small"
     }
   },
   "_docs": {
