@@ -5,6 +5,26 @@
  * Requirements: DIS-01 to DIS-05, DET-01 to DET-05
  */
 
+/**
+ * @deprecated This module is kept for testing purposes only.
+ *
+ * For production skill detection, use the skill-detector agent:
+ * - sf-review.md spawns skill-detector via Task
+ * - Any agent can spawn skill-detector with capability_filter
+ *
+ * Why deprecated:
+ * - CLI requires build/install, creates fragile dependency
+ * - Agent-based detection works without external tooling
+ * - Enables any agent (not just sf-review) to discover skills
+ *
+ * This code remains for:
+ * - Unit tests of detection algorithm
+ * - Reference implementation for skill-detector agent
+ *
+ * @see .specflow/agents/skill-detector.md for production usage
+ * @see Phase 26 (Skill-Detector Architecture) in ROADMAP.md
+ */
+
 import { readFile } from 'fs/promises';
 import { existsSync } from 'fs';
 import * as YAML from 'yaml';
@@ -88,6 +108,9 @@ function scopeAtLeast(
 /**
  * Discover all review-capable skills from agents.json and internal expertise
  * Requirements: DIS-03, DIS-04, DIS-05
+ *
+ * @deprecated Use skill-detector agent instead.
+ * Kept for testing - mirrors algorithm in .specflow/agents/skill-detector.md
  */
 export async function discoverReviewSkills(
   agentsJsonPath = 'agents.json',
@@ -170,6 +193,9 @@ export async function discoverReviewSkills(
 /**
  * Match a single skill's triggers against content
  * Requirements: DET-02, DET-03
+ *
+ * @deprecated Use skill-detector agent instead.
+ * Kept for testing trigger matching logic.
  */
 export function matchSkillTriggers(
   skill: ReviewSkill,
@@ -211,6 +237,9 @@ export function matchSkillTriggers(
 /**
  * Detect all relevant skills for a review context
  * Requirements: DET-01 to DET-05
+ *
+ * @deprecated Use skill-detector agent instead.
+ * Main entry point for CLI - replaced by agent spawn in sf-review.md Step 3.
  */
 export async function detectRelevantSkills(
   context: DetectionContext,
@@ -257,6 +286,9 @@ export async function detectRelevantSkills(
 
 /**
  * Format detection results for logging (DET-04, DET-05)
+ *
+ * @deprecated Output format now in skill-detector agent.
+ * Kept for test output formatting.
  */
 export function formatDetectionLog(results: DetectionResult[]): string {
   const lines: string[] = ['## Skill Detection Results\n'];
