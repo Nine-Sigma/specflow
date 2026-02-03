@@ -1149,6 +1149,135 @@ Each version includes:
 - skills_invoked list
 - Finding history reference
 
+## Integration with Drift Detection (Phase 23)
+
+<drift_integration>
+
+Review and PM have distinct checkpoint responsibilities. Understanding the boundary prevents confusion about who owns what.
+
+### Review Checkpoint Owns
+
+Review owns the fix loop and these concerns:
+
+| Concern | Owner | Why |
+|---------|-------|-----|
+| Test pass/fail | Review | Automated verification, objective result |
+| UAT pass/fail | Review | Automated verification, Gherkin scenarios |
+| Code quality findings | Review | Skills evaluate, fix loop resolves |
+| Integration issues | Review | Breaking changes are code issues |
+| Coverage thresholds | Review | Measurable, enforceable |
+
+**Test Failures are NOT Drift**
+
+A failing test is not "drift from spec" - it's a code bug. Review handles it through the fix loop:
+
+```
+Test fails -> CRITICAL finding -> Route to Dev -> Dev fixes -> Re-verify
+```
+
+No PM involvement unless:
+- CRITICAL persists after 2 iterations
+- Max iterations (3) reached
+- BREAKING change requires user decision
+
+### PM Checkpoint Owns (Phase 23)
+
+PM checkpoints verify spec alignment, not code correctness:
+
+| Concern | Owner | Why |
+|---------|-------|-----|
+| TEA test plan alignment | PM | Does plan match 1-spec.md? |
+| QA test coverage | PM | Do tests cover all AC? |
+| Dev implementation scope | PM | Did Dev implement the right thing? |
+| Requirement completeness | PM | Are all AC addressed? |
+
+**Drift = Spec Mismatch**
+
+PM drift detection catches:
+- Dev implemented feature X but spec says Y
+- Tests verify wrong behavior
+- AC coverage gaps (missing scenarios)
+
+### Flow Diagram
+
+```
+                    Feature Implementation
+                            |
+                            v
+                    +-------+--------+
+                    |   PM routes    |
+                    |   to agents    |
+                    +-------+--------+
+                            |
+        +-------------------+-------------------+
+        |                   |                   |
+        v                   v                   v
+    +-------+          +--------+          +-------+
+    |  TEA  |          |   QA   |          |  Dev  |
+    +-------+          +--------+          +-------+
+        |                   |                   |
+        v                   v                   v
+    +-------+          +--------+          +-------+
+    | PM    |          | PM     |          | PM    |
+    | check |          | check  |          | check |
+    +-------+          +--------+          +-------+
+        |                   |                   |
+        +-------------------+-------------------+
+                            |
+                            v
+                    +-------+--------+
+                    |    Review      |<----+
+                    | (code quality) |     |
+                    +-------+--------+     |
+                            |              |
+                    +-------+--------+     |
+                    | Test/UAT pass? |     |
+                    +-------+--------+     |
+                            |              |
+              Yes +---------+---------+ No |
+                  |                   |    |
+                  v                   v    |
+            +---------+         +--------+ |
+            | CLEAN   |         | Fix    | |
+            | to PM   |         | Loop   +-+
+            +---------+         +--------+
+```
+
+### When Review Escalates to PM
+
+Review only escalates to PM when automated fix loop is exhausted:
+
+| Trigger | Escalation Reason | PM Action |
+|---------|-------------------|-----------|
+| CRITICAL persists (iter >= 2) | Dev couldn't fix after 1 attempt | Override, re-route, or escalate to user |
+| Max iterations (3) | Fix loop exhausted | Override, re-route, or escalate to user |
+| BREAKING detected | Requires user decision | Present options to user |
+| NEW_CRITICAL_DISCOVERED | Regression, needs visibility | Add to fix loop or escalate |
+
+### Drift vs Test Failure
+
+| Situation | Type | Owner | Resolution |
+|-----------|------|-------|------------|
+| "Dev built logout but spec says password reset" | Drift | PM | Re-route to Dev with clarification |
+| "Logout test fails: expected 200, got 401" | Bug | Review | Fix loop to Dev |
+| "QA tests don't cover AC-03" | Drift | PM | Route to QA for test addition |
+| "Coverage 58% below 70% threshold" | Finding | Review | Fix loop to Dev |
+| "UAT scenario: user sees error message" | Bug | Review | Fix loop to Dev |
+| "TEA plan missing security testing" | Drift | PM | Route to TEA |
+
+### Key Principle
+
+**Review is autonomous for code correctness.**
+
+PM only gets involved for:
+- Spec alignment questions (drift)
+- Fix loop exhaustion (escalation)
+- User decisions (breaking changes)
+
+This keeps the fix loop fast (no PM round-trip) while preserving PM oversight for scope and requirement questions.
+
+</drift_integration>
+
 ## Related
 
 - `/sf:pm` - PM orchestrator (routes review outputs)
