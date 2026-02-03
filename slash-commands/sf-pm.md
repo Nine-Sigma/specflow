@@ -1111,6 +1111,131 @@ Update STATE.md after approval:
 
 </synthesis_gate>
 
+### TEA-Driven Routing (Post-Synthesis)
+
+After synthesis gate approval, PM reads TEA's `recommended_flow` to determine the execution path.
+
+<tea_routing>
+**Step 1: Read recommended_flow from 5-test-plan.md**
+
+```bash
+grep "recommended_flow:" .specflow/features/{slug}/5-test-plan.md
+```
+
+Extract value: `qa-first` or `dev-only`
+
+**Step 2: Route Based on Flow**
+
+| recommended_flow | Execution Path | Description |
+|------------------|----------------|-------------|
+| `qa-first` | QA (red) -> Dev (green) -> QA (verify) -> Review | QA writes failing tests first |
+| `dev-only` | Dev (TDD) -> Review | Dev does internal TDD, QA skipped |
+
+**qa-first Path (TDD with QA):**
+
+```
+PM Synthesis -> QA (TDD mode, writes 5-qa-tests.md) -> PM checkpoint ->
+Dev (implements to pass tests) -> PM checkpoint ->
+QA (verifies, writes 7-qa-output.md) -> PM checkpoint -> Review
+```
+
+**dev-only Path (Internal TDD):**
+
+```
+PM Synthesis -> Dev (internal TDD, writes 6-dev-output.md) -> PM checkpoint -> Review
+```
+
+**Step 3: Execution Phase States**
+
+| Phase | State Value | Agent | Output |
+|-------|-------------|-------|--------|
+| QA TDD (qa-first only) | qa-tdd | qa | 5-qa-tests.md |
+| QA TDD Checkpoint | tdd-checkpoint | pm | drift/checkpoint-qa-tdd.md |
+| Development | development | dev | 6-dev-output.md |
+| Dev Checkpoint | checkpoint | pm | drift/checkpoint-dev.md |
+| QA Verify (qa-first only) | qa-verify | qa | 7-qa-output.md |
+| QA Verify Checkpoint | checkpoint | pm | drift/checkpoint-qa.md |
+
+**Step 4: QA TDD Checkpoint (qa-first path only)**
+
+After QA returns with `phase: tdd-checkpoint`:
+
+1. Read `5-qa-tests.md` from QA
+2. Compare against TEA's specifications in `5-test-plan.md`:
+   - Are all integration/e2e/api specs implemented?
+   - Do tests reference correct AC-XX items?
+   - Are tests behavior-focused (not implementation-specific)?
+3. Verify tests are expected to fail (no implementation yet)
+
+**Checkpoint Outcomes:**
+
+| Outcome | Action |
+|---------|--------|
+| ALIGNED | Route to Dev with test context |
+| MINOR_DRIFT | Note gaps, route to Dev |
+| MAJOR_DRIFT | Write correction, re-invoke QA |
+
+**Step 5: Post-Dev Checkpoint (qa-first path)**
+
+After Dev completes in qa-first path:
+
+1. Read `6-dev-output.md` from Dev
+2. **Verify Dev made QA's tests pass:**
+   - Run tests: `npm test` or equivalent
+   - Check all tests in `5-qa-tests.md` now pass
+3. If tests still failing: CODE_ISSUE, route back to Dev
+4. If tests passing: Route to QA for verification phase
+
+**Step 6: QA Verify Phase (qa-first path)**
+
+QA re-runs in STANDARD_MODE (not TDD_MODE):
+- `6-dev-output.md` now exists
+- QA executes tests, writes `7-qa-output.md`
+- Reports test results to PM
+
+**Routing Summary:**
+
+```markdown
+IF recommended_flow == "qa-first":
+  1. Invoke /sf:qa (enters TDD_MODE)
+  2. QA writes 5-qa-tests.md (failing tests)
+  3. PM checkpoint (tdd-checkpoint)
+  4. Invoke /sf:dev (implements to pass tests)
+  5. PM checkpoint (checkpoint)
+  6. Invoke /sf:qa (enters STANDARD_MODE, 6-dev-output.md exists)
+  7. QA writes 7-qa-output.md (verification)
+  8. PM checkpoint (checkpoint)
+  9. Route to Review
+
+IF recommended_flow == "dev-only":
+  1. Invoke /sf:dev (internal TDD)
+  2. Dev writes 6-dev-output.md
+  3. PM checkpoint (checkpoint)
+  4. Route to Review (QA skipped)
+```
+
+**Update STATE.md for qa-first path:**
+
+After synthesis approval when `recommended_flow: qa-first`:
+```yaml
+phase: qa-tdd
+last-agent: pm
+next-agent: qa
+execution_flow: qa-first
+```
+
+**Update STATE.md for dev-only path:**
+
+After synthesis approval when `recommended_flow: dev-only`:
+```yaml
+phase: development
+last-agent: pm
+next-agent: dev
+execution_flow: dev-only
+```
+
+</tea_routing>
+
 ### Drift Detection Checkpoint Protocol
 
 After Dev or QA completes and returns to PM, run a drift checkpoint before routing to the next agent.
