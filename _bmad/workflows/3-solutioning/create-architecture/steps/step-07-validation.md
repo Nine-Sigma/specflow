@@ -1,5 +1,14 @@
 # Step 7: Architecture Validation & Completion
 
+<!--
+BMAD Methodology IDs exposed in this file:
+- validation-checklist: Architecture completeness checklist (40-item validation)
+
+SpecFlow agents reference via: {file}#methodology-id
+-->
+
+<bmad-orchestration>
+
 ## MANDATORY EXECUTION RULES (READ FIRST):
 
 - 🛑 NEVER generate content without user input
@@ -225,35 +234,60 @@ Prepare the content to append to the document:
 
 {{description_of_any_issues_found_and_resolutions}}
 
+<bmad-methodology id="validation-checklist">
+
 ### Architecture Completeness Checklist
 
-**✅ Requirements Analysis**
+**Requirements Analysis**
 
-- [x] Project context thoroughly analyzed
-- [x] Scale and complexity assessed
-- [x] Technical constraints identified
-- [x] Cross-cutting concerns mapped
+- [ ] Project context thoroughly analyzed
+- [ ] Scale and complexity assessed
+- [ ] Technical constraints identified
+- [ ] Cross-cutting concerns mapped
 
-**✅ Architectural Decisions**
+**Architectural Decisions**
 
-- [x] Critical decisions documented with versions
-- [x] Technology stack fully specified
-- [x] Integration patterns defined
-- [x] Performance considerations addressed
+- [ ] Critical decisions documented with versions
+- [ ] Technology stack fully specified
+- [ ] Integration patterns defined
+- [ ] Performance considerations addressed
 
-**✅ Implementation Patterns**
+**Implementation Patterns**
 
-- [x] Naming conventions established
-- [x] Structure patterns defined
-- [x] Communication patterns specified
-- [x] Process patterns documented
+- [ ] Naming conventions established
+- [ ] Structure patterns defined
+- [ ] Communication patterns specified
+- [ ] Process patterns documented
 
-**✅ Project Structure**
+**Project Structure**
 
-- [x] Complete directory structure defined
-- [x] Component boundaries established
-- [x] Integration points mapped
-- [x] Requirements to structure mapping complete
+- [ ] Complete directory structure defined
+- [ ] Component boundaries established
+- [ ] Integration points mapped
+- [ ] Requirements to structure mapping complete
+
+**Coherence Validation**
+
+- [ ] All decisions work together without conflicts
+- [ ] All versions compatible with each other
+- [ ] Patterns align with technology choices
+- [ ] No contradictory decisions
+
+**Requirements Coverage**
+
+- [ ] Every epic/feature has architectural support
+- [ ] All FR categories fully covered
+- [ ] Non-functional requirements addressed
+- [ ] Cross-cutting concerns properly handled
+
+**Implementation Readiness**
+
+- [ ] Decision documentation complete with versions
+- [ ] Implementation patterns comprehensive
+- [ ] Consistency rules clear and enforceable
+- [ ] Examples provided for major patterns
+
+</bmad-methodology>
 
 ### Architecture Readiness Assessment
 
@@ -357,3 +391,5 @@ When user selects 'C', append the content directly to the document using the str
 After user selects 'C' and content is saved to document, load `./step-08-complete.md` to complete the workflow and provide implementation guidance.
 
 Remember: Do NOT proceed to step-08 until user explicitly selects 'C' from the A/P/C menu and content is saved!
+
+</bmad-orchestration>
