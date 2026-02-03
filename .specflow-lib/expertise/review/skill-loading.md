@@ -10,23 +10,23 @@ This document provides the skill-to-lens mapping and loading pattern for the mul
 /sf:review (orchestrator)
     |
     +-- /sf:review-code
-    |       +-- Internal: _bmad/expertise/review/*
+    |       +-- Internal: .specflow-lib/expertise/review/*
     |       +-- External: .specflow/skills/code-review-excellence/SKILL.md
     |
     +-- /sf:review-test
-    |       +-- Internal: _bmad/expertise/review/*
+    |       +-- Internal: .specflow-lib/expertise/review/*
     |       +-- External: .specflow/skills/e2e-testing-patterns/SKILL.md
     |
     +-- /sf:review-security
-    |       +-- Internal: _bmad/expertise/review/* + security/*
+    |       +-- Internal: .specflow-lib/expertise/review/* + security/*
     |       +-- External: None (internal security expertise sufficient)
     |
     +-- /sf:review-arch
-    |       +-- Internal: _bmad/expertise/review/* + architecture/*
+    |       +-- Internal: .specflow-lib/expertise/review/* + architecture/*
     |       +-- External: None (internal architecture expertise sufficient)
     |
     +-- /sf:review-perf
-            +-- Internal: _bmad/expertise/review/*
+            +-- Internal: .specflow-lib/expertise/review/*
             +-- External: .specflow/skills/sql-optimization-patterns/SKILL.md
 ```
 
@@ -62,10 +62,10 @@ Copy-paste these `<expertise>` blocks into Phase 19 agent commands.
 Read and apply methodology from these sources:
 
 **Internal expertise (required):**
-- `_bmad/expertise/review/index.md` - Review system overview and lens selection
-- `_bmad/expertise/review/output-format.md` - Standard 8-review-output.md structure
-- `_bmad/expertise/review/feedback-loop.md` - Dev/QA routing protocol
-- `_bmad/expertise/review/escalation-rules.md` - PM escalation criteria
+- `.specflow-lib/expertise/review/index.md` - Review system overview and lens selection
+- `.specflow-lib/expertise/review/output-format.md` - Standard 8-review-output.md structure
+- `.specflow-lib/expertise/review/feedback-loop.md` - Dev/QA routing protocol
+- `.specflow-lib/expertise/review/escalation-rules.md` - PM escalation criteria
 
 **External skill (if available):**
 ```bash
@@ -88,10 +88,10 @@ If external skill missing: Continue with internal expertise only.
 Read and apply methodology from these sources:
 
 **Internal expertise (required):**
-- `_bmad/expertise/review/index.md` - Review system overview and lens selection
-- `_bmad/expertise/review/output-format.md` - Standard 8-review-output.md structure
-- `_bmad/expertise/review/feedback-loop.md` - Dev/QA routing protocol
-- `_bmad/expertise/review/escalation-rules.md` - PM escalation criteria
+- `.specflow-lib/expertise/review/index.md` - Review system overview and lens selection
+- `.specflow-lib/expertise/review/output-format.md` - Standard 8-review-output.md structure
+- `.specflow-lib/expertise/review/feedback-loop.md` - Dev/QA routing protocol
+- `.specflow-lib/expertise/review/escalation-rules.md` - PM escalation criteria
 
 **External skill (if available):**
 ```bash
@@ -114,10 +114,10 @@ If external skill missing: Continue with internal expertise only.
 Read and apply methodology from these sources:
 
 **Internal expertise (required):**
-- `_bmad/expertise/review/index.md` - Review system overview and lens selection
-- `_bmad/expertise/review/output-format.md` - Standard 8-review-output.md structure
-- `_bmad/expertise/review/feedback-loop.md` - Dev/QA routing protocol
-- `_bmad/expertise/review/escalation-rules.md` - PM escalation criteria
+- `.specflow-lib/expertise/review/index.md` - Review system overview and lens selection
+- `.specflow-lib/expertise/review/output-format.md` - Standard 8-review-output.md structure
+- `.specflow-lib/expertise/review/feedback-loop.md` - Dev/QA routing protocol
+- `.specflow-lib/expertise/review/escalation-rules.md` - PM escalation criteria
 
 **External skill (if available):**
 ```bash

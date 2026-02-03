@@ -168,7 +168,7 @@ triggers:
 Pillar-bound skills (security, architecture) are handled specially:
 - No SKILL.md exists
 - Bound to pillar selection
-- Methodology loaded from BMAD source
+- Methodology loaded from `.specflow-lib/methodology/`
 - Returned with `source: "internal"`
 
 ## Adding New Capabilities
