@@ -46,7 +46,7 @@ The spawning agent must provide a `<detection_context>` block with the following
 ```yaml
 ## Input
 
-capability_filter: review-capable  # Which capability to filter for
+capability_filter: review-capable  # Which capability to filter for (review-capable, report-capable, etc.)
 scope: medium                       # Current scope level (trivial|small|medium|large|complex)
 pillars: [security, testing]        # Selected pillars (may be empty list)
 changed_files:                      # Files to analyze (relative paths)
@@ -58,7 +58,7 @@ changed_files:                      # Files to analyze (relative paths)
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
-| `capability_filter` | string | Yes | Capability to filter for: `review-capable`, `report-capable`, `presentation-capable` |
+| `capability_filter` | string | Yes | Capability to filter for: `review-capable` (code review skills), `report-capable` (executive reporting, health checks) |
 | `scope` | string | Yes | Scope level: `trivial`, `small`, `medium`, `large`, `complex` |
 | `pillars` | string[] | No | Selected pillars: `security`, `testing`, `cost`, etc. (empty list if none) |
 | `changed_files` | string[] | Yes | List of file paths to analyze for trigger matching |
