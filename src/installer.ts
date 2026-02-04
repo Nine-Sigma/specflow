@@ -226,18 +226,20 @@ export async function init(
     process.exit(1);
   }
 
-  // 2. Preserve existing features if present
+  // 2. Check for existing features to inform user
+  // Note: Features are preserved implicitly - mkdir({recursive:true}) doesn't delete
+  // existing subdirectories, and we never rm -rf before creating. This check is
+  // purely informational to let users know their work is safe.
   // nosemgrep: path-join-resolve-traversal
   const featuresDir = join(safeTargetDir, '.specflow', 'features');
-  let preservedFeatures: string[] = [];
   try {
     const entries = await readdir(featuresDir);
-    preservedFeatures = entries.filter(f => f !== '.gitkeep');
-    if (preservedFeatures.length > 0) {
-      console.log(pc.dim(`Preserving ${preservedFeatures.length} existing feature(s)`));
+    const existingFeatures = entries.filter(f => f !== '.gitkeep');
+    if (existingFeatures.length > 0) {
+      console.log(pc.dim(`Preserving ${existingFeatures.length} existing feature(s)`));
     }
   } catch {
-    // No existing features
+    // No existing features directory
   }
 
   // 3. Create/copy directories
