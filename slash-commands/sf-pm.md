@@ -36,6 +36,8 @@ On every invocation, read:
 4. `.specflow/features/{slug}/COMMS/*.md` - Pending communications (if folder exists)
 5. `.specflow/features/{slug}/CONFLICTS.md` - Unresolved conflicts (if exists)
 6. `.specflow/skills/hierarchical-coordinator/SKILL.md` - Drift detection methodology (when running checkpoint)
+7. `.specflow/features/{slug}/0.3-brainstorm.md` - Brainstorm output (if exists, informs triage)
+8. `.specflow/features/{slug}/1.6-ux-design.md` - UX design output (if exists, informs architect routing)
 
 Replace {slug} with feature slug from STATE.md.
 </required_reading>
@@ -289,25 +291,204 @@ When engaging user, present clearly:
 ```
 </big_decisions>
 
+### Brainstorm Triggers
+
+PM suggests or invokes `/sf:brainstorm` when detecting uncertainty or need for ideation.
+
+<brainstorm_triggers>
+**Uncertainty Signals:**
+- Request is vague or ambiguous ("I want something like...", "maybe we could...")
+- User signals uncertainty ("I'm not sure what I want", "let me think")
+- Multiple valid interpretations exist
+- Request lacks concrete acceptance criteria
+- Innovation focus ("brainstorm", "explore", "what if")
+
+**Stuck Pattern Signals:**
+- User has tried multiple approaches ("tried everything", "nothing works")
+- Request implies need for fresh perspective
+- Domain is unfamiliar to user
+
+**PM Action Flow:**
+
+1. **Detect trigger** in user request or context
+2. **Suggest**: "This seems exploratory. Would you like to brainstorm first with `/sf:brainstorm`?"
+
+   OR (for strong signals):
+
+   **Invoke directly**: Route to `/sf:brainstorm "{topic}"` without asking
+
+3. **Read output**: After brainstorm completes, read `0.3-brainstorm.md`
+4. **Inform triage**: Use ideas to guide:
+   - Scope assessment (does brainstorm suggest large scope?)
+   - Feature definition (which ideas to pursue?)
+   - Pillar selection (do ideas have security/cost implications?)
+5. **Continue workflow**: Proceed to standard triage with enriched context
+
+**Trigger Keywords:**
+- brainstorm, ideas, explore, possibilities, options
+- think through, not sure, unclear, vague
+- innovate, new approach, fresh perspective
+
+**When NOT to brainstorm:**
+- Request is clear and specific
+- User has already defined requirements
+- Trivial/small scope work
+- Bug fix or documentation
+</brainstorm_triggers>
+
+### UX Triggers
+
+PM includes `/sf:ux` in workflow when detecting UI-heavy features.
+
+<ux_triggers>
+**UI-Heavy Feature Signals:**
+- User-facing interface changes (forms, dashboards, pages)
+- Multi-step user workflows
+- Mentions of user experience, journey, or flow
+- Visual design requirements (colors, layouts, components)
+- Mobile/responsive requirements
+- Accessibility requirements mentioned
+- Emotional design language ("delightful", "intuitive", "engaging")
+
+**Scope-Based Inclusion:**
+| Scope | UI Detected | Include /sf:ux? |
+|-------|-------------|-----------------|
+| trivial | Yes | No (too small) |
+| small | Yes | Optional (light UX) |
+| medium | Yes | Yes |
+| large+ | Yes | Yes (full UX) |
+
+**PM Action Flow:**
+
+1. **Detect UI signals** in request or 0-scope.md
+2. **Add UX to routing**: Sequence becomes:
+   ```
+   analyst (spec) -> /sf:ux -> architect
+   ```
+3. **Invoke /sf:ux** after spec creation:
+   - Reads `0-scope.md` for scope level
+   - Reads `1-spec.md` for requirements
+   - Writes `1.6-ux-design.md`
+4. **Read UX output** before routing to architect:
+   - Include UX constraints in architect context
+   - Note component strategy for architecture decisions
+5. **Continue to architect** with enriched context
+
+**Trigger Keywords:**
+- interface, UI, UX, user experience
+- screen, form, flow, dashboard, page
+- responsive, mobile, accessibility
+- button, input, navigation, menu
+
+**When NOT to include UX:**
+- Backend-only changes (APIs, services)
+- Data model changes without UI impact
+- Performance optimizations
+- Infrastructure changes
+</ux_triggers>
+
+### Reading New Command Outputs
+
+<output_reading>
+**After /sf:brainstorm returns:**
+
+If `0.3-brainstorm.md` exists, read and extract:
+- `techniques_used` from frontmatter
+- "Most Promising Ideas" section
+- "Recommended Next Steps" section
+- "Triage Implications" section (if present)
+
+Use this to inform:
+- Feature definition refinement
+- Scope assessment adjustments
+- Pillar selection (security/cost implications from ideas)
+
+**After /sf:ux returns:**
+
+If `1.6-ux-design.md` exists, read and extract:
+- `scope_honored` from frontmatter (verify scope match)
+- "Component Strategy" table
+- "For Architect" section
+- "Accessibility Requirements" list
+
+Pass to architect:
+- Include UX constraints in architect context
+- Note required components for architecture planning
+- Highlight technical considerations from UX
+
+**Example Flow:**
+
+```
+User: /sf:pm "build a user dashboard"
+
+PM: (detects UI-heavy feature)
+    1. Routes to analyst for scope/spec
+    2. After spec, reads 1-spec.md
+    3. Invokes /sf:ux (detects dashboard = UI-heavy)
+    4. Reads 1.6-ux-design.md
+    5. Includes UX constraints when routing to architect:
+
+       "Architect: Please review 2-architecture.md context including:
+       - UX constraints from 1.6-ux-design.md
+       - Component strategy: {components from UX}
+       - Accessibility: {requirements from UX}"
+```
+</output_reading>
+
+### Diagram On-Demand
+
+PM or Architect can invoke `/sf:diagram` for architecture visualization.
+
+<diagram_triggers>
+**Visualization Needed Signals:**
+- User requests "show me a diagram"
+- Architecture decisions would benefit from visualization
+- Complex data flows need illustration
+- Wireframes needed for UX decisions
+
+**PM/Architect Action:**
+
+1. **Invoke** `/sf:diagram --type {type}` with context:
+   - `--type flowchart` for process flows
+   - `--type wireframe` for UI layouts
+   - `--type dataflow` for data pipelines
+   - `--type architecture --from-arch` for system diagrams from 2-architecture.md
+
+2. **Return JSON** directly to user (no file written)
+3. **User pastes** JSON into Excalidraw
+4. **Continue workflow** (diagram is on-demand, not blocking)
+
+**When to Suggest:**
+- After architect completes 2-architecture.md
+- When user asks about system structure
+- During UX discussion for wireframes
+- When explaining complex flows
+
+**Note:** Diagrams are informational and do not gate workflow progression.
+</diagram_triggers>
+
 ### Routing Logic (Dynamic)
 
 Routing is determined by **triage decision**, not static tables. Read `0-triage.md` for selected pillars.
 
-**Full sequence with synthesis gate:**
+**Full sequence with new commands:**
 ```
-analyst (scope) -> PM approval -> analyst (codebase) -> PM -> analyst (spec) -> PM ->
-architect -> [security?] -> [cost?] -> tea -> PM SYNTHESIS GATE -> dev -> qa
+[brainstorm?] -> analyst (scope) -> PM approval -> analyst (codebase) -> PM ->
+analyst (spec) -> PM -> [ux?] -> architect -> [security?] -> [cost?] ->
+tea -> PM SYNTHESIS GATE -> dev -> qa
 ```
 
 **Detailed routing:**
 
 | Phase | Agent | Output | Next |
 |-------|-------|--------|------|
+| Pre-triage (optional) | brainstorm | 0.3-brainstorm.md | PM (triage) |
 | Scope | analyst | 0-scope.md | PM (scope approval) |
 | Scope Approval | PM | Approves scope | analyst |
 | Codebase Analysis | analyst | 1.5-codebase-constraints.md | PM |
 | PM Review | PM | Routes to spec | analyst |
 | Spec | analyst | 1-spec.md | PM |
+| **UX (if UI-heavy)** | **ux** | **1.6-ux-design.md** | **PM** |
 | Architecture | architect | 2-architecture.md | PM |
 | Security (if needed) | security | 3-security.md | PM |
 | Cost (if needed) | cost | 4-cost.md | PM |
@@ -1638,13 +1819,16 @@ authentication state. Incomplete session clearing is a security vulnerability
 
 ## Related
 
-- `/sf-analyst` - Requirements analysis (Mary)
-- `/sf-architect` - Architecture decisions (Winston)
-- `/sf-security` - Security analysis (Jordan)
-- `/sf-cost` - Cost analysis (Taylor)
-- `/sf-tea` - Test engineering analysis
-- `/sf-dev` - Development tasks (Amelia)
-- `/sf-qa` - Quality assurance (Quinn)
+- `/sf:analyst` - Requirements analysis (Mary)
+- `/sf:architect` - Architecture decisions (Winston)
+- `/sf:security` - Security analysis (Jordan)
+- `/sf:cost` - Cost analysis (Taylor)
+- `/sf:tea` - Test engineering analysis
+- `/sf:dev` - Development tasks (Amelia)
+- `/sf:qa` - Quality assurance (Quinn)
+- `/sf:brainstorm` - Structured ideation (John)
+- `/sf:ux` - UX design (Sally)
+- `/sf:diagram` - Architecture visualization
 
 ## Persona Source
 
