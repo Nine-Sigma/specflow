@@ -65,3 +65,35 @@ created: 2026-02-04T23:04:51Z
 - QA drift classification lacks clear heuristics (RED - fix)
 
 ---
+
+## 2026-02-04T23:13:00Z - Task 3: Inner Loop Friction Analysis Complete
+
+**Work Done:**
+- Analyzed sf-dev.md mode detection logic (3 modes: STANDARD, FIX, DRIFT_FIX)
+- Analyzed sf-qa.md mode detection logic (4 modes: TDD, DRIFT_FIX, FIX, STANDARD)
+- Analyzed sf-review.md fix loop logic and escalation paths
+- Cross-referenced with agent-pattern.md for handoff patterns
+- Identified 10 friction points with stoplight ratings
+- Documented 3 GREEN items (working well - preserve)
+- Documented 6 YELLOW items (friction present, workflow continues)
+- Documented 1 RED item (significant friction, needs priority fix)
+- Categorized all points for Phase 38 prioritization
+
+**Output:** `1.2-inner-loop-friction.md`
+
+**Friction Summary:**
+| Color | Count | Priority |
+|-------|-------|----------|
+| GREEN | 3 | Preserve |
+| YELLOW | 6 | Medium |
+| RED | 1 | High |
+
+**Key Findings:**
+- Dev mode detection priority chain works well (preserve)
+- QA TDD mode isolation prevents coupling (preserve)
+- Review fix loop has clear iteration limits (preserve)
+- Drift vs bug classification lacks automated heuristics (RED - fix)
+- Parallel vs sequential routing lacks concrete criteria (YELLOW)
+- VERIFY_FIXES scope has contradictory exception clause (YELLOW)
+
+---
