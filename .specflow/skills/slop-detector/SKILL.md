@@ -51,6 +51,43 @@ AI-generated code tends to have predictable quality issues:
 
 **Note:** Missing tools are skipped. At least one tool should be available for meaningful results.
 
+## Tool Availability Handling
+
+### Detection Matrix
+
+After checking tool availability, record which tools can run:
+
+| Tool | Check Command | Fallback |
+|------|--------------|----------|
+| ast-grep | `which ast-grep` | Skip structural analysis |
+| jscpd | `which jscpd` | Skip duplicate detection |
+| knip | `npx knip --version` | Skip unused exports (JS/TS) |
+| vulture | `which vulture` | Skip dead code (Python) |
+| ruff | `which ruff` | Skip unused imports (Python) |
+
+### Minimum Requirements
+
+The skill can run with any ONE of:
+- ast-grep (structural patterns)
+- jscpd (duplicates)
+- knip OR vulture OR ruff (unused code)
+
+If NO tools are available, return early:
+
+```markdown
+### slop-detector Findings
+
+**Status:** SKIPPED - No analysis tools available
+
+Install at least one tool:
+- `npm i -g @ast-grep/cli` (recommended - covers all languages)
+- `npm i -g jscpd` (duplicate detection)
+- `npm i -g knip` (JS/TS unused code)
+- `pip install vulture ruff` (Python)
+
+No findings to report.
+```
+
 ## Execution Methodology
 
 ### Step 1: Detect Available Tools
