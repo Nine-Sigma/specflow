@@ -1,0 +1,36 @@
+# Vulture whitelist for slop-detector
+# These are common patterns that vulture incorrectly flags as dead code
+
+# Test fixtures and pytest
+_.fixture
+_.parametrize
+_.mark
+conftest.py
+
+# Django
+_.objects
+_.DoesNotExist
+_.Meta
+_.get_absolute_url
+_.save
+_.delete
+
+# Flask
+_.route
+_.before_request
+_.after_request
+
+# FastAPI
+_.get
+_.post
+_.put
+_.delete
+_.depends
+
+# Common patterns
+__all__
+__init__
+__str__
+__repr__
+__eq__
+__hash__
