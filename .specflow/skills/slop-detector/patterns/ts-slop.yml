@@ -1,0 +1,100 @@
+# TypeScript/JavaScript AI Slop Detection Rules
+# Used by: ast-grep scan --rule ts-slop.yml {files}
+
+id: ts-slop-rules
+language: typescript
+rules:
+  - id: empty-catch-block
+    pattern: 'catch ($ERR) { }'
+    message: "Empty catch block swallows errors silently"
+    severity: error
+    note: "Add error handling: log, rethrow, or recover"
+
+  - id: catch-with-only-comment
+    pattern: |
+      catch ($ERR) {
+        // $$$
+      }
+    message: "Catch block has only comments, no error handling"
+    severity: warning
+    note: "Comments don't handle the error - add actual handling"
+
+  - id: console-log
+    pattern: 'console.log($$$)'
+    message: "console.log should not be in production code"
+    severity: warning
+    note: "Remove or replace with proper logging"
+
+  - id: console-debug
+    pattern: 'console.debug($$$)'
+    message: "console.debug should not be in production code"
+    severity: warning
+    note: "Remove or replace with proper logging"
+
+  - id: console-warn-temp
+    pattern: 'console.warn($MSG)'
+    constraints:
+      MSG:
+        regex: "(TODO|FIXME|temp|debug|test)"
+    message: "Temporary console.warn with debug text"
+    severity: warning
+
+  - id: todo-comment
+    pattern: '// TODO$$$'
+    message: "Unresolved TODO comment"
+    severity: warning
+    note: "Resolve or create a ticket"
+
+  - id: fixme-comment
+    pattern: '// FIXME$$$'
+    message: "Unresolved FIXME comment"
+    severity: warning
+    note: "Fix the issue or create a ticket"
+
+  - id: hack-comment
+    pattern: '// HACK$$$'
+    message: "HACK comment indicates technical debt"
+    severity: warning
+    note: "Document why or refactor"
+
+  - id: empty-function
+    pattern: 'function $NAME($$$) { }'
+    message: "Empty function body - placeholder?"
+    severity: warning
+    note: "Implement or remove if unused"
+
+  - id: empty-arrow-function
+    pattern: 'const $NAME = ($$$) => { }'
+    message: "Empty arrow function body - placeholder?"
+    severity: warning
+    note: "Implement or remove if unused"
+
+  - id: any-type
+    pattern: ': any'
+    message: "Using 'any' defeats type safety"
+    severity: warning
+    note: "Use proper type or 'unknown' if truly dynamic"
+
+  - id: ts-ignore
+    pattern: '// @ts-ignore'
+    message: "@ts-ignore suppresses type errors"
+    severity: warning
+    note: "Fix the type error instead of ignoring"
+
+  - id: ts-expect-error-no-reason
+    pattern: '// @ts-expect-error'
+    message: "@ts-expect-error without explanation"
+    severity: warning
+    note: "Add reason: // @ts-expect-error - reason here"
+
+  - id: debugger-statement
+    pattern: 'debugger'
+    message: "debugger statement left in code"
+    severity: error
+    note: "Remove before commit"
+
+  - id: alert-statement
+    pattern: 'alert($$$)'
+    message: "alert() should not be in production code"
+    severity: warning
+    note: "Use proper UI notification"
