@@ -223,3 +223,42 @@ All slop-detector findings route to **Dev** (never QA):
 - Code quality issues are Dev responsibility
 - Dev fixes in existing review loop
 - Re-review verifies fixes
+
+## Tool Output Parsing
+
+### ast-grep Output Format
+
+ast-grep with `--json` outputs:
+```json
+[
+  {
+    "text": "catch (e) { }",
+    "range": {
+      "start": {"line": 45, "column": 4},
+      "end": {"line": 45, "column": 17}
+    },
+    "file": "src/auth.ts",
+    "rule_id": "empty-catch-block",
+    "message": "Empty catch block swallows errors silently",
+    "severity": "error"
+  }
+]
+```
+
+**Parsing logic:**
+```
+FOR each match in ast-grep output:
+  id = generate_id(rule_id)  # SLOP-EC-01, SLOP-CL-01, etc.
+  location = "{file}:{range.start.line}"
+  issue = message
+  severity = map_severity(severity)  # error -> MAJOR, warning -> MINOR
+
+  ADD to findings table
+```
+
+**Severity mapping:**
+| ast-grep severity | Finding severity |
+|-------------------|------------------|
+| error | MAJOR |
+| warning | MINOR |
+| hint | MINOR |
