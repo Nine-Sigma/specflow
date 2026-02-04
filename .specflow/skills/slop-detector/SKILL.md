@@ -309,3 +309,66 @@ FOR each duplicate in jscpd output:
 
   ADD to findings table
 ```
+
+### knip Output Format
+
+knip outputs text format (use `--reporter json` if available):
+```
+Unused exports:
+  src/utils.ts: helperFunc, unusedConst
+Unused dependencies:
+  lodash, moment
+```
+
+**Parsing logic:**
+```
+FOR each "Unused exports" line:
+  id = "SLOP-UN-{N}"
+  location = file path
+  severity = MINOR
+  issue = "Unused export: {symbol}"
+```
+
+### vulture Output Format
+
+vulture outputs text:
+```
+src/helpers.py:45: unused function 'old_helper' (60% confidence)
+src/utils.py:12: unused variable 'temp' (80% confidence)
+```
+
+**Parsing logic:**
+```
+FOR each vulture line:
+  PARSE: {file}:{line}: unused {type} '{name}' ({confidence}% confidence)
+
+  IF confidence >= 80:
+    id = "SLOP-DEAD-{N}"
+    location = "{file}:{line}"
+    severity = MAJOR if type == "function" else MINOR
+    issue = "Dead {type}: {name}"
+```
+
+### ruff Output Format
+
+ruff with `--output-format=json`:
+```json
+[
+  {
+    "code": "F401",
+    "message": "'os' imported but unused",
+    "filename": "src/main.py",
+    "location": {"row": 1, "column": 1}
+  }
+]
+```
+
+**Parsing logic:**
+```
+FOR each ruff issue:
+  IF code in [F401, F841, F811]:
+    id = "SLOP-IMP-{N}" if F401 else "SLOP-VAR-{N}"
+    location = "{filename}:{location.row}"
+    severity = MINOR
+    issue = message
+```
