@@ -170,6 +170,117 @@ Next: Run /sf:pm "your feature" to begin
   await writeFile(join(specflowDir, 'skills', '.gitkeep'), '');
 }
 
+/**
+ * Initialize SpecFlow in a project directory.
+ *
+ * Creates:
+ * - .specflow/ (runtime workspace - created programmatically)
+ * - .specflow-lib/ (methodology library - copied from package)
+ * - .claude/commands/ (slash commands - copied from package)
+ *
+ * @param targetDir - Directory to initialize (defaults to cwd)
+ * @param options - { force: boolean } to skip confirmation prompt
+ */
+export async function init(
+  targetDir: string = process.cwd(),
+  options: { force?: boolean } = {}
+): Promise<void> {
+  const safeTargetDir = sanitizeTargetDir(targetDir);
+
+  console.log(pc.bold(pc.cyan('\nSpecFlow Init\n')));
+
+  // 1. Check for existing installation
+  const existingDirs = await detectExisting(safeTargetDir);
+  if (existingDirs.length > 0) {
+    console.log(pc.yellow('Existing SpecFlow installation detected:'));
+    for (const dir of existingDirs) {
+      console.log(`  ${pc.dim(dir)}`);
+    }
+    console.log('');
+
+    if (!options.force) {
+      const confirmed = await confirm('Overwrite existing files?');
+      if (!confirmed) {
+        console.log(pc.yellow('\nInit cancelled.'));
+        return;
+      }
+    } else {
+      console.log(pc.dim('--force specified, continuing...\n'));
+    }
+  }
+
+  // Find package root (where .specflow-lib/ and slash-commands/ live)
+  const packageRoot = resolve(__dirname, '..');
+
+  // Verify package has required directories
+  // nosemgrep: path-join-resolve-traversal
+  const specflowLibSrc = join(packageRoot, '.specflow-lib');
+  // nosemgrep: path-join-resolve-traversal
+  const slashCommandsSrc = join(packageRoot, 'slash-commands');
+
+  try {
+    await stat(specflowLibSrc);
+  } catch {
+    console.error(pc.red('Error: .specflow-lib/ not found in package'));
+    console.error(pc.dim(`Expected at: ${specflowLibSrc}`));
+    process.exit(1);
+  }
+
+  // 2. Preserve existing features if present
+  // nosemgrep: path-join-resolve-traversal
+  const featuresDir = join(safeTargetDir, '.specflow', 'features');
+  let preservedFeatures: string[] = [];
+  try {
+    const entries = await readdir(featuresDir);
+    preservedFeatures = entries.filter(f => f !== '.gitkeep');
+    if (preservedFeatures.length > 0) {
+      console.log(pc.dim(`Preserving ${preservedFeatures.length} existing feature(s)`));
+    }
+  } catch {
+    // No existing features
+  }
+
+  // 3. Create/copy directories
+  console.log(pc.bold('Creating directories:\n'));
+
+  // .specflow/ - created programmatically (not copied)
+  await createSpecflowDir(safeTargetDir);
+  console.log(`  ${pc.green('+')} .specflow/`);
+
+  // .specflow-lib/ - copied from package
+  // nosemgrep: path-join-resolve-traversal
+  const specflowLibDest = join(safeTargetDir, '.specflow-lib');
+  await cp(specflowLibSrc, specflowLibDest, { recursive: true, force: true });
+  console.log(`  ${pc.green('+')} .specflow-lib/`);
+
+  // .claude/commands/ - copied from package (reuse existing pattern)
+  // nosemgrep: path-join-resolve-traversal
+  const claudeDir = join(safeTargetDir, '.claude', 'commands');
+  // nosemgrep: path-join-resolve-traversal
+  await mkdir(join(safeTargetDir, '.claude'), { recursive: true });
+  await cp(slashCommandsSrc, claudeDir, { recursive: true, force: true });
+  console.log(`  ${pc.green('+')} .claude/commands/`);
+
+  // 4. Update .gitignore
+  await updateGitignore(safeTargetDir);
+  console.log(`  ${pc.green('+')} .gitignore (added secrets.json)`);
+
+  // 5. Display summary
+  console.log('');
+  console.log(pc.bold(pc.green('SpecFlow initialized successfully!\n')));
+
+  console.log(pc.bold('Created:'));
+  console.log(`  ${pc.cyan('.specflow/')}           ${pc.dim('Runtime workspace')}`);
+  console.log(`  ${pc.cyan('.specflow-lib/')}       ${pc.dim('Methodology library')}`);
+  console.log(`  ${pc.cyan('.claude/commands/')}    ${pc.dim('Slash commands')}`);
+  console.log('');
+
+  console.log(pc.bold('Next steps:'));
+  console.log(`  1. Review ${pc.cyan('.specflow/config.json')} for settings`);
+  console.log(`  2. Start PM with ${pc.green('/sf:pm "your feature"')}`);
+  console.log('');
+}
+
 export async function install(targetDir: string = process.cwd()): Promise<void> {
   // Sanitize user-provided directory path
   const safeTargetDir = sanitizeTargetDir(targetDir);
