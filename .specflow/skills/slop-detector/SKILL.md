@@ -262,3 +262,50 @@ FOR each match in ast-grep output:
 | error | MAJOR |
 | warning | MINOR |
 | hint | MINOR |
+
+### jscpd Output Format
+
+jscpd with `--reporters json` outputs to `jscpd-report/jscpd-report.json`:
+```json
+{
+  "duplicates": [
+    {
+      "format": "typescript",
+      "lines": 12,
+      "tokens": 87,
+      "firstFile": {
+        "name": "src/utils.ts",
+        "start": 10,
+        "end": 22
+      },
+      "secondFile": {
+        "name": "src/helpers.ts",
+        "start": 5,
+        "end": 17
+      },
+      "fragment": "function helper(x) {\n  return x * 2;\n}"
+    }
+  ],
+  "statistics": {
+    "total": {"lines": 1500},
+    "duplicates": {"lines": 24, "percentage": "1.6%"}
+  }
+}
+```
+
+**Parsing logic:**
+```
+FOR each duplicate in jscpd output:
+  id = "SLOP-DUP-{N}"
+  location = "{firstFile.name}:{firstFile.start}-{firstFile.end}"
+  lines = duplicate.lines
+
+  IF lines > 10:
+    severity = MAJOR
+  ELSE:
+    severity = MINOR
+
+  issue = "Duplicate of {secondFile.name}:{secondFile.start}-{secondFile.end} ({lines} lines)"
+
+  ADD to findings table
+```
