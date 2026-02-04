@@ -372,3 +372,49 @@ FOR each ruff issue:
     severity = MINOR
     issue = message
 ```
+
+## Error Handling
+
+### Tool Execution Errors
+
+If a tool fails, log and continue with other tools:
+
+```
+TRY: run ast-grep
+  IF exit_code != 0:
+    LOG: "ast-grep failed: {stderr}"
+    CONTINUE  # Don't fail the whole skill
+
+TRY: run jscpd
+  IF exit_code != 0:
+    LOG: "jscpd failed: {stderr}"
+    CONTINUE
+
+# ... same for other tools
+```
+
+### Common Error Cases
+
+| Error | Cause | Handling |
+|-------|-------|----------|
+| Tool not found | Not installed | Skip tool, suggest install |
+| Pattern file not found | Skill incomplete | Use inline patterns |
+| Permission denied | File access | Skip file, log warning |
+| Timeout | Large codebase | Limit file count per run |
+| Invalid JSON | Tool bug | Log error, skip tool output |
+
+### Error Summary in Output
+
+If any tools failed, include in findings output:
+
+```markdown
+### slop-detector Findings
+
+**Tools Status:**
+- ast-grep: OK (15 files scanned)
+- jscpd: FAILED (timeout after 60s)
+- knip: SKIPPED (not installed)
+- vulture: OK (8 files scanned)
+
+[... findings table ...]
+```
