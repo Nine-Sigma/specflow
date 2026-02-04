@@ -244,26 +244,66 @@ export async function init(
   console.log(pc.bold('Creating directories:\n'));
 
   // .specflow/ - created programmatically (not copied)
-  await createSpecflowDir(safeTargetDir);
-  console.log(`  ${pc.green('+')} .specflow/`);
+  try {
+    await createSpecflowDir(safeTargetDir);
+    console.log(`  ${pc.green('+')} .specflow/`);
+  } catch (err) {
+    const error = err as NodeJS.ErrnoException;
+    if (error.code === 'EACCES') {
+      console.error(pc.red(`Error: Permission denied creating .specflow/`));
+      console.error(pc.dim('Check directory permissions or try with elevated access.'));
+      process.exit(1);
+    }
+    throw error;
+  }
 
   // .specflow-lib/ - copied from package
   // nosemgrep: path-join-resolve-traversal
   const specflowLibDest = join(safeTargetDir, '.specflow-lib');
-  await cp(specflowLibSrc, specflowLibDest, { recursive: true, force: true });
-  console.log(`  ${pc.green('+')} .specflow-lib/`);
+  try {
+    await cp(specflowLibSrc, specflowLibDest, { recursive: true, force: true });
+    console.log(`  ${pc.green('+')} .specflow-lib/`);
+  } catch (err) {
+    const error = err as NodeJS.ErrnoException;
+    if (error.code === 'EACCES') {
+      console.error(pc.red(`Error: Permission denied creating .specflow-lib/`));
+      console.error(pc.dim('Check directory permissions or try with elevated access.'));
+      process.exit(1);
+    }
+    throw error;
+  }
 
   // .claude/commands/ - copied from package (reuse existing pattern)
   // nosemgrep: path-join-resolve-traversal
   const claudeDir = join(safeTargetDir, '.claude', 'commands');
   // nosemgrep: path-join-resolve-traversal
   await mkdir(join(safeTargetDir, '.claude'), { recursive: true });
-  await cp(slashCommandsSrc, claudeDir, { recursive: true, force: true });
-  console.log(`  ${pc.green('+')} .claude/commands/`);
+  try {
+    await cp(slashCommandsSrc, claudeDir, { recursive: true, force: true });
+    console.log(`  ${pc.green('+')} .claude/commands/`);
+  } catch (err) {
+    const error = err as NodeJS.ErrnoException;
+    if (error.code === 'EACCES') {
+      console.error(pc.red(`Error: Permission denied creating .claude/commands/`));
+      console.error(pc.dim('Check directory permissions or try with elevated access.'));
+      process.exit(1);
+    }
+    throw error;
+  }
 
   // 4. Update .gitignore
-  await updateGitignore(safeTargetDir);
-  console.log(`  ${pc.green('+')} .gitignore (added secrets.json)`);
+  try {
+    await updateGitignore(safeTargetDir);
+    console.log(`  ${pc.green('+')} .gitignore (added secrets.json)`);
+  } catch (err) {
+    const error = err as NodeJS.ErrnoException;
+    if (error.code === 'EACCES') {
+      console.error(pc.red(`Error: Permission denied updating .gitignore`));
+      console.error(pc.dim('Check file permissions or try with elevated access.'));
+      process.exit(1);
+    }
+    throw error;
+  }
 
   // 5. Display summary
   console.log('');
