@@ -4,6 +4,7 @@ import pc from 'picocolors';
 import { runAgent, loadCustomAgents, listAgents, getAgent } from './wrapper/agent-runner.js';
 import { installSkillCommand, listSkillsCommand, removeSkillCommand } from './skills/commands.js';
 import { reviewCommand } from './review/commands.js';
+import { init } from './installer.js';
 
 const program = new Command();
 
@@ -95,5 +96,19 @@ skillCommand
 
 program.addCommand(skillCommand);
 program.addCommand(reviewCommand);
+
+// Init command - full project initialization
+program
+  .command('init [directory]')
+  .description('Initialize SpecFlow in a project')
+  .option('-f, --force', 'Overwrite existing files without prompting')
+  .action(async (directory, options) => {
+    try {
+      await init(directory || process.cwd(), { force: options.force });
+    } catch (err) {
+      console.error(pc.red(`Error: ${(err as Error).message}`));
+      process.exit(1);
+    }
+  });
 
 program.parse();
