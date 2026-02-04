@@ -20,3 +20,48 @@ created: 2026-02-04T23:04:51Z
 - `.specflow/features/test-logout/PROGRESS.md`
 
 ---
+
+## 2026-02-04T23:07:00Z - Task 1: Workflow Map Complete
+
+**Work Done:**
+- Created end-to-end workflow map with 9 Mermaid diagrams
+- Documented scope-variant flows for all 5 scope levels
+- Created phase documentation for all workflow phases
+- Built decision points table with 11 decision points
+- Created agent sequence table by scope
+- Documented inner loops (drift fix, review fix, COMMS resolution)
+- Added state management and file numbering conventions
+
+**Output:** `1-workflow-map.md`
+
+**Commit:** baf174b
+
+---
+
+## 2026-02-04T23:12:00Z - Task 2: PM Triage Friction Analysis Complete
+
+**Work Done:**
+- Analyzed sf-pm.md (1897 lines) for friction points
+- Cross-referenced with add-password-reset/PROGRESS.md for real execution evidence
+- Identified 10 friction points with stoplight ratings
+- Documented 2 GREEN items (working well - preserve)
+- Documented 7 YELLOW items (friction present, workflow continues)
+- Documented 2 RED items (significant friction, needs priority fix)
+- Categorized all points for Phase 38 prioritization
+
+**Output:** `1.1-pm-triage-friction.md`
+
+**Friction Summary:**
+| Color | Count | Priority |
+|-------|-------|----------|
+| GREEN | 2 | Preserve |
+| YELLOW | 7 | Medium |
+| RED | 2 | High |
+
+**Key Findings:**
+- Pillar trigger detection works well (preserve)
+- Agent sequence dependency order works well (preserve)
+- Synthesis gate duplicates scope approval (RED - fix)
+- QA drift classification lacks clear heuristics (RED - fix)
+
+---
