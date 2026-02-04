@@ -1817,6 +1817,66 @@ authentication state. Incomplete session clearing is a security vulnerability
 **Agent Sequence:** analyst -> security -> dev -> qa
 ```
 
+### Report Generation Triggers
+
+When detecting report-related requests, PM spawns skill-detector with `capability: report-capable`:
+
+**Detection Patterns:**
+
+| User Says | Detected Intent | Primary Skill | Output |
+|-----------|-----------------|---------------|--------|
+| "status report", "exec summary", "executive update" | Executive Report | executive-reporting | 9-exec-report.md |
+| "health check", "how's it going", "project health" | Health Assessment | project-health-check | 9-health-check.md |
+| "risk assessment", "RAID log", "risk report" | Risk Analysis | risk-management | 9-risk-report.md |
+| "presentation", "deck", "slides", "pptx" | Presentation | pptx | {slug}.pptx |
+| "board package" | Chained Report | executive-reporting → pptx | 9-exec-report.md + .pptx |
+
+**PM Action for Report Requests:**
+
+1. Detect report trigger phrase in user request
+2. Spawn skill-detector:
+
+   Task: skill-detector
+
+   <detection_context>
+   capability_filter: report-capable
+   scope: {current_scope from 0-scope.md}
+   pillars: []
+   changed_files: []
+   </detection_context>
+
+3. From matched skills, select primary based on user intent
+4. If feature context exists (STATE.md has current_feature):
+   - Invoke selected skill with feature slug
+   - Skill reads artifacts from `.specflow/features/{slug}/`
+   - Skill writes to `9-*.md`
+5. If no feature context:
+   - Prompt user to select a feature or provide context
+   - For project-wide reports, aggregate across features
+
+**Skill Chaining (Board Package):**
+
+When user requests "board package":
+1. First invoke executive-reporting skill
+   - Wait for 9-exec-report.md to be written
+2. Then invoke pptx skill with 9-exec-report.md as input
+   - pptx generates presentation from report content
+3. Return both artifacts to user
+
+**Output File Convention:**
+
+All report skills output to `9-*.md` files in the feature directory:
+- `9-exec-report.md` - Executive status report
+- `9-health-check.md` - Health assessment
+- `9-risk-report.md` - Risk analysis
+
+The `9-` prefix indicates post-workflow artifacts (reports generated after feature work).
+
+**Installation:**
+- Bundled skills (executive-reporting, project-health-check, risk-management) are installed automatically by `npx specflow init`
+- pptx skill requires: `sf skill install pptx@anthropics/skills`
+- pptx optional tools for visual QA: LibreOffice (`brew install libreoffice`), Poppler (`brew install poppler`)
+
 ## Related
 
 - `/sf:analyst` - Requirements analysis (Mary)
@@ -1829,6 +1889,7 @@ authentication state. Incomplete session clearing is a security vulnerability
 - `/sf:brainstorm` - Structured ideation (John)
 - `/sf:ux` - UX design (Sally)
 - `/sf:diagram` - Architecture visualization
+- Report skills: executive-reporting, project-health-check, risk-management, pptx (via skill-detector)
 
 ## Persona Source
 
