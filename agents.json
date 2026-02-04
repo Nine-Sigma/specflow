@@ -65,6 +65,22 @@
       "description": "Execute Gherkin scenarios using browser-use (UI) or Node.js fetch (API) for automated User Acceptance Testing.",
       "review-capable": true,
       "scope-minimum": "small"
+    },
+    "slop-detector": {
+      "source": "skill",
+      "invoke": ".specflow/skills/slop-detector",
+      "bundled": true,
+      "tools": ["ast-grep", "jscpd", "knip", "vulture", "ruff"],
+      "toolInstall": {
+        "ast-grep": "npm i -g @ast-grep/cli",
+        "jscpd": "npm i -g jscpd",
+        "knip": "npm i -g knip",
+        "vulture": "pip install vulture",
+        "ruff": "pip install ruff"
+      },
+      "description": "Detect AI-generated code quality issues (duplicates, dead code, placeholders, empty catches)",
+      "review-capable": true,
+      "scope-minimum": "trivial"
     }
   },
   "_docs": {
@@ -75,6 +91,14 @@
       "4. All custom agents use source: 'custom'",
       "5. Agents prefixed with _ are examples/disabled",
       "6. For skills: installed via 'sf skill install', use source: 'skill'"
+    ],
+    "skill_fields": [
+      "bundled: boolean - If true, skill ships with SpecFlow (init copies it)",
+      "install: string - External source for downloadable skills (name@owner/repo)",
+      "tools: string[] - CLI tools required by this skill",
+      "toolInstall: object - Install commands for each tool {tool: 'command'}",
+      "review-capable: boolean - If true, skill can be used by sf-review",
+      "scope-minimum: string - Minimum scope level to trigger (trivial|small|medium|large|complex)"
     ],
     "invoking": [
       "Via CLI: sf agent <name>",
