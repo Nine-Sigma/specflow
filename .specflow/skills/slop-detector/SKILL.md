@@ -418,3 +418,35 @@ If any tools failed, include in findings output:
 
 [... findings table ...]
 ```
+
+## Finding Deduplication
+
+Multiple tools may flag the same issue. Deduplicate before output:
+
+### Deduplication Rules
+
+1. **Same file:line** - Keep higher severity finding
+2. **Same pattern type** - If ast-grep and ruff both find unused import, keep one
+3. **Overlapping ranges** - If jscpd duplicate overlaps another, merge
+
+### Example
+
+ast-grep finds: `SLOP-IMP-01: src/main.py:5 - unused import 'os'`
+ruff finds: `SLOP-IMP-02: src/main.py:5 - 'os' imported but unused`
+
+After dedup: Keep one, attribute both tools:
+`SLOP-IMP-01: src/main.py:5 - Unused import 'os' (found by: ast-grep, ruff)`
+
+### Deduplication Algorithm
+
+```
+findings = []
+FOR each tool_finding:
+  existing = find_by_location(findings, tool_finding.file, tool_finding.line)
+  IF existing:
+    existing.sources.append(tool_finding.source)
+    IF tool_finding.severity > existing.severity:
+      existing.severity = tool_finding.severity
+  ELSE:
+    findings.append(tool_finding)
+```
