@@ -421,14 +421,18 @@ function showHelp(): void {
   console.log(pc.bold(pc.cyan('\nSpecFlow CLI\n')));
   console.log('Usage: ' + pc.cyan('npx specflow') + ' <command> [directory]\n');
   console.log('Commands:');
-  console.log(`  ${pc.green('install')}     Copy /sf:* commands to .claude/commands/`);
+  console.log(`  ${pc.green('init')}        Initialize SpecFlow in a project`);
+  console.log(`  ${pc.green('install')}     Copy /sf:* commands only (use init for full setup)`);
   console.log(`  ${pc.red('uninstall')}   Remove /sf:* commands from .claude/commands/`);
-  console.log(`  ${pc.blue('link')}        Symlink commands for development (edits propagate)`);
+  console.log(`  ${pc.blue('link')}        Symlink commands for development`);
+  console.log('');
+  console.log('Options:');
+  console.log(`  ${pc.dim('-f, --force')}  Skip confirmation prompts`);
   console.log('');
   console.log('Examples:');
-  console.log(`  npx specflow install           ${pc.dim('# Install to current directory')}`);
-  console.log(`  npx specflow install ./myapp   ${pc.dim('# Install to specific directory')}`);
-  console.log(`  npx specflow link              ${pc.dim('# Dev mode with symlinks')}`);
+  console.log(`  npx specflow init              ${pc.dim('# Initialize in current directory')}`);
+  console.log(`  npx specflow init ./myapp      ${pc.dim('# Initialize in specific directory')}`);
+  console.log(`  npx specflow init --force      ${pc.dim('# Overwrite without prompting')}`);
   console.log('');
 }
 
@@ -437,6 +441,10 @@ const command = process.argv[2];
 const targetDir = process.argv[3] || process.cwd();
 
 switch (command) {
+  case 'init':
+    const forceFlag = process.argv.includes('--force') || process.argv.includes('-f');
+    init(targetDir, { force: forceFlag });
+    break;
   case 'install':
     install(targetDir);
     break;
