@@ -13,7 +13,8 @@
     "slash-commands",
     "ralph",
     "agents",
-    ".specflow-lib"
+    ".specflow-lib",
+    "templates"
   ],
   "scripts": {
     "build": "esbuild src/cli.ts --bundle --platform=node --outfile=dist/cli.js --format=esm --banner:js='import { createRequire } from \"module\"; const require = createRequire(import.meta.url);' && esbuild src/installer.ts --bundle --platform=node --outfile=dist/installer.js --format=esm --external:picocolors",

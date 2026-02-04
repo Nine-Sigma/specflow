@@ -12,9 +12,46 @@ import { copyFile, mkdir, readdir, unlink, stat, cp, readFile, writeFile } from 
 import { createInterface } from 'readline';
 import { dirname, join, resolve, normalize, isAbsolute } from 'path';
 import { fileURLToPath } from 'url';
+import { exec } from 'child_process';
+import { promisify } from 'util';
 import pc from 'picocolors';
 
+const execAsync = promisify(exec);
+
 const __dirname = dirname(fileURLToPath(import.meta.url));
+
+/**
+ * Skill entry structure from agents.json
+ */
+interface SkillEntry {
+  source: string;
+  invoke: string;
+  bundled?: boolean;
+  install?: string;
+  tools?: string[];
+  toolInstall?: Record<string, string>;
+  description?: string;
+  'review-capable'?: boolean;
+  'scope-minimum'?: string;
+}
+
+/**
+ * Agents.json structure
+ */
+interface AgentsJson {
+  agents: Record<string, SkillEntry>;
+  _docs?: Record<string, string[]>;
+}
+
+/**
+ * Tool availability status
+ */
+interface ToolStatus {
+  name: string;
+  available: boolean;
+  version?: string;
+  installCommand?: string;
+}
 
 /**
  * Sanitize and validate target directory path.
@@ -171,6 +208,321 @@ Next: Run /sf:pm "your feature" to begin
 }
 
 /**
+ * Process bundled skills from agents.json.
+ * Copies skill directories from package templates to user's .specflow/skills/
+ */
+async function processBundledSkills(
+  agentsJson: AgentsJson,
+  targetDir: string
+): Promise<void> {
+  const bundledSkills = Object.entries(agentsJson.agents)
+    .filter(([_, entry]) => entry.bundled === true && entry.source === 'skill');
+
+  if (bundledSkills.length === 0) {
+    console.log(pc.dim('  No bundled skills found'));
+    return;
+  }
+
+  for (const [name] of bundledSkills) {
+    // nosemgrep: path-join-resolve-traversal
+    const sourcePath = join(__dirname, '..', 'templates', 'skills', name);
+    // nosemgrep: path-join-resolve-traversal
+    const targetPath = join(targetDir, '.specflow', 'skills', name);
+
+    try {
+      await stat(sourcePath);
+      await cp(sourcePath, targetPath, { recursive: true, force: true });
+      console.log(`  ${pc.green('+')} ${name} -> .specflow/skills/${name}/`);
+    } catch (err) {
+      const error = err as NodeJS.ErrnoException;
+      if (error.code === 'ENOENT') {
+        console.log(`  ${pc.yellow('!')} ${name}: source not found (${sourcePath})`);
+      } else {
+        throw error;
+      }
+    }
+  }
+}
+
+/**
+ * Get default install command for a tool.
+ */
+function getDefaultInstallCommand(tool: string): string {
+  const defaults: Record<string, string> = {
+    'ast-grep': 'npm i -g @ast-grep/cli',
+    'jscpd': 'npm i -g jscpd',
+    'knip': 'npm i -g knip',
+    'vulture': 'pip install vulture',
+    'ruff': 'pip install ruff'
+  };
+  return defaults[tool] || `# Install ${tool}`;
+}
+
+/**
+ * Check if a CLI tool is available.
+ */
+async function checkToolAvailability(tool: string): Promise<{ available: boolean; version?: string }> {
+  try {
+    // Special case for npx-based tools
+    if (tool === 'knip') {
+      const { stdout } = await execAsync('npx knip --version 2>/dev/null', { timeout: 10000 });
+      return { available: true, version: stdout.trim() };
+    }
+
+    // Standard which + version check
+    await execAsync(`which ${tool}`);
+    try {
+      const { stdout } = await execAsync(`${tool} --version 2>/dev/null`, { timeout: 5000 });
+      const version = stdout.trim().split('\n')[0];
+      return { available: true, version };
+    } catch {
+      return { available: true }; // Found but no version
+    }
+  } catch {
+    return { available: false };
+  }
+}
+
+/**
+ * Check CLI tool availability for all skills.
+ */
+async function checkCliTools(agentsJson: AgentsJson): Promise<ToolStatus[]> {
+  // Collect all unique tools from all skills
+  const allTools = new Map<string, string>();
+
+  for (const [_, entry] of Object.entries(agentsJson.agents)) {
+    if (entry.tools) {
+      for (const tool of entry.tools) {
+        const installCmd = entry.toolInstall?.[tool];
+        if (installCmd) {
+          allTools.set(tool, installCmd);
+        } else {
+          allTools.set(tool, getDefaultInstallCommand(tool));
+        }
+      }
+    }
+  }
+
+  // Check each tool
+  const results: ToolStatus[] = [];
+
+  for (const [tool, installCommand] of allTools) {
+    const status = await checkToolAvailability(tool);
+    results.push({
+      name: tool,
+      available: status.available,
+      version: status.version,
+      installCommand
+    });
+  }
+
+  return results;
+}
+
+/**
+ * Display tool status to console.
+ */
+function displayToolStatus(tools: ToolStatus[]): void {
+  const available = tools.filter(t => t.available);
+  const missing = tools.filter(t => !t.available);
+
+  for (const tool of available) {
+    const version = tool.version ? ` (${tool.version})` : '';
+    console.log(`  ${pc.green('+')} ${tool.name}: found${version}`);
+  }
+
+  for (const tool of missing) {
+    console.log(`  ${pc.yellow('!')} ${tool.name}: not found`);
+  }
+}
+
+/**
+ * Prompt to install missing tools.
+ */
+async function promptInstallTools(missing: ToolStatus[]): Promise<void> {
+  if (missing.length === 0) return;
+
+  console.log('');
+  console.log(pc.bold('Missing tools can be installed:'));
+  for (const tool of missing) {
+    console.log(`  ${tool.name}: ${pc.dim(tool.installCommand)}`);
+  }
+
+  const rl = createInterface({ input: process.stdin, output: process.stdout });
+
+  const answer = await new Promise<string>(resolve => {
+    rl.question('\nInstall missing tools? [y/N/select] ', resolve);
+  });
+  rl.close();
+
+  const choice = answer.toLowerCase().trim();
+
+  if (choice === 'y' || choice === 'yes') {
+    // Install all missing tools
+    await installTools(missing);
+  } else if (choice === 's' || choice === 'select') {
+    // Let user select which to install
+    await selectAndInstallTools(missing);
+  } else {
+    console.log(pc.dim('\nSkipping tool installation.'));
+    console.log(pc.dim('Note: slop-detector will skip unavailable tools.'));
+  }
+}
+
+/**
+ * Install a list of tools.
+ */
+async function installTools(tools: ToolStatus[]): Promise<void> {
+  for (const tool of tools) {
+    console.log(`\nInstalling ${tool.name}...`);
+    try {
+      await execAsync(tool.installCommand!, { timeout: 120000 });
+      console.log(`  ${pc.green('+')} ${tool.name} installed`);
+    } catch (error: unknown) {
+      const err = error as Error;
+      console.log(`  ${pc.red('x')} ${tool.name} failed: ${err.message}`);
+      console.log(`    Try manually: ${tool.installCommand}`);
+    }
+  }
+}
+
+/**
+ * Select and install specific tools.
+ */
+async function selectAndInstallTools(tools: ToolStatus[]): Promise<void> {
+  const rl = createInterface({ input: process.stdin, output: process.stdout });
+
+  for (const tool of tools) {
+    const answer = await new Promise<string>(resolve => {
+      rl.question(`Install ${tool.name}? [y/N] `, resolve);
+    });
+
+    if (answer.toLowerCase().trim() === 'y') {
+      console.log(`Installing ${tool.name}...`);
+      try {
+        await execAsync(tool.installCommand!, { timeout: 120000 });
+        console.log(`  ${pc.green('+')} ${tool.name} installed`);
+      } catch (error: unknown) {
+        const err = error as Error;
+        console.log(`  ${pc.red('x')} Failed: ${err.message}`);
+      }
+    }
+  }
+
+  rl.close();
+}
+
+/**
+ * Merge skill entries from template into user's agents.json.
+ */
+async function mergeAgentsJson(
+  templateAgents: AgentsJson,
+  targetDir: string
+): Promise<void> {
+  // nosemgrep: path-join-resolve-traversal
+  const userAgentsPath = join(targetDir, 'agents.json');
+
+  let userAgents: AgentsJson = {
+    agents: {},
+    _docs: templateAgents._docs
+  };
+
+  // Read existing user agents.json if exists
+  try {
+    const content = await readFile(userAgentsPath, 'utf8');
+    userAgents = JSON.parse(content) as AgentsJson;
+  } catch {
+    // File doesn't exist or can't parse, will create new
+  }
+
+  // Merge bundled skills (don't overwrite user customizations)
+  const bundledSkills = Object.entries(templateAgents.agents)
+    .filter(([_, entry]) => entry.bundled === true);
+
+  let added = 0;
+  for (const [name, entry] of bundledSkills) {
+    if (!userAgents.agents[name]) {
+      // Adjust invoke path for user's project
+      const userEntry = { ...entry };
+      userEntry.invoke = `.specflow/skills/${name}`;
+      userAgents.agents[name] = userEntry;
+      added++;
+    }
+  }
+
+  // Update _docs if template has newer version
+  if (templateAgents._docs) {
+    userAgents._docs = templateAgents._docs;
+  }
+
+  // Write back
+  await writeFile(
+    userAgentsPath,
+    JSON.stringify(userAgents, null, 2) + '\n'
+  );
+
+  if (added > 0) {
+    console.log(`  ${pc.green('+')} Added ${added} skill(s) to agents.json`);
+  } else {
+    console.log(`  ${pc.dim('-')} agents.json up to date`);
+  }
+}
+
+/**
+ * ast-grep documentation section for CLAUDE.md
+ */
+const AST_GREP_SECTION = `
+
+## Code Search
+
+You run in an environment where \`ast-grep\` may be available. For syntax-aware or structural matching:
+- Use \`ast-grep --lang <lang> -p '<pattern>'\` for structural code search
+- Set \`--lang\` appropriately (typescript, python, rust, go, java, etc.)
+- Fall back to rg/grep only when ast-grep is unavailable or text search is needed
+
+Examples:
+- Find async functions: \`ast-grep -p 'async function $NAME($$$) { $$$ }' --lang typescript\`
+- Find React hooks: \`ast-grep -p 'use$HOOK($$$)' --lang tsx\`
+- Find empty catches: \`ast-grep -p 'catch ($_) { }' --lang typescript\`
+- Find class methods: \`ast-grep -p 'class $C { $$$METHOD($$$) { $$$ }' --lang python\`
+`;
+
+/**
+ * Inject ast-grep section into CLAUDE.md.
+ */
+async function injectAstGrepSection(targetDir: string): Promise<void> {
+  // nosemgrep: path-join-resolve-traversal
+  const claudeMdPath = join(targetDir, 'CLAUDE.md');
+
+  let content = '';
+  let exists = false;
+
+  try {
+    content = await readFile(claudeMdPath, 'utf8');
+    exists = true;
+
+    // Check if already has Code Search section
+    if (content.includes('## Code Search')) {
+      console.log(`  ${pc.dim('-')} CLAUDE.md already has Code Search section`);
+      return;
+    }
+  } catch {
+    // CLAUDE.md doesn't exist, will create
+  }
+
+  // Append ast-grep section
+  content = content.trimEnd() + AST_GREP_SECTION;
+
+  await writeFile(claudeMdPath, content);
+
+  if (exists) {
+    console.log(`  ${pc.green('+')} Added "## Code Search" section to CLAUDE.md`);
+  } else {
+    console.log(`  ${pc.green('+')} Created CLAUDE.md with Code Search section`);
+  }
+}
+
+/**
  * Initialize SpecFlow in a project directory.
  *
  * Creates:
@@ -183,7 +535,7 @@ Next: Run /sf:pm "your feature" to begin
  */
 export async function init(
   targetDir: string = process.cwd(),
-  options: { force?: boolean } = {}
+  options: { force?: boolean; skipToolInstall?: boolean } = {}
 ): Promise<void> {
   const safeTargetDir = sanitizeTargetDir(targetDir);
 
@@ -211,6 +563,18 @@ export async function init(
 
   // Find package root (where .specflow-lib/ and slash-commands/ live)
   const packageRoot = resolve(__dirname, '..');
+
+  // Load template agents.json for bundled skills
+  // nosemgrep: path-join-resolve-traversal
+  const templateAgentsPath = join(packageRoot, 'templates', 'agents.json');
+  let templateAgents: AgentsJson | null = null;
+  try {
+    const content = await readFile(templateAgentsPath, 'utf8');
+    templateAgents = JSON.parse(content) as AgentsJson;
+  } catch {
+    // Template agents.json not found, bundled skills won't be installed
+    console.log(pc.dim('Note: No bundled skills template found'));
+  }
 
   // Verify package has required directories
   // nosemgrep: path-join-resolve-traversal
@@ -307,7 +671,35 @@ export async function init(
     throw error;
   }
 
-  // 5. Display summary
+  // 5. Process bundled skills (if template exists)
+  if (templateAgents) {
+    console.log('');
+    console.log(pc.bold('Copying bundled skills:\n'));
+    await processBundledSkills(templateAgents, safeTargetDir);
+
+    // 6. Check CLI tools
+    console.log('');
+    console.log(pc.bold('Checking CLI tools:\n'));
+    const toolStatus = await checkCliTools(templateAgents);
+    displayToolStatus(toolStatus);
+
+    const missingTools = toolStatus.filter(t => !t.available);
+    if (missingTools.length > 0 && !options.skipToolInstall) {
+      await promptInstallTools(missingTools);
+    }
+
+    // 7. Merge agents.json
+    console.log('');
+    console.log(pc.bold('Updating agents.json:\n'));
+    await mergeAgentsJson(templateAgents, safeTargetDir);
+
+    // 8. Inject CLAUDE.md section
+    console.log('');
+    console.log(pc.bold('Updating CLAUDE.md:\n'));
+    await injectAstGrepSection(safeTargetDir);
+  }
+
+  // 9. Display summary
   console.log('');
   console.log(pc.bold(pc.green('SpecFlow initialized successfully!\n')));
 
@@ -315,6 +707,9 @@ export async function init(
   console.log(`  ${pc.cyan('.specflow/')}           ${pc.dim('Runtime workspace')}`);
   console.log(`  ${pc.cyan('.specflow-lib/')}       ${pc.dim('Methodology library')}`);
   console.log(`  ${pc.cyan('.claude/commands/')}    ${pc.dim('Slash commands')}`);
+  if (templateAgents) {
+    console.log(`  ${pc.cyan('agents.json')}          ${pc.dim('Agent registry (with bundled skills)')}`);
+  }
   console.log('');
 
   console.log(pc.bold('Next steps:'));
@@ -469,7 +864,8 @@ function showHelp(): void {
   console.log(`  ${pc.blue('link')}        Symlink commands for development`);
   console.log('');
   console.log('Options:');
-  console.log(`  ${pc.dim('-f, --force')}  Skip confirmation prompts`);
+  console.log(`  ${pc.dim('-f, --force')}            Skip confirmation prompts`);
+  console.log(`  ${pc.dim('--skip-tool-install')}    Skip prompting to install CLI tools`);
   console.log('');
   console.log('Examples:');
   console.log(`  npx specflow init              ${pc.dim('# Initialize in current directory')}`);
@@ -485,7 +881,8 @@ const targetDir = process.argv[3] || process.cwd();
 switch (command) {
   case 'init':
     const forceFlag = process.argv.includes('--force') || process.argv.includes('-f');
-    init(targetDir, { force: forceFlag });
+    const skipToolInstall = process.argv.includes('--skip-tool-install');
+    init(targetDir, { force: forceFlag, skipToolInstall });
     break;
   case 'install':
     install(targetDir);

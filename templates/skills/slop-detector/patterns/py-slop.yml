@@ -1,0 +1,99 @@
+# Python AI Slop Detection Rules
+# Used by: ast-grep scan --rule py-slop.yml {files}
+
+id: py-slop-rules
+language: python
+rules:
+  - id: bare-except
+    pattern: |
+      except:
+          pass
+    message: "Bare except with pass swallows all errors"
+    severity: error
+    note: "Catch specific exceptions and handle them"
+
+  - id: bare-except-any
+    pattern: 'except:'
+    message: "Bare except catches all exceptions including KeyboardInterrupt"
+    severity: error
+    note: "Use 'except Exception:' at minimum"
+
+  - id: except-pass
+    pattern: |
+      except $EXC:
+          pass
+    message: "Exception caught but ignored with pass"
+    severity: warning
+    note: "Log the exception or handle it properly"
+
+  - id: print-statement
+    pattern: 'print($$$)'
+    message: "print() should not be in production code"
+    severity: warning
+    note: "Use logging module instead"
+
+  - id: debug-print
+    pattern: 'print(f"$MSG")'
+    constraints:
+      MSG:
+        regex: "(debug|DEBUG|test|TEST|TODO|FIXME)"
+    message: "Debug print statement"
+    severity: warning
+
+  - id: todo-comment
+    pattern: '# TODO$$$'
+    message: "Unresolved TODO comment"
+    severity: warning
+    note: "Resolve or create a ticket"
+
+  - id: fixme-comment
+    pattern: '# FIXME$$$'
+    message: "Unresolved FIXME comment"
+    severity: warning
+    note: "Fix the issue or create a ticket"
+
+  - id: pass-placeholder
+    pattern: |
+      def $NAME($$$):
+          pass
+    message: "Empty function body (pass placeholder)"
+    severity: warning
+    note: "Implement or remove if unused"
+
+  - id: class-pass-placeholder
+    pattern: |
+      class $NAME:
+          pass
+    message: "Empty class body (pass placeholder)"
+    severity: warning
+    note: "Implement or remove if unused"
+
+  - id: type-ignore
+    pattern: '# type: ignore'
+    message: "type: ignore suppresses type checking"
+    severity: warning
+    note: "Fix the type issue instead of ignoring"
+
+  - id: noqa-blanket
+    pattern: '# noqa'
+    message: "Blanket noqa suppresses all linting"
+    severity: warning
+    note: "Use specific codes: # noqa: E501"
+
+  - id: breakpoint
+    pattern: 'breakpoint()'
+    message: "breakpoint() left in code"
+    severity: error
+    note: "Remove before commit"
+
+  - id: pdb-set-trace
+    pattern: 'pdb.set_trace()'
+    message: "pdb.set_trace() left in code"
+    severity: error
+    note: "Remove before commit"
+
+  - id: ipdb-set-trace
+    pattern: 'ipdb.set_trace()'
+    message: "ipdb.set_trace() left in code"
+    severity: error
+    note: "Remove before commit"
