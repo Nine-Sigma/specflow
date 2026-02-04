@@ -8,7 +8,8 @@
  *   npx specflow install ./app  # Install to specific directory
  *   npx specflow uninstall      # Remove SpecFlow commands
  */
-import { copyFile, mkdir, readdir, unlink, stat } from 'fs/promises';
+import { copyFile, mkdir, readdir, unlink, stat, cp, readFile, writeFile } from 'fs/promises';
+import { createInterface } from 'readline';
 import { dirname, join, resolve, normalize, isAbsolute } from 'path';
 import { fileURLToPath } from 'url';
 import pc from 'picocolors';
@@ -36,6 +37,137 @@ function sanitizeTargetDir(inputDir: string): string {
   }
 
   return normalized;
+}
+
+/**
+ * Prompt user for y/n confirmation.
+ * Returns true for 'y' or 'Y', false otherwise.
+ */
+async function confirm(message: string): Promise<boolean> {
+  const rl = createInterface({ input: process.stdin, output: process.stdout });
+  return new Promise((resolve) => {
+    rl.question(`${message} (y/N) `, (answer) => {
+      rl.close();
+      resolve(answer.toLowerCase() === 'y');
+    });
+  });
+}
+
+/**
+ * Detect which SpecFlow directories already exist.
+ * Note: targetDir must be sanitized before calling this function.
+ */
+async function detectExisting(targetDir: string): Promise<string[]> {
+  const dirs = ['.specflow', '.specflow-lib', '.claude/commands'];
+  const existing: string[] = [];
+
+  for (const dir of dirs) {
+    try {
+      // nosemgrep: path-join-resolve-traversal
+      await stat(join(targetDir, dir));
+      existing.push(dir);
+    } catch (err) {
+      const error = err as NodeJS.ErrnoException;
+      if (error.code !== 'ENOENT') throw error;
+    }
+  }
+  return existing;
+}
+
+/**
+ * Update .gitignore to include secrets.json entry.
+ * Creates file if it doesn't exist. Avoids duplicates.
+ * Note: targetDir must be sanitized before calling this function.
+ */
+async function updateGitignore(targetDir: string): Promise<void> {
+  // nosemgrep: path-join-resolve-traversal
+  const gitignorePath = join(targetDir, '.gitignore');
+  const lineToAdd = '.specflow/secrets.json';
+
+  let content = '';
+  try {
+    content = await readFile(gitignorePath, 'utf8');
+  } catch {
+    // .gitignore doesn't exist, will create
+  }
+
+  const lines = content.split('\n');
+  if (lines.some(line => line.trim() === lineToAdd)) {
+    return; // Already has the entry
+  }
+
+  const newContent = content.endsWith('\n') || content === ''
+    ? content + lineToAdd + '\n'
+    : content + '\n' + lineToAdd + '\n';
+
+  await writeFile(gitignorePath, newContent);
+}
+
+/**
+ * Create minimal .specflow/ directory with initial files.
+ * Does NOT copy from templates - creates programmatically.
+ * Note: targetDir must be sanitized before calling this function.
+ */
+async function createSpecflowDir(targetDir: string): Promise<void> {
+  // nosemgrep: path-join-resolve-traversal
+  const specflowDir = join(targetDir, '.specflow');
+
+  // Create directories
+  // nosemgrep: path-join-resolve-traversal
+  await mkdir(join(specflowDir, 'features'), { recursive: true });
+  // nosemgrep: path-join-resolve-traversal
+  await mkdir(join(specflowDir, 'skills'), { recursive: true });
+
+  // Create STATE.md
+  const stateContent = `# Project State
+
+## Current Position
+
+Phase: Not started
+Status: Ready for first feature
+
+## Accumulated Context
+
+### Decisions
+
+None yet.
+
+### Pending Todos
+
+None.
+
+## Session Continuity
+
+Last session: (not started)
+Next: Run /sf:pm "your feature" to begin
+`;
+  // nosemgrep: path-join-resolve-traversal
+  await writeFile(join(specflowDir, 'STATE.md'), stateContent);
+
+  // Create config.json
+  const configContent = JSON.stringify({
+    tracker: null,
+    testing: {
+      coverage_thresholds: {
+        medium: 70,
+        large: 80,
+        complex: 90
+      },
+      flaky_retries: 2
+    },
+    uat: {
+      mode: "auto",
+      fallback: "manual"
+    }
+  }, null, 2) + '\n';
+  // nosemgrep: path-join-resolve-traversal
+  await writeFile(join(specflowDir, 'config.json'), configContent);
+
+  // Create .gitkeep files
+  // nosemgrep: path-join-resolve-traversal
+  await writeFile(join(specflowDir, 'features', '.gitkeep'), '');
+  // nosemgrep: path-join-resolve-traversal
+  await writeFile(join(specflowDir, 'skills', '.gitkeep'), '');
 }
 
 export async function install(targetDir: string = process.cwd()): Promise<void> {
