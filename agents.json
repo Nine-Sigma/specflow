@@ -81,6 +81,46 @@
       "description": "Detect AI-generated code quality issues (duplicates, dead code, placeholders, empty catches)",
       "review-capable": true,
       "scope-minimum": "trivial"
+    },
+    "executive-reporting": {
+      "source": "skill",
+      "invoke": ".specflow/skills/executive-reporting",
+      "bundled": true,
+      "description": "Generate executive status reports, dashboards, and board packages from SpecFlow feature artifacts",
+      "report-capable": true,
+      "scope-minimum": "small"
+    },
+    "project-health-check": {
+      "source": "skill",
+      "invoke": ".specflow/skills/project-health-check",
+      "bundled": true,
+      "description": "6-dimension project health assessment with weighted scoring and flag analysis",
+      "report-capable": true,
+      "scope-minimum": "small"
+    },
+    "risk-management": {
+      "source": "skill",
+      "invoke": ".specflow/skills/risk-management",
+      "bundled": true,
+      "description": "RAID log management and risk correlation analysis with STRIDE integration",
+      "report-capable": true,
+      "scope-minimum": "small"
+    },
+    "pptx": {
+      "source": "skill",
+      "invoke": ".specflow/skills/pptx",
+      "install": "pptx@anthropics/skills",
+      "tools": ["markitdown", "pptxgenjs", "soffice", "pdftoppm", "pillow"],
+      "toolInstall": {
+        "markitdown": "pip install \"markitdown[pptx]\"",
+        "pptxgenjs": "npm install -g pptxgenjs",
+        "soffice": "brew install libreoffice (macOS) or apt install libreoffice (Linux)",
+        "pdftoppm": "brew install poppler (macOS) or apt install poppler-utils (Linux)",
+        "pillow": "pip install Pillow"
+      },
+      "hasScripts": true,
+      "description": "Generate PowerPoint presentations from scratch or edit templates",
+      "report-capable": true
     }
   },
   "_docs": {
@@ -98,6 +138,7 @@
       "tools: string[] - CLI tools required by this skill",
       "toolInstall: object - Install commands for each tool {tool: 'command'}",
       "review-capable: boolean - If true, skill can be used by sf-review",
+      "report-capable: boolean - If true, skill can generate executive reports (used by PM for report triggers)",
       "scope-minimum: string - Minimum scope level to trigger (trivial|small|medium|large|complex)"
     ],
     "invoking": [
