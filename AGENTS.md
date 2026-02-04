@@ -39,8 +39,10 @@ User → PM (orchestrator) → Agents (automated) → PM (review) → User (big 
 
 ## Project Structure
 
+The following directories are created by `npx specflow init`:
+
 ```
-.specflow/                    # SpecFlow state and features
+.specflow/                    # Runtime workspace (mutable)
 ├── STATE.md                  # Current session state
 ├── config.json               # Configuration
 ├── features/{slug}/          # Feature working directory
@@ -90,6 +92,13 @@ User → PM (orchestrator) → Agents (automated) → PM (review) → User (big 
 ```
 
 ## Commands
+
+### Setup Commands
+```bash
+npx specflow init           # Initialize SpecFlow in current directory
+npx specflow init ./myapp   # Initialize in specific directory
+npx specflow init --force   # Overwrite without prompting
+```
 
 ### Primary Commands
 ```bash
