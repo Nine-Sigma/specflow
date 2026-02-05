@@ -265,6 +265,224 @@ flowchart TD
 - Gherkin makes tests readable
 - QA verifies everything works
 
+## TDD Workflow Enforcement
+
+SpecFlow enforces test-driven development at the workflow level, not just the code level.
+
+### QA-First vs Dev-First Routing
+
+Based on TEA's analysis, PM routes work differently:
+
+```
+TEA Analysis
+    ↓
+Signals Detected
+    ↓
+┌─────────────────────────────────┐
+│ 2+ QA-First Signals?            │
+│   • Behavioral tests dominate   │
+│   • User-facing ACs             │
+│   • Medium+ scope               │
+│   • Regression risk             │
+└─────────────────────────────────┘
+    ↓ Yes              ↓ No
+QA-First           Dev-First
+    ↓                  ↓
+QA writes         Dev implements
+failing tests     with TDD
+    ↓                  ↓
+Dev implements    QA validates
+to pass tests
+```
+
+### Test Evidence Requirements
+
+Stories cannot be marked complete without test evidence:
+
+```markdown
+## Test Evidence (Required)
+
+| Field | Value |
+|-------|-------|
+| test_file | tests/auth/test_logout.py |
+| pass_count | 7/7 |
+| timestamp | 2024-02-05T10:30:00Z |
+| command | pytest tests/auth/test_logout.py |
+```
+
+The `validate_completion()` function enforces:
+- Test file exists
+- All tests pass (no failures)
+- Timestamp within current session
+- Coverage meets AC requirements
+
+## Automated User Acceptance Testing (UAT)
+
+SpecFlow includes automated UAT triggers for user-facing features.
+
+### UAT Signal Detection
+
+The system monitors for UAT signals:
+
+| Signal | Detection | Weight |
+|--------|-----------|--------|
+| UI Components | Component files created | 1 |
+| User Workflows | Gherkin with user steps | 1 |
+| Behavioral ACs | "User should see..." | 1 |
+| Form Handling | Input validation logic | 1 |
+| Navigation | Route changes | 1 |
+
+**3+ signals** triggers automatic UAT routing.
+
+### UAT Verification Flow
+
+```
+Feature Complete
+    ↓
+Signal Count Check
+    ↓ (3+ signals)
+/gsd:verify-work
+    ↓
+Conversational UAT
+    ↓
+Goal-Backward Verification
+    ↓
+VERIFICATION.md Created
+    ↓
+Pass? → Ship
+Fail? → Gap Closure Plans
+```
+
+### Goal-Backward Verification
+
+The verifier checks what actually exists in the codebase against phase goals:
+
+1. Read phase `must_haves` from plan
+2. Verify each artifact exists with required content
+3. Check key_links (integrations work)
+4. Produce `passed`, `human_needed`, or `gaps_found` status
+
+## Multi-Lens Review Loop
+
+SpecFlow implements dynamic, skill-based code review.
+
+### Skill Discovery
+
+Review automatically detects which skills apply:
+
+```bash
+/sf:review  # Discovers skills from code changes
+```
+
+The skill-detector analyzes:
+- File types modified
+- Import statements
+- Pattern matches
+- Capability requirements
+
+### Parallel Review Execution
+
+Multiple reviewers run simultaneously:
+
+```
+Code Changes
+    ↓
+Skill Discovery
+    ↓
+┌────────────────────────────────────────┐
+│ Parallel Review                        │
+│                                        │
+│  Security ──┐                          │
+│             │                          │
+│  Performance ──→ Aggregated Findings   │
+│             │                          │
+│  Accessibility ─┘                      │
+└────────────────────────────────────────┘
+    ↓
+PM Synthesis
+    ↓
+Drift Detection
+    ↓
+Ship or Iterate
+```
+
+### Drift Detection
+
+Review compares implementation against specification:
+
+| Drift Type | Detection | Response |
+|------------|-----------|----------|
+| Missing AC | Feature not implemented | Block + report |
+| Modified AC | Behavior differs | Classify (bug/drift) |
+| Added behavior | Not in spec | Document + approve/reject |
+| Security regression | STRIDE threat introduced | Block + escalate |
+
+Heuristics classify drift automatically:
+- File-based: Did spec file change?
+- Assertion-based: Do tests match ACs?
+- Semantic: Does behavior match intent?
+
+Low-confidence cases escalate to PM or user.
+
+## Slop Detection
+
+Prevents common AI-generated anti-patterns.
+
+### What is Slop?
+
+"Slop" refers to AI-generated code that:
+- Adds unnecessary abstractions
+- Over-engineers simple solutions
+- Creates premature generalizations
+- Duplicates existing library functionality
+- Adds excessive error handling for impossible cases
+
+### Detection Patterns
+
+| Pattern | Example | Flag |
+|---------|---------|------|
+| Unnecessary wrapper | Wrapping built-in with identical API | HIGH |
+| Premature abstraction | Interface with single implementation | MEDIUM |
+| Feature creep | Adding config for hardcoded values | MEDIUM |
+| NIH syndrome | Custom implementation of lodash function | HIGH |
+| Over-validation | Checking null after guaranteed initialization | LOW |
+
+### Library-First Enforcement
+
+SpecFlow prefers battle-tested libraries:
+
+1. **Analyst searches** for existing libraries during spec
+2. **Dev checks** before implementing common patterns
+3. **Custom requires justification** in PROGRESS.md
+
+```markdown
+## Library Assessment
+
+| Pattern | Library Option | Decision |
+|---------|---------------|----------|
+| Date formatting | date-fns | USE LIBRARY |
+| Validation | zod | USE LIBRARY |
+| Custom business logic | - | IMPLEMENT (no library exists) |
+```
+
+### Slop Review Integration
+
+Review skills flag slop patterns:
+
+```markdown
+## Review Findings
+
+### SLOP-01: Unnecessary Abstraction
+**File**: src/utils/stringHelper.ts
+**Pattern**: Wrapper around `String.prototype.trim()`
+**Recommendation**: Delete file, use native method
+
+### SLOP-02: Premature Generalization
+**File**: src/types/config.ts
+**Pattern**: 50-field config interface, 3 fields used
+**Recommendation**: Remove unused fields
+```
+
 ## Summary
 
 SpecFlow methodology ensures:
@@ -273,5 +491,9 @@ SpecFlow methodology ensures:
 - **Quality**: BOSS criteria are testable and specific
 - **Verification**: TEA creates comprehensive test coverage
 - **Cost**: FinOps estimates resource impact early
+- **TDD**: Test evidence required before completion
+- **UAT**: Automated user acceptance testing for user-facing features
+- **Review**: Multi-lens parallel review with drift detection
+- **Slop Prevention**: Library-first, anti-pattern detection
 
 These frameworks prevent the common failure mode: discovering problems after implementation when fixes are expensive.

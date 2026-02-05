@@ -4,11 +4,45 @@ Security-first, cost-aware, test-driven AI development methodology.
 
 ## What is SpecFlow?
 
-SpecFlow is a PM-orchestrated development methodology where every feature addresses three pillars before code is written:
+SpecFlow is a PM-orchestrated development methodology that ensures every feature is properly analyzed, tested, and reviewed before shipping. Unlike traditional AI-assisted coding that produces fast but fragile code, SpecFlow enforces quality gates at every stage.
 
-- **Security**: Threat modeling with STRIDE
-- **Cost**: Cloud resource estimation
-- **Testing**: Gherkin scenarios and test planning
+## Key Differentiators
+
+### Test-Driven Development (TDD)
+
+SpecFlow enforces TDD at the workflow level:
+
+1. **TEA (Test Engineering Analyst)** creates test scenarios before development
+2. **QA-first routing**: For behavioral features, QA writes failing tests BEFORE Dev implements
+3. **Test evidence required**: Stories cannot be marked complete without passing test evidence
+4. **Automated verification**: `validate_completion()` enforces test pass counts and timestamps
+
+### Automated User Acceptance Testing (UAT)
+
+SpecFlow includes automated UAT triggers:
+
+- **Signal detection**: UI components, Gherkin scenarios, user-facing workflows trigger UAT
+- **3+ signals threshold**: Automatically routes to UAT verification
+- **Conversational validation**: `/gsd:verify-work` enables structured acceptance testing
+- **Goal-backward verification**: Verifier checks actual codebase against phase goals
+
+### Multi-Lens Review Loop
+
+Dynamic skill-based code review:
+
+- **Skill discovery**: Automatically detects which review skills apply to your code
+- **Parallel review**: Multiple reviewers (security, performance, accessibility) run simultaneously
+- **Drift detection**: Catches when implementation diverges from specification
+- **Targeted re-review**: PM can invoke specific skills mid-workflow
+
+### Slop Detection
+
+Prevents AI-generated low-quality patterns:
+
+- **Pattern recognition**: Detects common AI "slop" patterns (unnecessary abstractions, over-engineering)
+- **Automated flags**: Raises concerns during review when slop patterns detected
+- **Quality gates**: Blocks completion until issues addressed
+- **Library-first enforcement**: Prefers battle-tested libraries over custom implementations
 
 ## Quick Start
 
@@ -17,33 +51,50 @@ npx specflow init
 /sf:pm "build a user authentication system"
 ```
 
-## Documentation
-
-- [Getting Started](/getting-started) - Installation and first feature
-- [Commands](/commands) - All available slash commands
-- [Architecture](/architecture) - How SpecFlow works
-- [Methodology](/methodology) - Security, testing, and cost frameworks
-- [Agents](/agents) - The personas behind SpecFlow
-
 ## The Three Pillars
 
 Every feature flows through these pillars based on its scope:
 
-| Scope | Pillars Applied |
-|-------|-----------------|
-| trivial | None |
-| small | Testing |
-| medium | Security + Testing |
-| large | All three |
-| complex | All three + research |
+| Scope | Pillars Applied | TDD Depth |
+|-------|-----------------|-----------|
+| trivial | None | None |
+| small | Testing | Unit tests |
+| medium | Security + Testing | Unit + E2E |
+| large | All three | Full + UAT |
+| complex | All three + research | Full + UAT + manual |
 
 ## How It Works
 
-1. **Invoke PM**: Start with `/sf:pm "your feature"`
-2. **Scope Assessment**: Analyst determines complexity
-3. **Pillar Analysis**: Security, Cost, Testing review (scope-dependent)
-4. **Requirements Lock**: PM synthesizes all outputs
-5. **Development**: Dev implements to specification
-6. **Verification**: QA validates against test plan
+```
+User Request
+    ↓
+PM Orchestrator ─────────────────────────────────────┐
+    ↓                                                │
+Analyst → Architect → Security → Cost → TEA          │
+    ↓                                                │
+Requirements Lock (frozen spec)                      │
+    ↓                                                │
+┌─────────────────────────────────────────┐         │
+│ QA-First (if behavioral)                │         │
+│   → QA writes failing tests             │         │
+│   → Dev implements to pass              │         │
+│                                         │         │
+│ Dev-First (if technical)                │         │
+│   → Dev implements with TDD             │         │
+│   → QA validates                        │         │
+└─────────────────────────────────────────┘         │
+    ↓                                                │
+Multi-Lens Review ←──────────────────────────────────┘
+    ↓                  (drift? → back to PM)
+UAT Verification (if triggered)
+    ↓
+Ship ✓
+```
 
-The PM orchestrates everything. You only intervene for scope approval and final review.
+## Documentation
+
+- [Getting Started](/getting-started) - Installation and first feature
+- [Commands](/commands) - All available slash commands
+- [Architecture](/architecture) - PM orchestration and agent flow
+- [Methodology](/methodology) - STRIDE, BOSS, TEA, and cost frameworks
+- [Agents](/agents) - The personas behind SpecFlow
