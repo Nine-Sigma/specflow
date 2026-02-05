@@ -2756,32 +2756,67 @@ Write to `.specflow/features/{slug}/drift/correction-{agent}-{N}.md`:
 
 ```yaml
 ---
-agent: {dev|qa}
+drift_type: {TEST_DRIFT | CODE_ISSUE | MAJOR_DRIFT | MINOR_DRIFT}
+severity: {critical | major | minor}
+impact_assessment:
+  scope: {files affected count}
+  effort: {low | medium | high}
+  risk: {low | medium | high}
+target_agent: {dev | qa}
 iteration: {N}
-timestamp: {iso-timestamp}
-severity: MAJOR_DRIFT
+created: {iso-timestamp}
 source_checkpoint: drift/checkpoint-{agent}.md
 ---
 
-# Correction for {Agent} (Iteration {N})
+# Drift Correction Required
 
-## Drift Summary
-- Missing: {list FR/AC items not implemented}
-- Extra: {list out-of-scope additions with file:line}
-- Quality: {issues if any}
+## Classification
+**Type:** {drift_type}
+**Severity:** {severity}
+**Target:** {target_agent}
 
-## Specific Instructions
+## Impact Assessment
 
-1. {Specific fix instruction referencing FR/AC IDs}
-2. {Specific fix instruction with file paths}
-3. {What to remove/revert if out-of-scope}
+| Dimension | Level | Rationale |
+|-----------|-------|-----------|
+| Scope | {files count} | {which files} |
+| Effort | {low/med/high} | {why} |
+| Risk | {low/med/high} | {potential regressions} |
 
-## Next Phase Context
+## What's Wrong
+{Clear description of the mismatch}
 
-After corrections:
-- {What the output should satisfy}
-- {What the next agent (QA or Review) will verify}
+## Expected (from spec)
+{Quote or reference to AC/requirement}
+
+## Actual (from output)
+{What was built/tested}
+
+## Correction Required
+{Specific changes needed}
+
+## Files to Modify
+- {file1} - {change description}
+
+## Verification
+After fix, verify:
+- [ ] {Specific check 1}
+- [ ] {Specific check 2}
 ```
+
+**Severity Classification:**
+
+| Severity | Meaning | Iteration Limit |
+|----------|---------|-----------------|
+| critical | Core functionality broken | 1 (escalate immediately) |
+| major | Feature incomplete or wrong | 2 |
+| minor | Edge case or polish issue | 3 |
+
+**Impact-Based Routing:**
+
+- high risk + any severity -> flag for careful review
+- low effort + minor -> can be bundled with other fixes
+- high effort + major -> may need story replan
 
 **Step 2b: QA Drift Classification (QA checkpoint only)**
 
