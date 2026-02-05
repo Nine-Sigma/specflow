@@ -115,6 +115,18 @@ This log is included in 8-review-output-vN.md frontmatter as `detection_log`.
 **Step 4: Spawn Skills in Parallel**
 
 <parallel_spawning>
+
+**Load pattern from:** `.specflow-lib/expertise/context-efficiency/parallel-spawning.md`
+
+### Scope-Based Parallel Skills
+
+| Scope | Always Parallel | Conditional |
+|-------|-----------------|-------------|
+| small | code-review-excellence | - |
+| medium | code-review-excellence, slop-detection | integration-review (if API) |
+| large | code-review-excellence, slop-detection, integration-review | app-security (if auth), database-security (if DB) |
+| complex | All above + semantic-drift | Full security suite |
+
 For each matched skill from detection, spawn a Task with fresh context.
 
 ### Loading Skill Methodology
@@ -243,7 +255,38 @@ Instructions: Review the provided files using {skill.name} methodology. Find iss
 
 Spawn ALL skill Tasks at once (do not wait between them). The Task tool will execute them in parallel.
 
+**Parallel Spawning Example (large scope with security):**
+
+```
+Task(
+  subagent_type="general-purpose",
+  prompt="Execute code-review-excellence skill for feature {slug}...",
+  description="Code review"
+)
+
+Task(
+  subagent_type="general-purpose",
+  prompt="Execute slop-detection skill for feature {slug}...",
+  description="Slop detection"
+)
+
+Task(
+  subagent_type="general-purpose",
+  prompt="Execute app-security skill for feature {slug}...",
+  description="Security review"
+)
+```
+
 After all Tasks complete, collect their outputs for consolidation (Step 5).
+
+**Aggregation Protocol:**
+
+After all parallel skill Tasks complete:
+1. Collect skill outputs from `.specflow/features/{slug}/8-skill-{name}.md`
+2. Merge findings by severity (CRITICAL > MAJOR > MINOR)
+3. Deduplicate by location + issue (>80% text similarity = duplicate)
+4. Sort by severity (critical first)
+5. Write combined output to 8-review-output.md
 
 ### Step 4.5: Test Skills Special Handling
 
