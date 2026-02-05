@@ -273,6 +273,34 @@ If you need information from another agent that is NOT in the numbered outputs:
 - Return immediately to PM for routing
 </blocked_constraints>
 
+### Blocker Reporting
+
+When QA encounters a blocker, include `blocker_type` in return:
+
+| blocker_type | Meaning | Resolution Path |
+|--------------|---------|-----------------|
+| infrastructure | Missing deps, env issues, build failure | User/DevOps resolves |
+| inter-agent | Need info from Dev/Analyst/Architect | PM routes COMMS |
+| user-decision | Business choice needed | PM escalates to user |
+| external | Third-party service unavailable | Wait or workaround |
+
+**Blocker Format:**
+
+```yaml
+status: blocked
+blocker_type: infrastructure
+blocker_details: "Missing @redis/client dependency. Run: npm install @redis/client"
+resolution_options:
+  - "Install dependency and retry"
+  - "Skip redis tests for now"
+```
+
+PM uses blocker_type to route appropriately:
+- infrastructure -> present resolution to user
+- inter-agent -> route COMMS to target agent
+- user-decision -> escalate to user for choice
+- external -> suggest waiting or alternative
+
 <output>
 After completing testing:
 
@@ -359,6 +387,15 @@ status: draft
 
 - {For PM: approve/revise/escalate recommendation}
 - {Any concerns about implementation}
+
+## PM Should Verify
+
+Before marking QA complete:
+
+- [ ] All test files created and runnable
+- [ ] Tests cover all AC items (check AC-XX coverage)
+- [ ] No hardcoded test values that won't work in CI
+- [ ] Test commands documented
 
 ## Files Created
 

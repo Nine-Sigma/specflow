@@ -2110,43 +2110,27 @@ From PROGRESS.md, extract:
 
 ```
 all_stories_done = all(s.status == 'done' for s in sprint.stories)
-planned_stories = count where status != 'skipped'
-completed_stories = count where status == 'done'
 
 if all_stories_done:
   # All planned stories complete
   Route to QA: /sf:qa
 
-elif planned_stories == completed_stories:
-  # Need to create next story
-  Create next story (informed by learnings)
-  Route to /sf:dev-story {next-id}
-
 else:
-  # More planned stories exist
+  # Find next story (all stories already created as files)
   next_story = findResumePosition(sprint)
   Route to /sf:dev-story {next_story.id}
 ```
 
-**Step 4: Create Next Story (Incremental)**
+**Note:** All story files are created immediately after epic generation.
+No incremental story creation - all stories exist in stories/ folder.
+PM can optionally update story acceptance criteria based on learnings before routing to next story.
 
-When creating next story:
-1. Read 5.5-epics.md for next planned story
-2. Read previous story's Dev Notes for learnings
-3. Adjust acceptance criteria if learnings suggest changes
-4. Create story file from template
-5. Add to sprint-status.yaml
-6. Route to /sf:dev-story
+**Example Learning Update (optional):**
 
-**Example Learning Integration:**
-
-```markdown
-# Previous Story Notes:
-"Used zod instead of regex for validation - more robust"
-
-# Next Story Adjustment:
-"AC-03: Use zod schema for form validation (consistent with 1-1 approach)"
-```
+If previous story reveals useful patterns:
+1. Read previous story's Dev Notes
+2. Update next story file's acceptance criteria or codebase patterns section
+3. Route to /sf:dev-story
 
 </story_completion_routing>
 

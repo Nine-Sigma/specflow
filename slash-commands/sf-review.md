@@ -332,6 +332,30 @@ When in re-review mode, the review is FOCUSED verification only.
 
 **Purpose:** Verify that specific previous findings are resolved. NOT a new full review.
 
+### VERIFY_ONLY Mode (Pure Verification)
+
+When re-reviewing after fixes:
+
+**VERIFY_ONLY mode - Review MUST NOT:**
+- Modify any code files
+- Modify any test files
+- Make "helpful" fixes
+- Expand scope beyond original findings
+
+**VERIFY_ONLY mode - Review MUST:**
+- Read original findings from prior review version
+- Check if each finding was addressed
+- Report status per finding (FIXED | NOT_FIXED | PARTIALLY_FIXED)
+- If NOT_FIXED, route back to Dev/QA with specific guidance
+
+**If Review discovers new issues during verification:**
+- Do NOT fix them
+- Do NOT add to current iteration
+- Note in output: "NEW_ISSUE_DISCOVERED: {description}"
+- PM decides whether to create new review iteration or defer
+
+This prevents Review from doing Dev's job and maintains separation of concerns.
+
 **Step A: Load Previous Findings**
 
 1. Read previous `8-review-output-v{N-1}.md`
@@ -1261,7 +1285,39 @@ Review only escalates to PM when automated fix loop is exhausted:
 | BREAKING detected | Requires user decision | Present options to user |
 | NEW_CRITICAL_DISCOVERED | Regression, needs visibility | Add to fix loop or escalate |
 
-### Drift vs Test Failure
+### Drift vs Test Failure Classification
+
+Apply file-based heuristics (same as PM classification):
+
+| Signal | Classification | Confidence |
+|--------|----------------|------------|
+| Test file unchanged since QA wrote it AND test fails | CODE_ISSUE | HIGH |
+| Test assertion value differs from AC specification | TEST_DRIFT | HIGH |
+| Dev output claims AC implemented but test fails on that AC | CODE_ISSUE | HIGH |
+| Test expects different endpoint/status than AC specifies | TEST_DRIFT | HIGH |
+| Test checks wrong behavior (action mismatch) | TEST_DRIFT | HIGH |
+| Implementation returns unexpected status code | CODE_ISSUE | MEDIUM |
+| Implementation does wrong action entirely | DRIFT | MEDIUM |
+| None of the above | NEEDS_MANUAL_CLASSIFICATION | LOW |
+
+**Heuristic Application:**
+
+When test failure occurs during review:
+1. Apply heuristics in order
+2. First HIGH confidence match determines classification
+3. If MEDIUM matches only, include evidence in routing
+4. If no match, escalate to PM with both options
+
+**Routing Based on Classification:**
+
+| Classification | Route To | Action |
+|----------------|----------|--------|
+| CODE_ISSUE | Dev | Fix implementation to pass test |
+| TEST_DRIFT | QA | Fix test to match AC |
+| DRIFT | PM | Re-evaluate requirements |
+| NEEDS_MANUAL | PM | Present evidence, request decision |
+
+**Example Situations:**
 
 | Situation | Type | Owner | Resolution |
 |-----------|------|-------|------------|
