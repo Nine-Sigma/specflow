@@ -2503,18 +2503,104 @@ After synthesis gate approval, PM reads TEA's `recommended_flow` to determine th
 <tea_routing>
 **Step 1: Read recommended_flow from 5-test-plan.md**
 
-```bash
-grep "recommended_flow:" .specflow/features/{slug}/5-test-plan.md
+```python
+test_plan = read(".specflow/features/{slug}/5-test-plan.md")
+recommended_flow = test_plan.frontmatter.get("recommended_flow", "dev-first")
+flow_rationale = test_plan.frontmatter.get("rationale", "")
 ```
 
-Extract value: `qa-first` or `dev-only`
+Extract value: `qa-first` or `dev-first`
 
 **Step 2: Route Based on Flow**
 
 | recommended_flow | Execution Path | Description |
 |------------------|----------------|-------------|
 | `qa-first` | QA (red) -> Dev (green) -> QA (verify) -> Review | QA writes failing tests first |
-| `dev-only` | Dev (TDD) -> Review | Dev does internal TDD, QA skipped |
+| `dev-first` | Dev (TDD) -> QA (verify) -> Review | Dev does internal TDD |
+
+### QA-First Flow Enforcement
+
+<!-- Requirements: FP-34 (QA writes E2E tests before Dev), AUD-21 (PM routes to QA for behavioral tests) -->
+
+When TEA recommends `qa-first`, PM routes to QA BEFORE Dev. This enables true TDD/BDD where behavioral tests define the contract.
+
+**QA-First User Presentation:**
+
+When routing to QA first, present the flow to user:
+
+```markdown
+## QA-First Flow
+
+TEA recommends writing behavioral tests before implementation.
+
+**Rationale:** {flow_rationale from 5-test-plan.md}
+
+**Flow:**
+1. QA writes failing E2E/integration tests (5-qa-tests.md)
+2. Dev implements to make tests pass (6-dev-output.md)
+3. QA verifies all tests pass (7-qa-output.md)
+
+Routing to /sf:qa (TDD_MODE)...
+```
+
+**QA-First Routing Logic:**
+
+```python
+if recommended_flow == "qa-first":
+    # QA writes failing tests BEFORE Dev implements
+    log_progress("QA-first flow: Routing to QA for behavioral tests")
+
+    # Update STATE.md
+    update_state(
+        phase="qa-tdd",
+        next_agent="qa",
+        execution_flow="qa-first"
+    )
+
+    # Route to QA with TDD mode indicator
+    # QA detects TDD_MODE from: 5-test-plan.md has qa-first + 6-dev-output.md missing
+    invoke("/sf:qa")
+
+elif recommended_flow == "dev-first":
+    # Standard flow: Dev implements, QA validates
+    log_progress("Dev-first flow: Routing to Dev for implementation")
+    proceed_to_story_generation()
+```
+
+**After QA TDD_MODE Completes:**
+
+When QA returns with `phase: tdd-checkpoint`:
+
+```python
+# QA has written failing tests in 5-qa-tests.md
+# Now route to Dev with tests as contract
+
+present(f"""
+## Dev Implementation Contract
+
+QA has written failing behavioral tests.
+Your goal: Make all tests pass.
+
+**Failing Tests:**
+- E2E: {count_e2e_tests()} scenarios
+- Integration: {count_integration_tests()} tests
+- API: {count_api_tests()} tests
+
+Dev implements until all tests green, then returns to PM.
+
+Routing to story generation...
+""")
+
+proceed_to_story_generation()
+# Stories will reference 5-qa-tests.md as the test contract
+```
+
+**After Dev Completes (qa-first):**
+
+```python
+# Route back to QA to verify all tests pass
+invoke("/sf:qa")  # QA runs STANDARD_MODE (6-dev-output.md exists)
+```
 
 **qa-first Path (TDD with QA):**
 
@@ -2524,10 +2610,50 @@ Dev (implements to pass tests) -> PM checkpoint ->
 QA (verifies, writes 7-qa-output.md) -> PM checkpoint -> Review
 ```
 
-**dev-only Path (Internal TDD):**
+**dev-first Path (Standard):**
 
 ```
-PM Synthesis -> Dev (internal TDD, writes 6-dev-output.md) -> PM checkpoint -> Review
+PM Synthesis -> Dev (internal TDD, writes 6-dev-output.md) -> PM checkpoint ->
+QA (verifies, writes 7-qa-output.md) -> PM checkpoint -> Review
+```
+
+### QA-First Flow Diagram
+
+```
+TEA: recommended_flow: qa-first
+        |
+        v
+PM: Present flow to user
+        |
+        v
+PM: Route to QA (TDD_MODE)
+        |
+        v
+QA: Write failing E2E/integration tests (5-qa-tests.md)
+        |
+        v
+PM: TDD Checkpoint (verify tests match specs)
+        |
+        v
+PM: Route to Dev (with failing tests as contract)
+        |
+        v
+Dev: Implement to pass tests (6-dev-output.md)
+        |
+        v
+PM: Dev Checkpoint (verify tests now pass)
+        |
+        v
+PM: Route to QA (STANDARD_MODE)
+        |
+        v
+QA: Verify all tests pass (7-qa-output.md)
+        |
+        v
+PM: QA Checkpoint
+        |
+        v
+PM: Route to Review
 ```
 
 **Step 3: Execution Phase States**
@@ -2592,11 +2718,14 @@ IF recommended_flow == "qa-first":
   8. PM checkpoint (checkpoint)
   9. Route to Review
 
-IF recommended_flow == "dev-only":
+IF recommended_flow == "dev-first":
   1. Invoke /sf:dev (internal TDD)
   2. Dev writes 6-dev-output.md
   3. PM checkpoint (checkpoint)
-  4. Route to Review (QA skipped)
+  4. Invoke /sf:qa (STANDARD_MODE)
+  5. QA writes 7-qa-output.md
+  6. PM checkpoint (checkpoint)
+  7. Route to Review
 ```
 
 **Update STATE.md for qa-first path:**
@@ -2609,14 +2738,14 @@ next-agent: qa
 execution_flow: qa-first
 ```
 
-**Update STATE.md for dev-only path:**
+**Update STATE.md for dev-first path:**
 
-After synthesis approval when `recommended_flow: dev-only`:
+After synthesis approval when `recommended_flow: dev-first`:
 ```yaml
 phase: development
 last-agent: pm
 next-agent: dev
-execution_flow: dev-only
+execution_flow: dev-first
 ```
 
 </tea_routing>
