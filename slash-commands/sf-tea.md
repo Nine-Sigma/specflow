@@ -191,6 +191,7 @@ test_levels:
   - integration  # if qa-first
   - e2e          # if qa-first and UI
   - api          # if qa-first and API
+  - uat          # if user-facing workflows with Gherkin (see UAT Recommendation section)
 test_framework: {vitest | jest | pytest | go | none}
 test_directory: {detected path or "TBD"}
 ---
@@ -293,6 +294,79 @@ rationale: "Feature is behavior-heavy (5 E2E specs), medium scope, user-facing A
 3. Route to Dev with failing tests as contract
 4. Dev implements to make tests pass
 5. QA verifies all tests pass
+```
+
+## UAT Recommendation
+
+TEA recommends automated UAT (`uat` in test_levels) when the feature needs AI-powered acceptance testing using browser-use (UI) or API automation.
+
+### UAT Triggers
+
+Include `uat` in test_levels when:
+
+| Signal | Example | Weight |
+|--------|---------|--------|
+| User-facing workflows | Login, checkout, onboarding | +2 |
+| Gherkin scenarios in spec | "Given I am on...", "When I click..." | +2 |
+| UI components changed | Forms, pages, navigation | +1 |
+| Medium+ scope with UI | User interaction complexity | +1 |
+| Replacement of existing UI | Regression risk on user flows | +1 |
+| AC describe user experience | "User sees...", "User can..." | +1 |
+
+### UAT Decision Logic
+
+```python
+def should_include_uat(spec, scope, architecture):
+    uat_signals = 0
+
+    # Check for Gherkin scenarios
+    if has_gherkin_scenarios(spec):
+        uat_signals += 2
+
+    # Check for user-facing workflows
+    user_workflows = ["login", "checkout", "onboarding", "signup", "payment"]
+    if any(w in spec.feature_description.lower() for w in user_workflows):
+        uat_signals += 2
+
+    # Check for UI components
+    ui_files = architecture.changed_files.filter(["*.tsx", "*.jsx", "pages/**", "components/**"])
+    if len(ui_files) > 0:
+        uat_signals += 1
+
+    # Check scope
+    if scope in ["medium", "large", "complex"]:
+        uat_signals += 1
+
+    # Check for replacement/modification of existing UI
+    if spec.modifies_existing_ui or spec.replaces_workflow:
+        uat_signals += 1
+
+    # Threshold: 3+ signals = include UAT
+    return uat_signals >= 3
+```
+
+### UAT vs E2E
+
+| Aspect | E2E (Playwright/Cypress) | UAT (browser-use) |
+|--------|--------------------------|-------------------|
+| Purpose | Programmatic test suite | AI-powered acceptance |
+| Authoring | Code-based tests | Gherkin scenarios |
+| Execution | CI/CD pipeline | On-demand verification |
+| Best for | Regression suite | User flow validation |
+| Include when | Need persistent test suite | Need human-like verification |
+
+**Note:** Features can have BOTH e2e and uat:
+- `e2e`: Programmatic tests for CI
+- `uat`: Browser-use acceptance for final verification
+
+### Updated test_levels Output
+
+```yaml
+test_levels:
+  - unit
+  - integration
+  - e2e
+  - uat  # Added when user-facing workflows with Gherkin scenarios
 ```
 
 ## Test Directory Detection
