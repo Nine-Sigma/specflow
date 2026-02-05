@@ -906,6 +906,121 @@ Write to PROGRESS.md:
 ```
 </qa_ticket_tracking>
 
+### QA Ticket Parallelization
+
+<!-- Requirements: AUD-17 -->
+
+QA tickets support parallel execution similar to stories.
+
+<qa_ticket_parallelization>
+**Ticket Format in sprint-status.yaml:**
+
+```yaml
+qa_tickets:
+  - id: qa-unit
+    type: unit
+    status: pending
+    parallel_safe: true
+    depends_on: []  # Can run independently
+    validates: [1-1, 1-2, 1-3]  # Stories this tests
+
+  - id: qa-integration
+    type: integration
+    status: pending
+    parallel_safe: true
+    depends_on: []  # Parallel with unit
+    validates: [1-3, 2-2]
+
+  - id: qa-e2e
+    type: e2e
+    status: pending
+    parallel_safe: false
+    depends_on: [qa-unit]  # After unit passes
+    validates: [2-2, 2-3]
+
+  - id: qa-security
+    type: security
+    status: pending
+    parallel_safe: true
+    depends_on: [qa-e2e]  # After e2e
+    validates: [1-1, 2-2]
+```
+
+**Typical QA Waves:**
+
+| Wave | Tickets | Rationale |
+|------|---------|-----------|
+| 1 | qa-unit, qa-integration | Independent, can run parallel |
+| 2 | qa-e2e | May depend on unit passing |
+| 3 | qa-security, qa-performance | After functional tests |
+
+**PM Routing for QA:**
+
+After all stories complete:
+1. Generate QA tickets with parallelization metadata
+2. Calculate QA waves using same algorithm as stories
+3. Route Wave 1 tickets (can be presented as parallel options)
+4. After ticket completes, route next in wave or next wave
+
+**QA Wave Calculation (same as story waves):**
+
+```python
+def calculate_qa_waves(tickets):
+    """Group QA tickets into parallel-safe waves based on dependencies."""
+    waves = []
+    completed = set()
+    remaining = [t for t in tickets if t.status == 'pending']
+
+    while remaining:
+        wave = []
+        for ticket in remaining:
+            deps_met = all(d in completed for d in ticket.depends_on)
+            if deps_met:
+                wave.append(ticket)
+
+        if not wave:
+            escalate_to_user("Cannot progress QA: check ticket dependencies")
+            break
+
+        waves.append(wave)
+        remaining = [t for t in remaining if t not in wave]
+        completed.update(t.id for t in wave)
+
+    return waves
+```
+
+**QA Output with Parallel Safety:**
+
+When QA completes a ticket:
+```markdown
+## QA Ticket Complete: qa-unit
+
+**Tests Written:** 45
+**Coverage:** AC-01 through AC-12
+
+**Parallel Impact:**
+- No shared fixtures with qa-integration (safe to parallel)
+- Creates test DB state used by qa-e2e (qa-e2e depends on this)
+
+**Next in Wave:** qa-integration (parallel-safe)
+```
+
+**Wave Progress Display:**
+
+```markdown
+## QA Waves
+
+| Wave | Tickets | Status |
+|------|---------|--------|
+| 1 | qa-unit, qa-integration | in-progress |
+| 2 | qa-e2e | pending |
+| 3 | qa-security, qa-performance | pending |
+
+**Current Wave:** 1
+**Completed:** 0/5 tickets
+```
+</qa_ticket_parallelization>
+
 ### Feature Complete Detection
 
 When all QA tickets done:
