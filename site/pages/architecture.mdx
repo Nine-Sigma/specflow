@@ -406,25 +406,34 @@ SpecFlow scales its process to feature complexity:
 
 Small features should not suffer enterprise process. Complex features should not skip critical analysis. SpecFlow calibrates automatically.
 
-## Tracker Integration
+## Tracker Integration (Upcoming)
 
-SpecFlow syncs with external trackers to create tickets from generated stories:
+SpecFlow will sync with external trackers for end-to-end autonomous development:
 
 | Tracker | Epic Type | Story Type |
 |---------|-----------|------------|
 | GitHub | Issue + `epic` label | Issue + `story` label |
 | Jira | Epic issue type | Story issue type |
 | Linear | Project | Issue |
+| Rally | Feature | User Story |
 
-The `/sf:scrum` command manages this integration:
+**Planned capabilities:**
+
+- **Auto-create tickets**: Generate epics and stories in your tracker from SpecFlow specs
+- **Bidirectional sync**: Pull stories from backlog, push status updates back
+- **Autonomous development**: Pick up stories, implement, create PRs, update tracker status
+- **Sprint automation**: Auto-assign stories based on capacity and dependencies
+
+The `/sf:scrum` command will manage this integration:
 
 ```
 /sf:scrum create-epic "User Authentication"
 /sf:scrum create-story --epic AUTH-1 "Login form"
 /sf:scrum sprint-board
+/sf:scrum auto-develop --sprint current
 ```
 
-Sprint boards show real-time status:
+Sprint boards will show real-time status:
 
 ```
 Current Sprint: Sprint 5
@@ -458,7 +467,7 @@ SpecFlow architecture ensures:
 4. **Wave-based parallelism**: Execute independent stories concurrently
 5. **Multi-lens review**: Security, slop, and integration checks
 6. **Drift detection**: Catch deviations early
-7. **Tracker integration**: Sync with GitHub, Jira, Linear
+7. **Tracker integration** (upcoming): Sync with GitHub, Jira, Linear, Rally
 8. **Extensibility**: Add skills without core changes
 
 The architecture serves one goal: ship quality software with confidence.
