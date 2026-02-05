@@ -61,25 +61,22 @@ The PM applies rules to determine which pillars need analysis:
 The PM constructs an agent sequence based on triggers:
 
 ```mermaid
-flowchart TD
-    Request[Feature Request] --> Triage{Triage}
-    Triage --> Scope[Analyst: Scope]
-    Scope --> Spec[Analyst: Spec]
-    Spec --> Arch[Architect]
-    Arch --> SecCheck{Security?}
-    SecCheck -->|Yes| Sec[Security]
-    SecCheck -->|No| CostCheck
-    Sec --> CostCheck{Cost?}
-    CostCheck -->|Yes| Cost[Cost]
-    CostCheck -->|No| TEA
-    Cost --> TEA[TEA]
-    TEA --> Lock[PM: Lock]
-    Lock --> Dev[Dev]
-    Dev --> QA[QA]
-    QA --> Review[Review]
-    Review -->|Findings| Dev
-    Review -->|Clean| Complete[Complete]
+flowchart LR
+    subgraph Analysis
+        A[Analyst] --> B[Architect]
+    end
+    subgraph Pillars
+        C[Security] --> D[Cost] --> E[TEA]
+    end
+    subgraph Execution
+        F[Dev] --> G[QA] --> H[Review]
+    end
+
+    Request([Request]) --> Analysis --> Pillars --> Lock{Lock} --> Execution --> Done([Ship])
+    H -.->|fixes| F
 ```
+
+**Flow**: Request → Analyst → Architect → Security → Cost → TEA → Lock → Dev → QA → Review → Ship
 
 ## Agent Communication
 
