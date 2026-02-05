@@ -1,0 +1,46 @@
+# sprint-status-small.yaml - Minimal work tracker for small scope features
+# Used when scope_level: small
+feature: {slug}
+created: {iso-timestamp}
+updated: {iso-timestamp}
+scope: small
+status: in-progress
+
+# Minimal analysis items for small scope
+analysis:
+  - id: scope
+    agent: analyst
+    output: 0-scope.md
+    status: done  # Already approved when this file created
+    completed_at: {iso-timestamp}
+
+  - id: spec
+    agent: analyst
+    output: 1-spec.md
+    status: pending
+    depends_on: [scope]
+
+  - id: architecture
+    agent: architect
+    output: 2-architecture.md
+    status: pending
+    depends_on: [spec]
+    # May be skipped for very simple changes
+
+  - id: tea
+    agent: tea
+    output: 5-test-plan.md
+    status: pending
+    depends_on: [spec]
+
+  - id: requirements-lock
+    agent: pm
+    output: 5-requirements-lock.md
+    status: pending
+    depends_on: [spec, tea]
+
+# Small scope: No story breakdown (direct dev after requirements-lock)
+stories: []
+
+# Small scope: No explicit QA tickets (standard suite runs)
+qa_tickets: []
