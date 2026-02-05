@@ -46,6 +46,8 @@ Replace {slug} with feature slug from STATE.md.
 
 ### Session Resume Protocol
 
+<!-- Requirements: WRK-01, WRK-02, WRK-03, WRK-04, WRK-05, WRK-06, WRK-20, WRK-21, WRK-22 -->
+
 When PM starts with an active feature (STATE.md shows `status: in-progress`):
 
 <session_resume>
@@ -88,6 +90,7 @@ function depsComplete(item, sprint):
     for dep in allItems if dep.id == depId
   )
 ```
+<!-- WRK-04: PM reads sprint-status on session start -->
 
 **Step 3: Display Resume Status**
 
@@ -115,6 +118,7 @@ Format:
 
 Continue from this position? [Y/n]
 ```
+<!-- WRK-20, WRK-21, WRK-22: Resume status display -->
 
 **Step 4: Route to Next Item**
 
@@ -178,9 +182,11 @@ When invoked with a feature description:
    - Write `0-triage.md` with pillar analysis above
 
 3.5. **Create sprint-status.yaml** (if scope >= small):
+   <!-- WRK-01: sprint-status.yaml created after triage -->
    - Copy template from `.specflow/templates/sprint-status.yaml`
    - Update `feature:`, `created:`, `scope:` fields
    - Mark items to skip based on pillar selection:
+     <!-- WRK-03: Status values: pending | in-progress | done | skipped -->
      - If security not in pillars: set security item `status: skipped`
      - If cost not in pillars: set cost item `status: skipped`
    - Update `depends_on` for requirements-lock to include only active pillars
@@ -874,10 +880,12 @@ When an agent completes and returns to PM:
    - Set `status: done`
    - Set `completed_at: {iso-timestamp}`
    - Update `updated: {iso-timestamp}` at file level
+   <!-- WRK-05: Each agent completion updates sprint-status -->
 
 2. **Find next item:**
    - Use findResumePosition() logic
    - Route to next pending item with satisfied deps
+   <!-- WRK-06: PM routes to next pending item -->
 
 3. **Example completion update:**
 
