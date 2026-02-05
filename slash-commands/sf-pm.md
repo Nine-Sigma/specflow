@@ -1003,6 +1003,65 @@ After TEA completes (last pillar), PM runs synthesis gate before routing to dev.
 - If cost: `4-cost.md`
 - Always: `5-test-plan.md`, `5-requirements-lock.md`, `6-dev-output.md`, `7-qa-output.md`
 
+### Parallel Pillar Spawning (Post-Architect)
+
+<!-- Parallel spawning reduces workflow time by running independent agents concurrently -->
+
+After architect writes `2-architecture.md`, PM spawns applicable pillar agents in parallel.
+
+**Load pattern from:** `.specflow-lib/expertise/context-efficiency/parallel-spawning.md`
+
+**Spawn Decision Matrix:**
+
+| Pillar | Condition | Task Prompt |
+|--------|-----------|-------------|
+| Security | `security` in pillars.required | `/sf:security` with arch context |
+| Cost | `cost` in pillars.required | `/sf:cost` with arch context |
+| UX | UI-heavy detected AND medium+ scope | `/sf:ux` with spec + arch context |
+
+**Parallel Spawn Protocol:**
+
+1. **Check applicable pillars** from 0-scope.md frontmatter
+2. **Build spawn list** based on conditions above
+3. **Spawn all in single message** using Task tool:
+
+```
+# Example: Feature needs security + cost pillars
+
+Task(
+  subagent_type="general-purpose",
+  prompt="Read .specflow/features/{slug}/2-architecture.md, then execute /sf:security for this feature. Write output to 3-security.md.",
+  description="Security analysis"
+)
+
+Task(
+  subagent_type="general-purpose",
+  prompt="Read .specflow/features/{slug}/2-architecture.md, then execute /sf:cost for this feature. Write output to 4-cost.md.",
+  description="Cost analysis"
+)
+```
+
+4. **Wait for all tasks** to complete
+5. **Aggregate results**:
+   - Read all pillar outputs (3-security.md, 4-cost.md, 1.6-ux-design.md)
+   - Check for cross-pillar conflicts (e.g., security constraint conflicts with cost optimization)
+   - Flag conflicts for user decision if found
+6. **Route to TEA** for test strategy, then synthesis
+
+**Sequential Fallback:**
+
+If parallel spawning fails (Task tool not available), fall back to sequential:
+```
+architect -> security -> cost -> ux -> tea -> synthesis
+```
+
+**Context Efficiency:**
+
+Each spawned agent receives summarized context (see context-summarization.md), not full files:
+- Feature slug and scope level
+- Relevant architecture decisions (ADRs)
+- Specific triggers that activated the pillar
+
 ### Work Item Completion
 
 When an agent completes and returns to PM:
