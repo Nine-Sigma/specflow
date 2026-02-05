@@ -2081,7 +2081,7 @@ If scope_level == 'small':
 |-------|----------------------------------|
 | trivial | N/A (no synthesis) |
 | small | Route to /sf:dev |
-| medium+ | Generate epics -> Create first story -> Route to /sf:dev-story |
+| medium+ | Generate epics -> Create ALL story files -> Route to /sf:dev-story |
 
 ### After Story Completion
 
