@@ -106,6 +106,24 @@
       "report-capable": true,
       "scope-minimum": "small"
     },
+    "app-security": {
+      "source": "skill",
+      "invoke": ".specflow/skills/app-security",
+      "bundled": true,
+      "description": "OWASP-based code-level vulnerability detection for auth, input, API, secrets, payment, and crypto patterns",
+      "review-capable": true,
+      "security-capable": true,
+      "scope-minimum": "small"
+    },
+    "database-security": {
+      "source": "skill",
+      "invoke": ".specflow/skills/database-security",
+      "bundled": true,
+      "description": "Database-specific security review for SQL injection, ORM safety, credentials, and configuration",
+      "review-capable": true,
+      "security-capable": true,
+      "scope-minimum": "small"
+    },
     "pptx": {
       "source": "skill",
       "invoke": ".specflow/skills/pptx",
