@@ -1726,7 +1726,7 @@ codebase_analysis:
 {table with ID, Constraint, Source, Rationale}
 
 ## Security Constraints (SC)
-{table with ID, Constraint, Source, STRIDE Category}
+{table with ID, Constraint, Source, STRIDE Category, Rationale}
 {Omit section if 3-security.md does not exist}
 
 ## Acceptance Criteria (AC)
@@ -1742,9 +1742,23 @@ codebase_analysis:
 |-------|-------------------|
 | trivial | No - PM auto-approves |
 | small | No - PM auto-approves |
-| medium | Yes - user approval |
-| large | Yes - user approval |
-| complex | Yes - user approval |
+| medium | **Auto-approve** if scope was user-approved AND no conflicts detected during synthesis |
+| medium | **User approval** if conflicts detected OR scope wasn't user-approved |
+| large | Yes - user approval (always) |
+| complex | Yes - user approval (always) |
+
+**Auto-Approve Check (medium scope only):**
+
+IF scope == medium:
+  1. Check CONFLICTS.md exists -> if yes, require user approval
+  2. Check 0-scope.md has `approval_status: APPROVED` by user (not PM auto-approved)
+  3. If scope was user-approved AND no conflicts:
+     - Auto-approve the lock
+     - Log: "Lock auto-approved (user approved scope, no conflicts)"
+     - Skip user approval prompt
+  4. If conditions not met, proceed to user approval
+
+This reduces double approval (scope gate + lock gate) to single approval for medium features with no issues.
 
 **For trivial/small (auto-approve):**
 
