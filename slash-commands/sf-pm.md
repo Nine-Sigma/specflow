@@ -167,6 +167,46 @@ When Analyst returns with `0-scope.md` (STATE.md shows `phase: scope-approval`):
    - If payment/PII involved, is scope >= large?
    - Does scope match the risk profile?
 
+**4b. Sensitive Pattern Auto-Detection:**
+
+When scope_level is trivial or small, scan for sensitive patterns:
+
+| Pattern Category | Detection Patterns | Escalation |
+|------------------|-------------------|------------|
+| Authentication | password, auth, login, logout, session, token, jwt, bcrypt, argon, scrypt | -> medium, add security pillar |
+| Payment | payment, stripe, paypal, card, cvv, billing, checkout, charge, refund | -> large, add security + cost pillars |
+| Crypto | crypto, cipher, encrypt, decrypt, sign, verify, hash, MD5, SHA1, DES, RC4, ECB | -> ESCALATE to user (manual review) |
+| PII | ssn, dob, social_security, driver_license, passport, address + personal | -> medium, add security pillar |
+
+**Detection Process:**
+
+1. If scope_level in [trivial, small]:
+   a. Read changed_files from feature context (0-scope.md or user description)
+   b. For each file, scan content for sensitive patterns
+   c. If auth/PII patterns detected: SCALE_UP to medium, add security pillar
+   d. If payment patterns detected: SCALE_UP to large, add security + cost pillars
+   e. If crypto patterns detected: ESCALATE to user with manual review recommendation
+
+2. If scope_level >= medium: Skip (security pillar already required)
+
+**Pattern Detection Output:**
+
+When patterns detected, add to 0-scope.md PM Approval section:
+
+```markdown
+## Sensitive Pattern Detection
+
+| Pattern Category | Detected | Source |
+|------------------|----------|--------|
+| Authentication | Yes | src/auth/login.ts contains "password", "session" |
+| Payment | No | - |
+| Crypto | No | - |
+| PII | No | - |
+
+**Escalation Applied:** SCALE_UP trivial -> medium (auth patterns)
+**Pillars Added:** [security]
+```
+
 5. **Decide if user confirmation needed:**
 
    | Condition | Action |
