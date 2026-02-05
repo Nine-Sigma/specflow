@@ -263,6 +263,74 @@ Write to: .specflow/features/{slug}/{output_file}
    - dev_iterations: {N} (if DRIFT_FIX_MODE, increment; else keep current)
 </output>
 
+## Library-First Development (Library Check)
+
+Before implementing any feature code:
+
+**Step 1: Check spec for library recommendations**
+
+Read 1-spec.md or 5-requirements-lock.md for Library Analysis section.
+If library recommended, use it.
+
+**Step 2: If no library in spec, check before implementing**
+
+For any code block that would be >50 lines, check if it matches a red-flag pattern:
+
+Red-flag patterns (always search first):
+- "rate limit", "throttle"
+- "validate", "schema"
+- "jwt", "token", "auth"
+- "email", "smtp"
+- "upload", "multipart"
+- "retry", "backoff"
+- "cache", "redis"
+- "queue", "job"
+- "websocket", "realtime"
+
+If pattern matches:
+1. Pause implementation
+2. Search npm/pypi for existing solutions
+3. Document finding in dev output
+4. Use library if suitable, else document why custom
+
+**Step 3: Custom implementation requires justification**
+
+If implementing custom code for a common pattern:
+
+```markdown
+## Custom Implementation Justification
+
+**Pattern:** Rate limiting
+**Why not library:**
+- express-rate-limit: Doesn't support our Redis cluster setup
+- rate-limiter-flexible: Would require 200KB+ bundle
+- Custom: 45 lines, uses existing Redis client, exactly our needs
+
+**Risks:**
+- Need to handle edge cases (clock skew, race conditions)
+- No community testing
+
+**Mitigation:**
+- Added comprehensive tests (see tests/rate-limit.test.ts)
+- Followed OWASP rate limiting guidelines
+```
+
+**IMPORTANT:** Analyst should have searched. Dev is the safety net.
+
+If Dev finds a better library than spec recommended, note in output:
+
+```markdown
+## Library Discovery (Dev Addition)
+
+Spec recommended: zod
+Dev found: valibot (50% smaller bundle, same API)
+Decision: Switching to valibot per size constraint
+
+Justification: {why this is better}
+```
+
+PM should acknowledge library switches at checkpoint.
+
 ## TDD Workflow (Amelia's way)
 
 ```
