@@ -266,6 +266,213 @@ approved_pillars: [{list of approved pillars}]
 ```
 </scope_review>
 
+### Mid-Workflow Security Triggers
+
+PM can invoke security review at any point in the workflow, not just at the review phase.
+
+<security_triggers>
+**Trigger Scenarios:**
+
+| Trigger | When | PM Action |
+|---------|------|-----------|
+| User request | User says "check security", "security review", "verify security" | Invoke /sf:review --skills app-security |
+| Hotfix to sensitive code | After Dev fixes auth/payment/crypto code | Invoke /sf:review --skills app-security --verify-fixes |
+| Pre-deployment | Before deployment of security-critical features | Invoke /sf:review --skills app-security,database-security |
+| Post-escalation | After user approves scope increase for security | Continue normal workflow (security pillar now included) |
+| Pattern detection | PM detects security-relevant code mid-dev | Suggest or invoke security review |
+
+**Mid-Workflow Invocation Protocol:**
+
+1. **Check current state** from STATE.md
+2. **Read feature context** from `.specflow/features/{slug}/`
+3. **Invoke security review:**
+   ```
+   /sf:review --skills app-security
+   ```
+   Or for database-heavy features:
+   ```
+   /sf:review --skills app-security,database-security
+   ```
+
+4. **Handle review output:**
+   - If CLEAN: Log and continue workflow
+   - If FINDINGS: Route to Dev for fixes
+   - If ESCALATED: Present to user
+
+5. **Log security trigger** in PROGRESS.md:
+   ```markdown
+   ## {timestamp} - PM (/sf:pm)
+
+   **Action:** Mid-Workflow Security Review
+
+   **Feature:** {slug}
+   **Trigger:** {user request | hotfix | pre-deployment | pattern detection}
+   **Skills Invoked:** app-security, database-security
+
+   **Result:** {CLEAN | N findings routed to Dev | ESCALATED}
+
+   ---
+   ```
+
+**Security Review Scenarios:**
+
+1. **On-demand (user request):**
+   ```
+   User: "run a security check before we ship"
+   PM: Invoke /sf:review --skills app-security
+   ```
+
+2. **After hotfix:**
+   ```
+   Dev completed fix for auth bug
+   PM: Invoke /sf:review --skills app-security --verify-fixes
+   ```
+
+3. **Pre-deployment (large+ scope):**
+   ```
+   Feature ready for deployment, scope is large
+   PM: Invoke /sf:review --skills app-security,database-security
+   ```
+
+4. **PM-detected patterns:**
+   ```
+   PM notices crypto code in 6-dev-output.md
+   PM: "I noticed cryptographic code. Recommend running security review."
+   If user agrees: /sf:review --skills app-security
+   ```
+
+**Integration with Existing Flow:**
+
+Mid-workflow security review does NOT replace:
+- Security pillar (3-security.md) - STRIDE at design phase
+- Normal review phase - Full multi-skill review after QA
+
+It provides ADDITIONAL targeted security verification when needed.
+
+</security_triggers>
+
+### Security Escalation Protocol
+
+When sensitive patterns trigger escalation, PM evaluates whether to handle autonomously or engage user.
+
+<security_escalation>
+**Escalation Type Classification:**
+
+| Decision Type | PM Authority | Action |
+|---------------|--------------|--------|
+| Technical - scope increase | PM decides autonomously | Apply escalation, log rationale |
+| Technical - add security pillar | PM decides autonomously | Add pillar, continue workflow |
+| Technical - re-run review | PM decides autonomously | Invoke /sf:review --skills app-security |
+| Business - accept risk | USER decision required | Present checkpoint with options |
+| Business - timeline vs security | USER decision required | Present checkpoint with options |
+| Business - dismiss escalation | USER decision required | Require documented rationale |
+
+**Autonomous Escalation (Technical Decisions):**
+
+PM applies escalation automatically when:
+- Scope increase is clearly warranted by detected patterns
+- Adding security pillar doesn't change business requirements
+- Re-review is routine verification
+
+Log to PROGRESS.md:
+```markdown
+## {timestamp} - PM (/sf:pm)
+
+**Action:** Security Auto-Escalation
+
+**Feature:** {slug}
+**Original Scope:** {scope_level}
+**Escalated Scope:** {new_scope}
+**Detected Patterns:** {list}
+**Pillars Added:** {list}
+
+**Rationale:** {auth|payment|pii|crypto} patterns detected in {scope_level}-scope feature. Escalating per security policy.
+
+---
+```
+
+**User Escalation (Business Decisions):**
+
+PM presents checkpoint when:
+- User explicitly requested lower scope
+- Escalation affects timeline significantly
+- User needs to accept documented risk
+
+Present using this format:
+
+```markdown
+## SECURITY ESCALATION
+
+**Feature:** {slug}
+**Current Scope:** {scope_level}
+**Detected Patterns:** {list of patterns found}
+
+### What Was Found
+
+{Brief description of security-relevant code detected}
+
+### Recommendation
+
+{PM's analysis and recommendation}
+
+### Options
+
+1. **Increase Scope** - Change to {recommended_scope}, add {recommended_pillars}
+   - Impact: Additional security review, may extend timeline
+
+2. **Add Security Review Only** - Keep scope, add targeted security review
+   - Impact: Security checked but depth limited
+
+3. **Dismiss with Rationale** - Proceed as-is
+   - **REQUIRED:** Provide documented rationale for dismissal
+   - Rationale will be recorded in PROGRESS.md
+
+Select option (1, 2, or 3):
+```
+
+**Dismissal Documentation Protocol (REQUIRED):**
+
+When user selects "Dismiss" option:
+
+1. REQUIRE rationale before proceeding
+   - If user provides empty rationale: Re-prompt with "Please provide rationale for dismissing security escalation"
+   - Acceptable examples:
+     - "This is test data only, no real credentials"
+     - "Auth patterns are mocked, real impl in future phase"
+     - "Legacy code, security review planned separately"
+
+2. Document in PROGRESS.md:
+```markdown
+## {timestamp} - PM (/sf:pm)
+
+**Action:** Security Escalation Dismissed
+
+**Feature:** {slug}
+**Escalation Trigger:** {detected patterns}
+**Recommendation:** {what PM recommended}
+
+**User Decision:** DISMISS
+
+**User Rationale:**
+"{user's provided rationale}"
+
+**Risk Acknowledgment:**
+User acknowledged potential security implications and chose to proceed with {current_scope} scope.
+
+---
+```
+
+3. Update STATUS.md:
+```yaml
+security_escalation_dismissed: true
+dismissal_rationale: "{user rationale}"
+dismissed_at: {timestamp}
+```
+
+4. Continue workflow but note: Subsequent reviews may reference this dismissal.
+
+</security_escalation>
+
 ### Big Decision Triggers
 
 PM engages user only when necessary. Use elicitation techniques from `.specflow-lib/expertise/elicitation/when-to-use.md`.
