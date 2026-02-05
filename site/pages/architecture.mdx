@@ -460,7 +460,37 @@ npx specflow skill install pptx@anthropics/skills
 npx specflow skill list
 ```
 
-Skills extend SpecFlow without modifying core workflows.
+**How skills get registered and picked up:**
+
+Skills are defined by a `SKILL.md` file with YAML frontmatter:
+
+```yaml
+---
+name: app-security
+description: OWASP vulnerability detection
+review-capable: true
+security-capable: true
+scope-minimum: small
+triggers:
+  files:
+    - "*.ts"
+    - "src/**/*"
+    - "auth/**/*"
+  patterns:
+    - "password"
+    - "token"
+    - "jwt"
+---
+```
+
+The skill-detector matches skills to your code:
+
+1. **File triggers**: Glob patterns match changed files (`auth/**/*`)
+2. **Code patterns**: Regex matches file content (`jwt`, `SELECT.*FROM`)
+3. **Capabilities**: Filter by `review-capable`, `security-capable`, etc.
+4. **Scope minimum**: Only run if feature scope >= threshold
+
+Skills live in `.specflow/skills/{name}/SKILL.md` and are auto-discovered at review time.
 
 ## Summary
 
