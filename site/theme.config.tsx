@@ -5,7 +5,7 @@ const config: DocsThemeConfig = {
   logo: (
     <span style={{ display: 'flex', alignItems: 'baseline', gap: '0.5rem' }}>
       <span style={{ fontWeight: 'bold', fontSize: '1.5rem' }}>SpecFlow</span>
-      <span style={{ fontSize: '0.75rem', opacity: 0.7 }}>This site was built by SpecFlow in under 10 minutes</span>
+      <span style={{ fontSize: '0.75rem', opacity: 0.7 }}>This site was built, reviewd and shipped by SpecFlow in under 10 minutes</span>
     </span>
   ),
   project: {
