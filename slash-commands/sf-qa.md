@@ -532,6 +532,103 @@ Ready for PM checkpoint.
 
 **NOTE:** In DRIFT_FIX mode, QA returns to PM for re-checkpoint, NOT to Review. PM will verify the correction was successful before routing forward.
 
+## TDD_MODE: Write Tests Before Implementation
+
+<!-- Requirements: FP-34 (QA writes E2E tests before Dev), AUD-21 (PM routes to QA for behavioral tests) -->
+
+Activated when PM routes with `mode="TDD_MODE"` (qa-first flow) OR when detected automatically:
+- `5-test-plan.md` exists with `recommended_flow: qa-first`
+- `6-dev-output.md` does NOT exist (Dev hasn't implemented yet)
+
+**Purpose:** Write failing behavioral tests that define the feature contract.
+Dev will implement code to make these tests pass.
+
+### TDD Rules
+
+1. Write integration, E2E, and API tests ONLY (per TEA's test_levels)
+2. Do NOT write unit tests (Dev writes those during implementation)
+3. Tests must be behavior-focused (WHAT, not HOW)
+4. Tests WILL FAIL - that's expected (no implementation yet)
+5. Tests define the contract - Dev implements to this contract
+
+### TDD_MODE Execution
+
+```python
+# Step 1: Load test specifications from TEA
+test_plan = read("5-test-plan.md")
+e2e_specs = test_plan.e2e_specifications
+integration_specs = test_plan.integration_specifications
+api_specs = test_plan.api_specifications
+
+# Step 2: Write test files (they will fail)
+for spec in e2e_specs:
+    write_failing_test(spec)
+
+for spec in integration_specs:
+    write_failing_test(spec)
+
+for spec in api_specs:
+    write_failing_test(spec)
+
+# Step 3: Run tests to confirm they fail
+run_tests()  # Should show all failing - this is expected
+
+# Step 4: Document failing tests for Dev
+# (See output format below)
+```
+
+### TDD_MODE Output
+
+Write to `.specflow/features/{slug}/5-qa-tests.md`:
+
+```markdown
+---
+agent: qa
+mode: TDD_MODE
+tests_written: {count}
+tests_status: all_failing
+created: {iso-timestamp}
+---
+
+# QA Behavioral Tests (TDD Contract)
+
+## Test Summary
+
+| Type | Count | Status |
+|------|-------|--------|
+| E2E | {n} | Failing |
+| Integration | {m} | Failing |
+| API | {p} | Failing |
+
+## Failing Tests
+
+### E2E-01: {Test Name}
+- **File:** `e2e/rate-limit.test.ts`
+- **Expected:** {behavior from AC}
+- **Current:** Fails (not implemented)
+
+## Dev Instructions
+
+Run: `{test_command}`
+Goal: Make all tests pass
+
+## PM Next Step
+
+Route to Dev with this file as context.
+Dev implements until all tests green.
+```
+
+### Return to PM
+
+After TDD_MODE completes:
+
+```markdown
+QA TDD_MODE complete.
+Written: {n} failing behavioral tests
+Contract defined for Dev.
+Returning to PM for Dev routing.
+```
+
 ## TDD Mode Output Format (5-qa-tests.md)
 
 When in TDD_MODE (writing tests before Dev implements), use this output format.
