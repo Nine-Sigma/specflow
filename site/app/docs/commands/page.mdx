@@ -1,0 +1,350 @@
+# Commands Reference
+
+SpecFlow commands for PM orchestration, analysis, and development.
+
+## Primary Commands
+
+These are the core commands you use most frequently:
+
+| Command | Description | When to Use |
+|---------|-------------|-------------|
+| `/sf:pm` | PM Orchestrator | Start or continue any feature |
+| `/sf:analyst` | Requirements Analysis | Scope assessment and specifications |
+| `/sf:architect` | Architecture Design | Technical design |
+| `/sf:security` | Security Analysis | STRIDE threat modeling |
+| `/sf:cost` | Cost Analysis | Cloud resource estimation |
+| `/sf:tea` | Test Engineering | Test planning |
+| `/sf:dev` | Development | Implementation |
+| `/sf:qa` | Quality Assurance | Test execution |
+
+## Extended Commands
+
+Additional commands for specialized workflows:
+
+| Command | Description |
+|---------|-------------|
+| `/sf:brainstorm` | Structured ideation using 60+ techniques |
+| `/sf:ux` | UX design analysis |
+| `/sf:diagram` | Architecture visualization (Excalidraw) |
+| `/sf:docs` | Technical documentation |
+| `/sf:review` | Dynamic code review orchestrator |
+
+## Command Details
+
+### /sf:pm - PM Orchestrator
+
+The main entry point for all SpecFlow workflows. John (PM) orchestrates the entire feature lifecycle.
+
+**Usage:**
+```bash
+/sf:pm "add logout button"         # Start new feature
+/sf:pm --status                    # Check current state
+/sf:pm --review                    # Review outputs
+```
+
+**What it does:**
+1. Analyzes your request for pillar triggers
+2. Creates feature folder in `.specflow/features/`
+3. Routes to appropriate agents based on scope
+4. Runs drift checkpoints after Dev and QA
+5. Synthesizes requirements lock
+
+---
+
+### /sf:analyst - Requirements Analysis
+
+Mary analyzes scope and writes specifications with BOSS-compliant acceptance criteria.
+
+**Usage:**
+```bash
+/sf:analyst    # Run within active feature
+```
+
+**Modes:**
+- **Mode 1**: Scope assessment (creates `0-scope.md`)
+- **Mode 1.5**: Codebase analysis (creates `1.5-codebase-constraints.md`)
+- **Mode 2**: Specification (creates `1-spec.md`)
+
+**When to use directly:** To rerun scope assessment or update specifications.
+
+---
+
+### /sf:architect - Architecture Design
+
+Winston designs technical solutions that honor existing codebase patterns.
+
+**Usage:**
+```bash
+/sf:architect    # Run within active feature
+```
+
+**Output depth by scope:**
+
+| Scope | Output |
+|-------|--------|
+| trivial | Skipped |
+| small | Brief summary |
+| medium | Standard with diagrams |
+| large | Full documentation |
+| complex | ADRs + C4 diagrams |
+
+**When to use directly:** To regenerate architecture after spec changes.
+
+---
+
+### /sf:security - Security Analysis
+
+Jordan applies STRIDE threat modeling to architecture designs.
+
+**Usage:**
+```bash
+/sf:security    # Run within active feature
+```
+
+**Triggers:** Medium+ scope features involving:
+- Authentication or authorization
+- User data (PII, passwords, tokens)
+- Payment processing
+- Public API endpoints
+- File uploads
+
+**Output:** `3-security.md` with STRIDE analysis and mitigations.
+
+---
+
+### /sf:cost - Cost Analysis
+
+Taylor estimates cloud resource costs using FinOps principles.
+
+**Usage:**
+```bash
+/sf:cost    # Run within active feature
+```
+
+**Output depth by scope:**
+
+| Scope | Output |
+|-------|--------|
+| trivial/small | Skipped |
+| medium | Estimate only |
+| large | Breakdown by component |
+| complex | Multi-scenario projections |
+
+**Output:** `4-cost.md` with estimates and optimizations.
+
+---
+
+### /sf:tea - Test Engineering Analysis
+
+TEA creates Gherkin test scenarios and traceability matrices.
+
+**Usage:**
+```bash
+/sf:tea    # Run within active feature
+```
+
+**Output:** `5-test-plan.md` containing:
+- Gherkin scenarios for all acceptance criteria
+- Traceability matrix (AC to tests)
+- Test count based on scope
+- Flow recommendation (qa-first or dev-first)
+
+---
+
+### /sf:dev - Development
+
+Amelia implements features according to requirements lock.
+
+**Usage:**
+```bash
+/sf:dev    # Run within active feature
+```
+
+**Modes:**
+- **Standard**: Implement from requirements lock
+- **Fix Mode**: Address review findings
+- **Drift Fix**: Correct drift issues
+
+**Output:** `6-dev-output.md` with implementation summary.
+
+---
+
+### /sf:qa - Quality Assurance
+
+Quinn executes tests and verifies acceptance criteria.
+
+**Usage:**
+```bash
+/sf:qa    # Run within active feature
+```
+
+**Modes:**
+- **Standard**: Verify after Dev implements
+- **TDD**: Write failing tests before Dev (qa-first)
+- **Fix Mode**: Address review findings
+
+**Output:** `7-qa-output.md` with test results.
+
+---
+
+### /sf:brainstorm - Structured Ideation
+
+Uses 60+ brainstorming techniques for idea generation.
+
+**Usage:**
+```bash
+/sf:brainstorm "how should we handle user onboarding?"
+```
+
+**Standalone mode:** Returns ideas document directly.
+**PM-invoked mode:** PM detects uncertainty, routes to brainstorm.
+
+**Output:** `0.3-brainstorm.md` when invoked via PM.
+
+---
+
+### /sf:ux - UX Design Analysis
+
+Sally analyzes user experience needs based on feature scope.
+
+**Usage:**
+```bash
+/sf:ux "design the checkout flow"
+```
+
+**Depth by scope:**
+
+| Scope | Methodology |
+|-------|-------------|
+| small | Core experience only |
+| medium | + User journeys, component strategy |
+| large+ | All 9 UX methodology files |
+
+**Output:** `1.6-ux-design.md` with recommendations.
+
+---
+
+### /sf:diagram - Architecture Visualization
+
+Generates Excalidraw JSON for visual documentation.
+
+**Usage:**
+```bash
+/sf:diagram --type flowchart "User login flow"
+/sf:diagram --type wireframe "Dashboard layout"
+/sf:diagram --type dataflow "API pipeline"
+/sf:diagram --type architecture --from-arch
+```
+
+**Output:** Raw JSON for Excalidraw import.
+
+---
+
+### /sf:docs - Technical Documentation
+
+Paige generates documentation in various formats.
+
+**Usage:**
+```bash
+/sf:docs --type readme "Document this API"
+/sf:docs --type api --output docs/api.md
+/sf:docs --type user-guide
+```
+
+**Types:** readme, api, user-guide, architecture, developer, release-notes
+
+**Output:** `8-docs.md` or specified output path.
+
+---
+
+### /sf:review - Dynamic Review Orchestrator
+
+Orchestrates code review with multiple review skills.
+
+**Usage:**
+```bash
+/sf:review                    # Full review
+/sf:review --security         # Security-focused review
+/sf:review --lens=quality     # Specific lens
+```
+
+**Available lenses:** quality, security, performance, accessibility
+
+**Output:** `8-review-output.md` with findings.
+
+---
+
+### /sf:dev-story - Develop Single Story
+
+Implements a single story from the sprint.
+
+**Usage:**
+```bash
+/sf:dev-story 1-1-auth-setup
+```
+
+**Features:**
+- Checks story dependencies
+- Updates sprint-status.yaml
+- TDD with test evidence capture
+
+---
+
+## Utility Commands
+
+| Command | Description |
+|---------|-------------|
+| `/sf:agents` | List all available agents |
+| `/sf:sync` | Sync state with external tracker |
+| `/sf:issue` | GitHub issue management |
+| `/sf:pr` | Pull request management |
+| `/sf:scrum` | Scrum ticket management |
+
+## Planning Commands
+
+| Command | Description |
+|---------|-------------|
+| `/sf:product-brief` | Initial product vision |
+| `/sf:create-prd` | Create PRD from brief |
+| `/sf:create-architecture` | Create technical architecture |
+| `/sf:create-epics` | Create epics and stories |
+| `/sf:create-story` | Create story details |
+| `/sf:sprint-planning` | Sprint planning |
+
+## Command Patterns
+
+### Starting a Feature
+
+```bash
+# The PM handles everything
+/sf:pm "your feature description"
+```
+
+### Checking Status
+
+```bash
+/sf:pm --status
+```
+
+### Rerunning a Stage
+
+```bash
+/sf:analyst     # Redo scope/spec
+/sf:architect   # Redo architecture
+/sf:tea         # Redo test plan
+```
+
+### Direct Agent Invocation
+
+While PM routes automatically, you can invoke agents directly when you need to:
+- Rerun a specific stage
+- Debug workflow issues
+- Learn agent capabilities
+
+## Tips
+
+1. **Start with PM**: Always begin features with `/sf:pm`
+2. **Trust routing**: Let PM handle agent sequencing
+3. **Check status**: Use `--status` to see where you are
+4. **Review outputs**: Read the artifacts agents produce
+5. **Scope first**: Approve scope before deep analysis begins
