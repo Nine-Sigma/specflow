@@ -282,6 +282,7 @@ For complex implementations, create:
 ---
 agent: dev
 created: {iso-timestamp}
+mode: {STANDARD_MODE | FIX_MODE | DRIFT_FIX_MODE}
 depends_on: ["2-architecture.md", "3-security.md", "4-cost.md"]
 status: draft
 ---
@@ -305,9 +306,10 @@ status: draft
 
 ## Files Modified
 
-| File | Change |
-|------|--------|
-| {path} | {description} |
+| File | Change Type | Lines |
+|------|-------------|-------|
+| {path} | created | {line count} |
+| {path} | modified | +{added}/-{removed} |
 
 ## AC Coverage
 
@@ -315,15 +317,37 @@ status: draft
 |-----------|--------|----------------|
 | AC-01 | DONE | {file:line} |
 | AC-02 | DONE | {file:line} |
+| AC-03 | BLOCKED | {reason} |
+
+## Integration Points Connected
+
+| IP | File | How Connected |
+|----|------|---------------|
+| IP-01 | {file} | {description of integration} |
+| IP-02 | {file} | {description of integration} |
+
+## PM Should Verify
+
+Before routing to QA, PM should check:
+
+- [ ] All claimed AC implementations have corresponding code changes
+- [ ] Files modified list matches the feature scope (no unexpected files)
+- [ ] Integration points actually connected (not just stub comments)
+- [ ] No TODO comments left for AC items marked complete
+- [ ] Build passes: `{build_command}` (REQUIRED)
 
 ## Testing Notes
 
 - {How to test the implementation}
 - {Edge cases to verify}
 
-## Open Questions
+## Test Commands
 
-- {Any issues for QA or PM}
+{Commands for QA/Review to run tests}
+
+## Dev Notes
+
+{Implementation decisions, gotchas, suggestions for QA}
 ```
 
 ## Fix Mode Output Format (6-dev-output-v{N}.md)
