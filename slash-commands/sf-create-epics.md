@@ -36,9 +36,11 @@ All acceptance criteria must be:
 - **S**pecific: Exact values, thresholds, counts
 - **S**cope-bound: This feature only
 
-## Output Format
+## Output
 
-### 5.5-epics.md
+### Step 1: Write 5.5-epics.md
+
+Write epic breakdown to `.specflow/features/{slug}/5.5-epics.md`
 
 ```markdown
 ---
@@ -82,6 +84,50 @@ total_points: {sum}
 **Dependencies:** Epic 1 (requires auth infrastructure)
 ```
 
+### Step 2: Create Story Files
+
+For each story in the epic breakdown:
+
+1. Create stories/ folder if not exists:
+   ```bash
+   mkdir -p .specflow/features/{slug}/stories/
+   ```
+
+2. Create story file from template:
+   - Read `.specflow/templates/story.md`
+   - Fill in story_id, epic, story, title, status, parallel_safe, depends_on
+   - Fill in acceptance criteria from epic breakdown
+   - Add interface contract for stories with dependents
+   - Write to `.specflow/features/{slug}/stories/{story_id}.md`
+
+3. Example story file path:
+   - Epic 1, Story 1, "redis-client" -> `stories/1-1-redis-client.md`
+   - Epic 2, Story 3, "headers" -> `stories/2-3-headers.md`
+
+### Step 3: Update sprint-status.yaml
+
+Add all stories to sprint-status:
+
+```yaml
+stories:
+  - id: 1-1-redis-client
+    epic: 1
+    story: 1
+    title: "Redis Client Setup"
+    file: stories/1-1-redis-client.md
+    status: pending
+    parallel_safe: true
+    depends_on: []
+```
+
+### Verification
+
+After epic generation:
+- [ ] 5.5-epics.md exists with epic/story breakdown
+- [ ] stories/ folder exists
+- [ ] One story file per story in epics
+- [ ] sprint-status.yaml lists all stories with file paths
+
 ### Story Files (BMAD Format)
 
 Story files are written to `.specflow/features/{slug}/stories/{epic}-{story}-{slug}.md`
@@ -122,8 +168,8 @@ After generating epics, update sprint-status.yaml:
        depends_on: []
    ```
 
-3. **Note:** Only the first story file is created immediately.
-   Subsequent story files created incrementally by PM.
+3. **Note:** All story files are created at once after epic generation.
+   See Step 2 above for story file creation process.
 
 ## BMAD Story Format (WRK-28)
 
@@ -135,6 +181,13 @@ Story files use BMAD format from `.specflow/templates/story.md`:
 - Technical context (from requirements-lock and codebase-constraints)
 - Dependencies (other story IDs)
 - Out of scope items
+
+## Notes
+
+- **All story files created at once** (not incrementally)
+- Story files can be refined by PM before routing to dev
+- Interface contracts added for stories with dependents
+- Test command auto-detected from project config
 
 ## Related
 
