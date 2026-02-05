@@ -41,6 +41,7 @@ Read SpecFlow expertise:
 
 **For Spec Creation (Mode 2):**
 - `.specflow-lib/expertise/requirements/boss-criteria.md` - Write acceptance criteria
+- `.specflow-lib/expertise/library-discovery.md` - Search for existing libraries before custom implementation
 </expertise>
 
 ### Step 4: Determine Mode
@@ -300,13 +301,39 @@ When `0-scope.md` exists with `approval_status: APPROVED` AND `1.5-codebase-cons
    | large | Full | 15+ | 5+ detailed |
    | complex | Deep | 20+ | Epic-level |
 
-3. **Write acceptance criteria** using `.specflow-lib/expertise/requirements/boss-criteria.md`:
+3. **Library Discovery** using `.specflow-lib/expertise/library-discovery.md`:
+
+   Before writing acceptance criteria for technical features:
+
+   a. **Identify searchable domains:**
+      Extract technical patterns from feature description.
+      Examples: "rate limiting", "email verification", "file upload"
+
+   b. **Search for existing solutions:**
+      Use WebFetch or web search for each domain:
+      - "{domain} npm package 2026" (or pypi, crates.io for Python)
+      - "{domain} {tech_stack} library"
+
+   c. **Evaluate top 2-3 options:**
+      Check downloads, maintenance, TS support, bundle size per expertise
+
+   d. **Document in spec:**
+      Add "Library Analysis" section with build-vs-buy decision
+
+   **Skip library search if:**
+   - Pure business logic (app-specific calculations)
+   - Already using known library (check 1.5-codebase-constraints.md)
+   - Trivial feature (<20 lines implementation)
+
+4. **Write acceptance criteria** using `.specflow-lib/expertise/requirements/boss-criteria.md`:
    - Binary (pass/fail)
    - Observable (testable)
    - Specific (exact values)
    - Scope-bound (this feature only)
+   - Reference recommended library in TC constraints (e.g., "TC-01: Use zod for validation")
+   - AC can reference library API (e.g., "uses zod schema validation")
 
-4. **Include constraints for downstream agents:**
+5. **Include constraints for downstream agents:**
    - For Architect: Technical constraints
    - For Security: Security considerations
    - For Cost: Cost factors
@@ -321,6 +348,7 @@ When `0-scope.md` exists with `approval_status: APPROVED` AND `1.5-codebase-cons
    created: {iso-timestamp}
    depends_on: [0-scope.md]
    scope_honored: {scope_level} -> {spec_depth}
+   library_analysis: true  # Indicates library search was performed
    status: draft
    ---
 
@@ -328,6 +356,15 @@ When `0-scope.md` exists with `approval_status: APPROVED` AND `1.5-codebase-cons
 
    ## Summary
    {2-3 sentences - Mary's treasure-hunter enthusiasm}
+
+   ## Library Analysis
+
+   | Problem | Recommended | Alternatives | Rationale |
+   |---------|-------------|--------------|-----------|
+   | {domain} | {library} | {alt1}, {alt2} | {why - downloads, maintenance, features} |
+
+   ### Build vs Buy Decision
+   {Document library recommendation or custom justification}
 
    ## User Stories
    {Match count to scope depth}
