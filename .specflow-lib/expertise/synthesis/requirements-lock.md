@@ -74,9 +74,9 @@ Constraints from 2-architecture.md AND 1.5-codebase-constraints.md.
 
 Constraints from 3-security.md (if exists).
 
-| ID | Constraint | Source | STRIDE Category |
-|----|------------|--------|-----------------|
-| SC-01 | {constraint} | 3-security.md SEC-{N} | {category} |
+| ID | Constraint | Source | STRIDE Category | Rationale |
+|----|------------|--------|-----------------|-----------|
+| SC-01 | {constraint} | 3-security.md SEC-{N} | {category} | {why this constraint} |
 
 ## Acceptance Criteria (AC)
 
