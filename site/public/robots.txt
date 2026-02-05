@@ -1,0 +1,6 @@
+# robots.txt for SpecFlow Documentation
+User-agent: *
+Allow: /
+
+# Sitemap location (update with actual domain)
+# Sitemap: https://your-domain.com/sitemap.xml
