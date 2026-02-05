@@ -8,7 +8,7 @@ const config: DocsThemeConfig = {
   },
   docsRepositoryBase: 'https://github.com/anthropics/specflow/tree/main/site',
   footer: {
-    content: 'SpecFlow Documentation',
+    text: 'SpecFlow Documentation',
   },
   useNextSeoProps() {
     return {
