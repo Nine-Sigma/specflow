@@ -755,6 +755,138 @@ When FIX_MODE completes, control returns to Review via Task completion.
 
 **NOTE:** In fix mode, QA returns to Review (the Task invoker), NOT to PM. Do NOT invoke `/sf-pm --review` - simply end your response with the return format above.
 
+## Sprint Status Integration
+
+<!-- Requirement: WRK-26 -->
+
+When QA tickets exist in sprint-status.yaml, QA works through them systematically.
+
+### Required Reading (Updated)
+
+Add to existing required reading:
+- `.specflow/features/{slug}/sprint-status.yaml` - QA tickets to complete
+
+### QA Ticket Workflow
+
+<qa_ticket_tracking>
+**Step 1: Read QA Tickets**
+
+From sprint-status.yaml:
+```yaml
+qa_tickets:
+  - id: qa-unit
+    type: unit
+    status: pending
+    validates: [1-1-auth-setup, 1-2-login-flow]
+```
+
+**Step 2: Execute Test Suite by Type**
+
+| Ticket Type | Test Focus | Commands |
+|-------------|------------|----------|
+| unit | Function/module tests | npm test |
+| integration | Service/API tests | npm run test:integration |
+| e2e | User flow tests | npm run test:e2e |
+| security | Security scans | npm audit, /sf:review --skills app-security |
+| performance | Load/perf tests | npm run test:perf |
+| accessibility | a11y checks | npm run test:a11y |
+
+**Step 3: Update Ticket Status (WRK-26)**
+
+After running test suite:
+
+```yaml
+# Before
+- id: qa-unit
+  type: unit
+  status: pending
+  validates: [1-1-auth-setup, 1-2-login-flow]
+
+# After (passing)
+- id: qa-unit
+  type: unit
+  status: done
+  validates: [1-1-auth-setup, 1-2-login-flow]
+  test_count: 47
+  passed: 47
+  failed: 0
+  completed_at: 2026-02-05T16:00:00Z
+
+# After (failing)
+- id: qa-unit
+  type: unit
+  status: blocked
+  validates: [1-1-auth-setup, 1-2-login-flow]
+  test_count: 47
+  passed: 44
+  failed: 3
+  failure_details: "See 7-qa-output.md for failures"
+```
+
+**Step 4: Handle Failures**
+
+If any test fails:
+1. Set ticket status to `blocked`
+2. Document failures in 7-qa-output.md
+3. Return to PM with failure report
+4. PM routes to dev for fixes
+5. After fix, QA re-runs ticket
+
+**Step 5: Complete All Tickets**
+
+```
+while pending_tickets:
+  ticket = next_pending_ticket()
+  run_test_suite(ticket.type)
+  update_ticket_status(ticket)
+
+  if ticket.status == 'blocked':
+    return_to_pm(failure_report)
+    break
+
+if all_tickets_done:
+  return_to_pm(success_report)
+```
+
+**Step 6: Log Completion**
+
+Write to PROGRESS.md:
+```markdown
+## {timestamp} - QA (/sf:qa)
+
+**QA Tickets Complete:**
+
+| Ticket | Tests | Passed | Failed |
+|--------|-------|--------|--------|
+| qa-unit | 47 | 47 | 0 |
+| qa-integration | 12 | 12 | 0 |
+| qa-e2e | 8 | 8 | 0 |
+
+**Coverage:** 100% of stories validated
+**Validated Stories:** 1-1-auth-setup, 1-2-login-flow, 1-3-password-reset
+
+---
+```
+</qa_ticket_tracking>
+
+### Feature Complete Detection
+
+When all QA tickets done:
+```
+if all(t.status == 'done' for t in sprint.qa_tickets):
+  # Feature complete!
+  Update sprint-status.yaml:
+    status: complete
+    completed_at: {timestamp}
+
+  Return to PM with completion report
+```
+
+PM then:
+1. Runs final review phase
+2. Updates STATE.md status to complete
+3. Archives feature or routes to deployment
+
 ## Persona Source
 
 Full persona: `.specflow-lib/personas/qa.md`
