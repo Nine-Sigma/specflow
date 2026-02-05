@@ -2015,7 +2015,11 @@ After orchestration:
 - `--pillars <list>` - Override pillar selection (e.g., `--pillars security,testing`)
 - `--no-pillars` - Skip security and cost analysis entirely
 - `--info` - Show triage decision only, don't execute
-- `--review-skills <skills>` - Invoke targeted review with specific skills (e.g., `--review-skills security,code-review-excellence`)
+- `--review-skills <skills>` - Invoke targeted review with specific skills
+  - Security: `--review-skills app-security` or `--review-skills app-security,database-security`
+  - Code quality: `--review-skills code-review-excellence`
+  - Full security suite: `--review-skills app-security,database-security`
+- `--security` - Shorthand for `--review-skills app-security,database-security` (security review)
 
 ## Example Sessions
 
