@@ -1939,36 +1939,98 @@ Invoke `/sf:create-epics` to generate `5.5-epics.md`:
 - Creates FR coverage matrix
 - Outputs to `.specflow/features/{slug}/5.5-epics.md`
 
-**Step 2: Create First Story (WRK-12, WRK-18)**
+### Story File Creation (after Epic Generation)
 
-After epics generated, create ONLY the first story:
-- Copy template from `.specflow/templates/story.md`
-- Fill in from Epic 1, Story 1
-- Write to `.specflow/features/{slug}/stories/1-1-{slug}.md`
-- Update sprint-status.yaml to add story
+After `/sf:create-epics` completes and writes `5.5-epics.md`:
 
-**Incremental Story Generation (WRK-18):**
+**Step 1: Create stories/ directory**
 
-Stories are created ONE AT A TIME, not all at once:
-
-```
-After requirements-lock approved:
-  1. Generate epic breakdown (5.5-epics.md)
-  2. Create first story of first epic
-  3. Route to dev for implementation
-
-After each story completes:
-  1. PM reads learnings from dev output
-  2. PM creates NEXT story (informed by learnings)
-  3. Route to dev for implementation
-
-Repeat until all stories complete.
+```bash
+mkdir -p .specflow/features/{slug}/stories/
 ```
 
-Rationale:
-- Later stories benefit from implementation learnings
-- Reduces rework from upstream assumptions
-- Allows scope adjustment based on actual velocity
+**Step 2: Create story files for ALL stories**
+
+For each story in 5.5-epics.md:
+
+```python
+for epic in epics:
+    for story in epic.stories:
+        story_id = f"{epic.number}-{story.number}-{story.slug}"
+        story_file = f"stories/{story_id}.md"
+
+        # Read template
+        template = read(".specflow/templates/story.md")
+
+        # Fill template fields
+        content = template
+            .replace("{story_id}", story_id)
+            .replace("{epic_number}", epic.number)
+            .replace("{story_number}", story.number)
+            .replace("{title}", story.title)
+            .replace("{points}", story.points)
+            .replace("{test_command}", detect_test_command())
+
+        # Add acceptance criteria from epics
+        content = add_criteria(content, story.criteria)
+
+        # Add interface contract if story has dependents
+        if story.has_dependents:
+            content = add_interface_contract(content, story)
+
+        # Write story file
+        write(f".specflow/features/{slug}/{story_file}", content)
+
+        # Update sprint-status.yaml
+        add_to_sprint_status(story, story_file)
+```
+
+**Step 3: Add interface contracts for dependency stories**
+
+For stories that other stories depend on:
+
+```markdown
+## Interface Contract
+
+<!-- Other stories depend on these exports -->
+
+\`\`\`typescript
+// src/lib/redis.ts
+export async function getRedisClient(): Promise<Redis>;
+export async function closeRedisConnection(): Promise<void>;
+export type { Redis } from 'ioredis';
+\`\`\`
+
+This contract is frozen - dependent stories code against it.
+```
+
+**Step 4: Detect test command**
+
+```python
+def detect_test_command():
+    if exists("package.json"):
+        pkg = read_json("package.json")
+        if "vitest" in pkg.devDependencies:
+            return "npm test {test_file}"
+        if "jest" in pkg.devDependencies:
+            return "npm test -- {test_file}"
+    return "npm test"  # Default
+```
+
+**Step 5: Verify story files created**
+
+After creation, PM should verify:
+- [ ] stories/ folder exists
+- [ ] One .md file per story in epics
+- [ ] Each story file has frontmatter with story_id
+- [ ] sprint-status.yaml references all story files
+
+**IMPORTANT:** Do NOT skip story file creation. /sf:dev-story REQUIRES these files.
+
+**Rationale for Batch Creation:**
+- /sf:dev-story requires story files to exist before routing
+- Interface contracts enable parallel development
+- All stories visible upfront for sprint planning
 
 **Story ID Format (WRK-15):**
 
