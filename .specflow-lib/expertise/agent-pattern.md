@@ -232,6 +232,25 @@ PM will:
 - Route to next agent when ready
 ```
 
+## Context Efficiency
+
+Agents should apply context efficiency patterns to reduce context window usage.
+
+**Load these patterns:**
+- `.specflow-lib/expertise/context-efficiency/targeted-reads.md` - Section-specific file reading
+- `.specflow-lib/expertise/context-efficiency/checkpoint-guidance.md` - When to /clear
+- `.specflow-lib/expertise/context-efficiency/shared-patterns.md` - Common patterns (DRY)
+
+**Key rules:**
+1. Read sections, not full files (see targeted-reads.md)
+2. Clear context at recommended checkpoints (see checkpoint-guidance.md)
+3. Reference shared patterns instead of repeating (see shared-patterns.md)
+
+**Context budget targets:**
+- Single section read: ~100-300 tokens
+- Full file reads: Avoid unless role requires (e.g., Architect reviewing full architecture)
+- After requirements-lock: MANDATORY /clear before dev work
+
 ## Expertise Mapping by Agent
 
 | Agent | Persona | Methodology + Expertise | Primary Output |
@@ -244,6 +263,8 @@ PM will:
 | `/sf:dev` | Amelia | `requirements/` (constraints) | Implementation |
 | `/sf:qa` | Quinn | `validation/` | Test execution |
 | `/sf:review` | (SpecFlow) | `review/` + dynamic skill discovery | 8-review-output-vN.md |
+
+**All agents** should also load `.specflow-lib/expertise/context-efficiency/` patterns.
 
 **Note:** `/sf:review` is a dynamic skill orchestrator, not a fixed agent. It discovers review-capable skills, matches them to code content, and spawns relevant skills in parallel. See Review Lenses section below.
 
