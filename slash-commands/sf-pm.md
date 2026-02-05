@@ -1842,6 +1842,88 @@ Update STATE.md after approval:
 
 </synthesis_gate>
 
+### Context Summarization for Agent Routing
+
+<!-- Requirements: FP-28 (Context loss at synthesis), AUD-11 (PM summarizes context for agents) -->
+
+Before routing to Dev or QA after requirements-lock approval:
+
+<context_summarization>
+**Step 1: Load Summarization Patterns**
+
+Read `.specflow-lib/expertise/synthesis/context-summarization.md` for:
+- Summary templates for Dev/QA routing
+- Rationale preservation patterns
+- Role-specific context guidelines
+
+**Step 2: Create Context Summary**
+
+Extract from 5-requirements-lock.md and pillar outputs:
+
+```markdown
+## Context Summary
+
+**Feature:** {slug}
+**Scope:** {scope_level from 0-scope.md}
+**Pillars Applied:** {from 0-triage.md}
+
+### Key Decisions (with rationale)
+{Extract from TC/SC tables, include rationale column}
+- **{TC-01}**: {constraint} -- *Rationale: {rationale}*
+- **{SC-01}**: {constraint} -- *Rationale: {rationale}*
+
+### Acceptance Criteria ({count} total)
+{List AC IDs and one-line summaries}
+- AC-01: {brief}
+- AC-02: {brief}
+
+### Integration Points
+{From IP section of requirements-lock}
+- IP-01: {file} -- {interface}
+
+### For Full Details
+- 5-requirements-lock.md (complete requirements)
+- 2-architecture.md (ADRs and technical design)
+```
+
+**Step 3: Include in Agent Invocation**
+
+When invoking /sf:dev or /sf:qa:
+- Prepend context summary to invocation
+- Agent receives focused context, not just file references
+- Summary target: ~500 tokens (vs 2000+ for full files)
+
+**Rationale Preservation:**
+
+IMPORTANT: When creating requirements-lock, transfer rationale from:
+- 2-architecture.md ADR decisions -> TC rationale
+- 3-security.md recommendations -> SC rationale
+- 4-cost.md constraints -> cost rationale (if applicable)
+
+This preserves the "why" that would otherwise be lost in synthesis.
+
+**Drift Correction Context:**
+
+When routing to agent for drift correction, use the drift template:
+
+```markdown
+## Drift Correction Context
+
+**Story/Issue:** {id}
+**Drift Type:** {TEST_DRIFT | CODE_ISSUE | DRIFT}
+
+### What's Wrong
+{1-2 sentence description of mismatch}
+
+### Expected (from AC)
+{Exact AC text}
+
+### Fix Needed
+{Specific change required}
+```
+
+</context_summarization>
+
 ### Story Generation Protocol
 
 <!-- Requirements: WRK-11, WRK-12, WRK-13, WRK-14, WRK-15, WRK-18 -->
@@ -2005,6 +2087,148 @@ When creating next story:
 ```
 
 </story_completion_routing>
+
+### Wave-Based Story Routing
+
+<!-- Requirements: FP-29, AUD-15, AUD-17 -->
+
+After all stories planned in sprint-status.yaml, PM calculates execution waves for parallel-safe routing.
+
+<wave_routing>
+**Wave Calculation Algorithm:**
+
+```python
+def calculate_waves(stories):
+    """Group stories into parallel-safe waves based on dependencies."""
+    waves = []
+    completed = set()
+    remaining = [s for s in stories if s.status == 'pending']
+
+    while remaining:
+        # Find stories where all deps are satisfied
+        wave = []
+        for story in remaining:
+            deps_met = all(d in completed for d in story.depends_on)
+            if deps_met:
+                wave.append(story)
+
+        if not wave:
+            # Stuck - circular dependency or unmet external dep
+            escalate_to_user("Cannot progress: check story dependencies")
+            break
+
+        waves.append(wave)
+        remaining = [s for s in remaining if s not in wave]
+        completed.update(s.id for s in wave)
+
+    return waves
+```
+
+**Wave Execution Display:**
+
+Present wave plan to user after generating all stories:
+
+```markdown
+## Story Waves
+
+| Wave | Stories | Parallel Safe | Status |
+|------|---------|---------------|--------|
+| 1 | 1-1-redis-client, 1-2-config, 2-1-identifier | All parallel | pending |
+| 2 | 1-3-sliding-window | deps on 1-1 | pending |
+| 3 | 2-2-middleware | deps on 1-2, 1-3, 2-1 | pending |
+| 4 | 2-3-headers, 3-1-fail-open | parallel | pending |
+
+**Current Wave:** 1
+**Parallel Execution:** Claude executes sequentially, but multiple human sessions could work Wave 1 stories in parallel.
+```
+
+**Routing a Wave:**
+
+1. Calculate waves on first story routing (after epics)
+2. Present wave plan to user:
+   ```
+   ## Wave Plan
+
+   Wave 1: [1-1, 1-2, 2-1] (parallel-safe, no deps)
+   Wave 2: [1-3] (after 1-1)
+   Wave 3: [2-2] (after 1-2, 1-3, 2-1)
+   Wave 4: [2-3, 3-1, 3-2] (parallel, after 2-2)
+
+   Starting Wave 1. First story: 1-1-redis-client
+   ```
+3. Route to /sf:dev-story {first-story-in-wave}
+4. After story completes:
+   - If more stories in current wave: route to next in wave
+   - If wave complete: calculate next wave, route to first story
+
+**Parallel Safety Validation:**
+
+When PM marks story as parallel_safe:
+1. Check file overlap with other pending stories
+2. Check data dependency (same models/tables)
+3. If overlap found, mark parallel_safe: false
+
+```python
+def validate_parallel_safety(story, other_stories):
+    """Validate story can run in parallel with others."""
+    story_files = set(story.files_affected)
+    story_models = set(story.models_affected)
+
+    for other in other_stories:
+        if other.id in story.depends_on:
+            continue  # Skip explicit dependencies
+
+        other_files = set(other.files_affected)
+        other_models = set(other.models_affected)
+
+        # Check file overlap
+        if story_files & other_files:
+            return False, f"File overlap with {other.id}"
+
+        # Check data overlap
+        if story_models & other_models:
+            return False, f"Model overlap with {other.id}"
+
+    return True, "No overlap detected"
+```
+
+**Story Frontmatter with Wave Data:**
+
+```yaml
+---
+story_id: 1-2-config
+epic: 1
+story: 2
+title: "Configuration Loading"
+status: pending
+parallel_safe: true
+depends_on: []
+wave: 1  # Calculated by PM
+---
+```
+
+**Wave Progress Tracking:**
+
+Update sprint-status.yaml with wave information:
+
+```yaml
+waves:
+  - number: 1
+    stories: [1-1-redis-client, 1-2-config, 2-1-identifier]
+    status: in-progress
+  - number: 2
+    stories: [1-3-sliding-window]
+    status: pending
+  - number: 3
+    stories: [2-2-middleware]
+    status: pending
+  - number: 4
+    stories: [2-3-headers, 3-1-fail-open]
+    status: pending
+
+current_wave: 1
+```
+</wave_routing>
 
 ### QA Ticket Generation
 
@@ -2518,6 +2742,47 @@ After corrections:
 When QA checkpoint returns MAJOR_DRIFT, analyze to determine root cause:
 
 <qa_drift_analysis>
+
+**Classification Heuristics:**
+
+Apply in order (first match wins):
+
+| Signal | Classification | Confidence |
+|--------|----------------|------------|
+| Test file unchanged since QA wrote it AND test fails | CODE_ISSUE | HIGH |
+| Test assertion value differs from AC specification | TEST_DRIFT | HIGH |
+| Dev output claims AC implemented but test fails on that AC | CODE_ISSUE | HIGH |
+| Test expects different endpoint/status than AC specifies | TEST_DRIFT | HIGH |
+| Test checks wrong behavior (action mismatch) | TEST_DRIFT | HIGH |
+| Implementation returns unexpected status code | CODE_ISSUE | MEDIUM |
+| Implementation does wrong action entirely | DRIFT | MEDIUM |
+| None of the above | NEEDS_MANUAL_CLASSIFICATION | LOW |
+
+**Heuristic Detection Process:**
+
+1. Read test file modification history:
+   ```bash
+   git log --oneline -1 -- {test_file}
+   ```
+   If last modifier was QA agent and file unchanged since, likely CODE_ISSUE.
+
+2. Compare test assertion values to AC values:
+   - Read failing test expected value
+   - Read corresponding AC from 5-requirements-lock.md
+   - If values differ, likely TEST_DRIFT
+
+3. Check dev output claims:
+   - Read 6-dev-output.md for "AC-XX implemented" claims
+   - If dev claimed to implement AC but test fails on it, likely CODE_ISSUE
+
+4. If no heuristic matches with HIGH confidence:
+   - Flag for manual classification
+   - Present both options to user with evidence
+
+**Fallback Semantic Signals:**
+
+If heuristics don't produce HIGH confidence match, consider these semantic signals:
+
 **Signals for TEST_DRIFT (write correction for QA):**
 - Tests pass but don't cover ACs from requirements lock
 - Tests cover wrong scenarios (not matching spec)
@@ -2529,20 +2794,26 @@ When QA checkpoint returns MAJOR_DRIFT, analyze to determine root cause:
 - Tests correctly assert expected behavior, but code returns wrong result
 - Code is missing functionality that tests expect
 
-**Classification Process:**
+**Classification Output:**
 
-1. Read `7-qa-output.md` test results
-2. For each failing/missing test, ask:
-   - Does the test correctly reflect the AC from requirements lock?
-   - If yes -> CODE_ISSUE (code wrong)
-   - If no -> TEST_DRIFT (test wrong)
-
-3. Write analysis to checkpoint file:
+Write analysis to checkpoint file:
 
 ```markdown
 ## QA Drift Analysis
 
-**Classification:** {TEST_DRIFT | CODE_ISSUE}
+**Classification:** {TEST_DRIFT | CODE_ISSUE | NEEDS_MANUAL_CLASSIFICATION}
+**Confidence:** {HIGH | MEDIUM | LOW}
+
+### Heuristic Analysis
+
+| Heuristic | Result | Conclusion |
+|-----------|--------|------------|
+| Test file unchanged since QA wrote it | {Yes/No} | {CODE_ISSUE if Yes + failing} |
+| Test assertion differs from AC value | {Yes/No} | {TEST_DRIFT if Yes} |
+| Dev claimed AC implemented | {Yes/No} | {CODE_ISSUE if Yes + test fails} |
+| Test expects wrong endpoint/status | {Yes/No} | {TEST_DRIFT if Yes} |
+
+### Semantic Signals (if heuristics inconclusive)
 
 | Signal | Observed |
 |--------|----------|
@@ -2556,9 +2827,10 @@ When QA checkpoint returns MAJOR_DRIFT, analyze to determine root cause:
 **Route to:** {qa | dev}
 ```
 
-4. Route correction:
-   - TEST_DRIFT: Write `drift/correction-qa-{N}.md`, re-invoke QA
-   - CODE_ISSUE: Write `drift/correction-dev-{N}.md`, re-invoke Dev
+**Routing:**
+- TEST_DRIFT: Write `drift/correction-qa-{N}.md`, re-invoke QA
+- CODE_ISSUE: Write `drift/correction-dev-{N}.md`, re-invoke Dev
+- NEEDS_MANUAL_CLASSIFICATION: Present evidence to user, ask for classification
 </qa_drift_analysis>
 
 **Step 3: Update STATE.md**
