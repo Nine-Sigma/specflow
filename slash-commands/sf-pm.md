@@ -2132,6 +2132,63 @@ If scope_level == 'small':
 - Skip story generation entirely
 - Route directly to dev after requirements-lock
 - Dev works from requirements-lock without story breakdown
+
+### Story Management Checkpoint
+
+<!-- All stories created upfront, reviewed/adjusted, then waves calculated -->
+
+**Load pattern from:** `.specflow-lib/expertise/context-efficiency/parallel-spawning.md`
+
+After creating ALL story files, PM presents a review checkpoint before calculating waves.
+
+**Checkpoint Format:**
+
+```
++------------------------------------------------------------------+
+|  CHECKPOINT: Story Review                                         |
++------------------------------------------------------------------+
+
+Created {N} stories in stories/ folder:
+
+| ID | Story | Dependencies | Files | Complexity |
+|----|-------|--------------|-------|------------|
+| 1-1-auth-setup | Auth setup | none | auth.ts, middleware.ts | medium |
+| 1-2-config | Config loader | none | config.ts | small |
+| 2-1-rate-limit | Rate limiter | 1-1 | rate-limit.ts, auth.ts | large |
+
+-------------------------------------------------------------------
+-> Review stories. Options:
+  - "approved" -- calculate waves and begin execution
+  - "modify 1-2: add validation logic" -- update story scope
+  - "delete 2-1" -- remove story (recalculates deps)
+  - "add: implement caching layer" -- create new story
+  - "split 2-1 into rate-limit-core, rate-limit-redis" -- break up large story
+  - "reorder: 1-2 before 1-1" -- change dependency order
+-------------------------------------------------------------------
+```
+
+**After User Response:**
+
+1. **If modifications requested:**
+   - Apply changes to story files in stories/ folder
+   - Update sprint-status.yaml with modified stories
+   - Re-display checkpoint with updated table
+
+2. **If approved:**
+   - Calculate waves based on dependencies and file overlap
+   - Present wave plan (see Wave Calculation below)
+   - Begin parallel spawning by wave
+
+**Modification Handling:**
+
+| Action | PM Response |
+|--------|-------------|
+| modify {id}: {changes} | Update story file, re-display checkpoint |
+| delete {id} | Remove file, update deps on other stories, re-display |
+| add: {desc} | Create new story file with next ID, re-display |
+| split {id} into {parts} | Create N new stories, delete original, re-display |
+| reorder: {id} before {id} | Update dependencies, re-display |
+
 </story_generation>
 
 **Post-Synthesis Routing:**
@@ -2265,6 +2322,53 @@ Present wave plan to user after generating all stories:
 4. After story completes:
    - If more stories in current wave: route to next in wave
    - If wave complete: calculate next wave, route to first story
+
+### Dev Stories Wave Parallel Spawning
+
+<!-- Wave-based parallel spawning executes independent stories concurrently -->
+
+After requirements-lock approved and stories generated, PM spawns dev stories by wave.
+
+**Load pattern from:** `.specflow-lib/expertise/context-efficiency/parallel-spawning.md`
+
+**Wave Execution Protocol:**
+
+1. **Get Wave 1 stories** from sprint-status.yaml (stories with `wave: 1`)
+2. **Spawn all Wave 1 in single message** using Task tool:
+
+```
+# Example: Wave 1 has 3 parallel-safe stories
+
+Task(
+  subagent_type="general-purpose",
+  prompt="Execute /sf:dev-story 1-1-auth-setup for feature {slug}. Read story file, implement, run tests, mark done.",
+  description="Dev story 1-1-auth-setup"
+)
+
+Task(
+  subagent_type="general-purpose",
+  prompt="Execute /sf:dev-story 1-2-config for feature {slug}. Read story file, implement, run tests, mark done.",
+  description="Dev story 1-2-config"
+)
+
+Task(
+  subagent_type="general-purpose",
+  prompt="Execute /sf:dev-story 2-1-identifier for feature {slug}. Read story file, implement, run tests, mark done.",
+  description="Dev story 2-1-identifier"
+)
+```
+
+3. **Wait for all Wave 1** to complete
+4. **Update sprint-status.yaml** with completed stories
+5. **Spawn Wave 2** stories in parallel (repeat)
+6. **Continue until all waves complete**
+
+**Conflict Detection:**
+
+Before spawning wave, validate parallel safety:
+- No file overlap between stories in same wave
+- No model/data conflicts
+- If conflict detected, move story to next wave
 
 **Parallel Safety Validation:**
 
@@ -2476,9 +2580,97 @@ qa_tickets:
     validates: [1-1-auth-setup, 1-2-login-flow, 1-3-password-reset]
 ```
 
-**Route to QA:**
+### QA Decision (TEA-Informed)
 
-After tickets added:
+<!-- Not every feature needs QA tickets - let TEA decide -->
+
+After all dev stories complete, PM reads TEA's test strategy to determine QA needs.
+
+**Load pattern from:** `.specflow-lib/expertise/context-efficiency/parallel-spawning.md`
+
+**Step 1: Read TEA test_levels**
+
+```python
+test_levels = 5-test-plan.md frontmatter.test_levels
+# Example: ["unit", "integration", "e2e"]
+# Or: ["unit"] only
+# Or: [] empty
+```
+
+**Step 2: Apply QA Decision Matrix**
+
+| test_levels | QA Action |
+|-------------|-----------|
+| `[]` empty | Skip QA -> Route to Review |
+| `["unit"]` only | Skip QA tickets (dev handles unit tests) -> Route to Review |
+| includes `integration` | Generate integration QA ticket |
+| includes `e2e` | Generate e2e QA ticket |
+| includes `uat` | Generate UAT ticket (uat-execution skill with browser-use/API) |
+| includes `security` | Generate security QA ticket |
+| includes `performance` | Generate performance QA ticket |
+| includes `accessibility` | Generate accessibility QA ticket |
+
+**UAT Ticket Details:**
+
+When `test_levels` includes `uat`:
+- Create QA ticket with type: `uat`
+- QA invokes `uat-execution` skill
+- Skill auto-detects mode: browser (UI) or API
+- Executes Gherkin scenarios from 5-test-plan.md
+- Captures evidence (screenshots for browser, responses for API)
+
+**Step 3: Route Decision**
+
+```python
+if len(test_levels) == 0 or test_levels == ["unit"]:
+    # Dev already ran unit tests, skip QA phase
+    route_to_review()
+else:
+    # Generate only the ticket types TEA recommends
+    generate_qa_tickets(test_levels)
+    spawn_qa_by_wave()
+```
+
+### QA Tickets Wave Parallel Spawning (If QA Needed)
+
+<!-- Wave-based parallel spawning executes independent QA tickets concurrently -->
+
+After all dev stories complete AND test_levels requires QA, PM spawns QA tickets by wave.
+
+**Wave Execution Protocol:**
+
+1. **Get Wave 1 QA tickets** from sprint-status.yaml (tickets with `wave: 1`)
+2. **Spawn all Wave 1 in single message** using Task tool:
+
+```
+# Example: Wave 1 has 2 parallel QA tickets
+
+Task(
+  subagent_type="general-purpose",
+  prompt="Execute /sf:qa --ticket QA-001-integration for feature {slug}. Run test suite, capture results, mark done.",
+  description="QA ticket QA-001"
+)
+
+Task(
+  subagent_type="general-purpose",
+  prompt="Execute /sf:qa --ticket QA-002-e2e for feature {slug}. Run test suite, capture results, mark done.",
+  description="QA ticket QA-002"
+)
+```
+
+3. **Wait for all Wave 1** to complete
+4. **Update sprint-status.yaml** with completed tickets
+5. **Spawn Wave 2** tickets in parallel (repeat)
+6. **Route to Review** after all QA waves complete
+
+**QA Wave Grouping:**
+
+Functional tests (unit, integration, e2e) run in Wave 1.
+Security and performance tests run in Wave 2 (after functional tests pass).
+
+**Route to QA (Legacy - Sequential):**
+
+If not using parallel spawning, route sequentially:
 ```
 Route to /sf:qa with context:
 - sprint-status.yaml location
