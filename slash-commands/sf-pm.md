@@ -2144,6 +2144,74 @@ Route to /sf:qa with context:
 ```
 </qa_ticket_generation>
 
+### Feature Completion Check
+
+After QA returns with all tickets done:
+
+<feature_completion>
+**Check Sprint Status:**
+
+```
+stories_done = all(s.status == 'done' for s in sprint.stories)
+qa_done = all(t.status == 'done' for t in sprint.qa_tickets)
+
+if stories_done and qa_done:
+  feature_complete = true
+```
+
+**Mark Feature Complete:**
+
+Update sprint-status.yaml:
+```yaml
+feature: {slug}
+status: complete  # Was: in-progress
+completed_at: {iso-timestamp}
+```
+
+Update STATE.md:
+```yaml
+status: complete
+```
+
+**Final Actions:**
+
+1. Run final code review if not done
+2. Generate completion summary
+3. Archive or deploy based on workflow
+
+**Completion Summary Format:**
+
+```markdown
+## FEATURE COMPLETE
+
+**Feature:** {slug}
+**Scope:** {scope_level}
+**Duration:** {started_at} to {completed_at}
+
+### Work Summary
+
+| Phase | Items | Completed |
+|-------|-------|-----------|
+| Analysis | {count} | {count} |
+| Stories | {count} | {count} |
+| QA | {count} | {count} |
+
+### Key Artifacts
+
+- 5-requirements-lock.md: {FR count} requirements
+- 5.5-epics.md: {epic count} epics
+- stories/: {story count} stories
+- 7-qa-output.md: {test count} tests
+
+### Decisions Made
+
+{From PROGRESS.md decision log}
+
+---
+Feature ready for deployment.
+```
+</feature_completion>
+
 ### TEA-Driven Routing (Post-Synthesis)
 
 After synthesis gate approval, PM reads TEA's `recommended_flow` to determine the execution path.
