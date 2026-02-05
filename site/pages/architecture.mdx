@@ -101,7 +101,8 @@ Each agent reads specific files and writes specific outputs:
 | Security | `1-spec.md`, `2-architecture.md` | `3-security.md` |
 | Cost | `2-architecture.md` | `4-cost.md` |
 | TEA | All prior outputs | `5-test-plan.md` |
-| Dev | All prior outputs | `6-dev-output.md` |
+| PM | All pillar outputs | `5-requirements-lock.md`, `5.5-epics.md`, `stories/*.md` |
+| Dev | Story files, prior outputs | `6-dev-output.md` |
 | QA | Test plan, dev output | `7-qa-output.md` |
 | Review | Dev output, spec, scope | `8-review-output.md` |
 
@@ -220,6 +221,44 @@ The requirements lock contains:
 - Acceptance Criteria (AC)
 - Integration Points (IP)
 
+### Stage 6.5: Epic and Story Generation (Medium+ Scope)
+
+For medium and larger features, PM generates epics and stories before development:
+
+```mermaid
+sequenceDiagram
+    PM->>PM: Read requirements-lock
+    PM->>PM: Generate epic breakdown
+    Note over PM: 5.5-epics.md
+    PM->>PM: Create story files
+    Note over PM: stories/*.md
+    PM->>PM: Update sprint-status.yaml
+    PM->>User: Approve story plan?
+```
+
+Each story includes:
+
+- BOSS-validated acceptance criteria
+- Story points estimation
+- Dependency mapping
+- Interface contracts (for stories with dependents)
+
+#### Sprint Planning
+
+After stories are approved, PM plans capacity:
+
+```
+Sprint Capacity: 20 points
+
+Selected Stories:
+1. Auth Setup (3 pts) - P1
+2. Session Management (5 pts) - P1
+3. Login Form (3 pts) - P1
+
+Total: 11 points (55% capacity)
+Buffer: 9 points for bugs/unknowns
+```
+
 ### Stage 7: Development and QA
 
 Dev implements, QA verifies:
@@ -232,6 +271,56 @@ sequenceDiagram
     PM->>QA: Route for verification
     QA->>QA: Execute tests
     QA->>PM: Return 7-qa-output.md
+```
+
+#### Wave-Based Parallel Execution (Large Features)
+
+For features with multiple stories, PM calculates execution waves based on dependencies:
+
+```mermaid
+flowchart LR
+    subgraph Wave1[Wave 1 - Parallel]
+        S1[Story 1-1]
+        S2[Story 1-2]
+        S3[Story 2-1]
+    end
+    subgraph Wave2[Wave 2]
+        S4[Story 1-3]
+    end
+    subgraph Wave3[Wave 3]
+        S5[Story 2-2]
+    end
+    subgraph Wave4[Wave 4 - Parallel]
+        S6[Story 2-3]
+        S7[Story 3-1]
+    end
+    Wave1 --> Wave2 --> Wave3 --> Wave4
+```
+
+Stories within the same wave have no dependencies and can execute in parallel. PM spawns all stories in a wave simultaneously using the Task tool.
+
+**Wave calculation rules:**
+- Stories with no dependencies start in Wave 1
+- Stories wait for their dependencies to complete
+- File overlap detection prevents conflicts
+- `parallel_safe: true` marks stories safe for concurrent execution
+
+**Example sprint-status.yaml:**
+
+```yaml
+stories:
+  - id: 1-1-redis-client
+    wave: 1
+    parallel_safe: true
+    depends_on: []
+  - id: 1-2-config
+    wave: 1
+    parallel_safe: true
+    depends_on: []
+  - id: 1-3-sliding-window
+    wave: 2
+    parallel_safe: false
+    depends_on: [1-1-redis-client]
 ```
 
 ### Stage 8: Multi-Lens Review
@@ -317,6 +406,36 @@ SpecFlow scales its process to feature complexity:
 
 Small features should not suffer enterprise process. Complex features should not skip critical analysis. SpecFlow calibrates automatically.
 
+## Tracker Integration
+
+SpecFlow syncs with external trackers to create tickets from generated stories:
+
+| Tracker | Epic Type | Story Type |
+|---------|-----------|------------|
+| GitHub | Issue + `epic` label | Issue + `story` label |
+| Jira | Epic issue type | Story issue type |
+| Linear | Project | Issue |
+
+The `/sf:scrum` command manages this integration:
+
+```
+/sf:scrum create-epic "User Authentication"
+/sf:scrum create-story --epic AUTH-1 "Login form"
+/sf:scrum sprint-board
+```
+
+Sprint boards show real-time status:
+
+```
+Current Sprint: Sprint 5
+Capacity: 20 pts | Committed: 18 pts
+
+TODO (6 pts)    IN PROGRESS (8 pts)    DONE (4 pts)
+-----------     ------------------     -----------
+[ ] Profile     [>] Login              [x] Setup
+[ ] Avatar      [>] Session            [x] Config
+```
+
 ## Skills Architecture
 
 Beyond core agents, SpecFlow supports installable skills:
@@ -336,8 +455,10 @@ SpecFlow architecture ensures:
 1. **Central orchestration**: PM controls all routing
 2. **File-based state**: Persistent, auditable, resumable
 3. **Proportional ceremony**: Scale process to scope
-4. **Multi-lens review**: Security, slop, and integration checks
-5. **Drift detection**: Catch deviations early
-6. **Extensibility**: Add skills without core changes
+4. **Wave-based parallelism**: Execute independent stories concurrently
+5. **Multi-lens review**: Security, slop, and integration checks
+6. **Drift detection**: Catch deviations early
+7. **Tracker integration**: Sync with GitHub, Jira, Linear
+8. **Extensibility**: Add skills without core changes
 
 The architecture serves one goal: ship quality software with confidence.
