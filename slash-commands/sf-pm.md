@@ -181,15 +181,147 @@ When invoked with a feature description:
    - Update frontmatter with feature slug and timestamp
    - Write `0-triage.md` with pillar analysis above
 
-3.5. **Create sprint-status.yaml** (if scope >= small):
+3.5. **Create sprint-status.yaml** (scope-based):
    <!-- WRK-01: sprint-status.yaml created after triage -->
-   - Copy template from `.specflow/templates/sprint-status.yaml`
-   - Update `feature:`, `created:`, `scope:` fields
-   - Mark items to skip based on pillar selection:
-     <!-- WRK-03: Status values: pending | in-progress | done | skipped -->
-     - If security not in pillars: set security item `status: skipped`
-     - If cost not in pillars: set cost item `status: skipped`
-   - Update `depends_on` for requirements-lock to include only active pillars
+
+   a. Read approved scope_level from 0-scope.md
+
+   b. Apply scope rules:
+      - Trivial: Skip (no sprint-status.yaml)
+      - Small: Minimal tracking (scope, spec, arch, tea, lock)
+      - Medium+: Full tracking from template
+
+   c. If creating sprint-status.yaml:
+      - Copy appropriate template or create minimal version
+      - Update `feature:`, `created:`, `scope:` fields
+      - Set pillar items to `skipped` if not in approved pillars
+      - Scope item already `done` (just approved)
+      <!-- WRK-03: Status values: pending | in-progress | done | skipped -->
+
+   d. Log decision in PROGRESS.md:
+      ```markdown
+      ## {timestamp} - PM (/sf:pm)
+
+      **Action:** Work Tracking Setup
+
+      **Feature:** {slug}
+      **Scope:** {scope_level}
+      **Tracking Level:** {none|minimal|full}
+      **Items Created:** {count} analysis items
+
+      ---
+      ```
+
+### Scope-Based Work Item Generation
+
+<!-- Requirements: WRK-07, WRK-08, WRK-09, WRK-10 -->
+
+When creating sprint-status.yaml, apply scope-based depth:
+
+<scope_tracking_rules>
+| Scope | Sprint Status | Analysis Items | Stories | QA Tickets |
+|-------|---------------|----------------|---------|------------|
+| trivial | **Skip** (no file) | - | - | - |
+| small | Minimal | scope, spec, tea only | None | None |
+| medium | Full | All analysis items | 2-5 stories | Basic (unit, e2e) |
+| large | Full | All analysis items | 5-15 stories | Full suite |
+| complex | Full | All analysis items | Many stories | Full + security |
+
+**Trivial Scope (WRK-07):**
+- DO NOT create sprint-status.yaml
+- Direct implementation without tracking
+- Use existing STATE.md for basic routing
+- Examples: typo fix, config change, single-line bug fix
+
+**Small Scope (WRK-08):**
+- Create minimal sprint-status.yaml
+- Include only: scope, spec, architecture, tea, requirements-lock
+- Skip: codebase-constraints, security, cost (unless explicitly required)
+- No stories section (direct to dev after requirements-lock)
+- No qa_tickets section (QA runs standard suite)
+
+**Medium Scope (WRK-09):**
+- Create full sprint-status.yaml
+- Include all analysis items per pillar selection
+- Generate 2-5 dev stories after requirements-lock
+- Include basic QA tickets (unit, e2e)
+
+**Large/Complex Scope (WRK-10):**
+- Create full sprint-status.yaml
+- Include all analysis items with full depth
+- Generate many dev stories (typically 5-15+)
+- Include detailed QA tickets (unit, integration, e2e, security)
+- Track parallel-safe stories for potential concurrent work
+
+**Implementation Logic:**
+
+```
+After scope approval (when PM approves 0-scope.md):
+
+1. Read approved scope_level from 0-scope.md frontmatter
+
+2. If scope_level == 'trivial':
+   - Skip sprint-status.yaml creation
+   - Log: "Trivial scope - work tracking skipped"
+   - Continue with existing STATE.md routing
+
+3. If scope_level == 'small':
+   - Create sprint-status.yaml with minimal items:
+     analysis:
+       - scope (already done)
+       - spec
+       - architecture (if required)
+       - tea
+       - requirements-lock
+   - stories: [] (empty, no story breakdown)
+   - qa_tickets: [] (empty, standard QA suite)
+
+4. If scope_level in ['medium', 'large', 'complex']:
+   - Create full sprint-status.yaml from template
+   - Include all pillars from approved scope
+   - stories: [] (populated after requirements-lock)
+   - qa_tickets: [] (populated after stories complete)
+```
+
+**Template Selection:**
+
+| Scope | Template | Location |
+|-------|----------|----------|
+| trivial | None | No file created |
+| small | sprint-status-small.yaml | `.specflow/templates/` |
+| medium+ | sprint-status.yaml | `.specflow/templates/` |
+
+When creating sprint-status.yaml:
+
+```
+if scope_level == 'trivial':
+  # No file
+  pass
+
+elif scope_level == 'small':
+  # Copy minimal template
+  copy '.specflow/templates/sprint-status-small.yaml'
+    to '.specflow/features/{slug}/sprint-status.yaml'
+  # Update fields: feature, created, updated
+  # scope item already marked done
+
+else:  # medium, large, complex
+  # Copy full template
+  copy '.specflow/templates/sprint-status.yaml'
+    to '.specflow/features/{slug}/sprint-status.yaml'
+  # Update fields: feature, created, updated, scope
+  # Mark skipped pillars as status: skipped
+```
+
+**Small Scope Story Exception:**
+
+Small scope features do NOT get story breakdown by default. However, PM may add stories if:
+- User explicitly requests story breakdown
+- Implementation reveals unexpected complexity
+- Multiple dev iterations suggest need for granular tracking
+
+In these cases, PM can manually add stories to sprint-status.yaml and treat as medium scope for tracking purposes.
+</scope_tracking_rules>
 
 4. **Update STATE.md**:
    ```
