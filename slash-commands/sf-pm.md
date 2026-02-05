@@ -40,7 +40,94 @@ On every invocation, read:
 8. `.specflow/features/{slug}/1.6-ux-design.md` - UX design output (if exists, informs architect routing)
 
 Replace {slug} with feature slug from STATE.md.
+
+7. `.specflow/features/{slug}/sprint-status.yaml` - Work item tracker (if exists)
 </required_reading>
+
+### Session Resume Protocol
+
+When PM starts with an active feature (STATE.md shows `status: in-progress`):
+
+<session_resume>
+**Step 1: Read Sprint Status**
+
+If `.specflow/features/{slug}/sprint-status.yaml` exists:
+1. Parse the file to get all work items
+2. Find resume position (first pending item with satisfied deps)
+3. Display resume status to user
+
+**Step 2: Find Resume Position**
+
+```
+function findResumePosition(sprint):
+  # Check analysis items first
+  for item in sprint.analysis:
+    if item.status == 'pending' and depsComplete(item, sprint):
+      return item
+
+  # Then stories
+  for story in sprint.stories:
+    if story.status == 'pending' and depsComplete(story, sprint):
+      return story
+
+  # Then QA tickets
+  for ticket in sprint.qa_tickets:
+    if ticket.status == 'pending' and depsComplete(ticket, sprint):
+      return ticket
+
+  return null  # All complete
+
+function depsComplete(item, sprint):
+  if not item.depends_on or len(item.depends_on) == 0:
+    return true
+
+  allItems = sprint.analysis + sprint.stories + sprint.qa_tickets
+  return all(
+    dep.status == 'done'
+    for depId in item.depends_on
+    for dep in allItems if dep.id == depId
+  )
+```
+
+**Step 3: Display Resume Status**
+
+Format:
+
+```markdown
+## RESUME STATUS
+
+**Feature:** {slug}
+**Scope:** {scope_level}
+
+### Progress
+
+| Phase | Done | Total |
+|-------|------|-------|
+| Analysis | {done_count}/{total_analysis} | {done_items} |
+| Stories | {done_count}/{total_stories} | {done_items} |
+| QA | {done_count}/{total_qa} | {done_items} |
+
+### Current Position
+
+**Next:** {next_item.id}
+**Agent:** {next_item.agent} (or /sf:dev-story {id} for stories)
+**Depends on:** {deps} (all done)
+
+Continue from this position? [Y/n]
+```
+
+**Step 4: Route to Next Item**
+
+If user confirms (or auto-continue):
+- Update sprint-status.yaml: Set next item to `status: in-progress`
+- Route to the agent or command for that item
+
+**Fallback (no sprint-status.yaml):**
+
+If sprint-status.yaml doesn't exist but STATE.md shows in-progress:
+- Use existing `last-agent`/`next-agent` fields for routing
+- Suggest: "Consider running `/sf:pm --init-sprint` to enable work tracking"
+</session_resume>
 
 ## Workflows
 
@@ -89,6 +176,14 @@ When invoked with a feature description:
    - Copy templates: PROGRESS.md, STATUS.md from `.specflow/templates/`
    - Update frontmatter with feature slug and timestamp
    - Write `0-triage.md` with pillar analysis above
+
+3.5. **Create sprint-status.yaml** (if scope >= small):
+   - Copy template from `.specflow/templates/sprint-status.yaml`
+   - Update `feature:`, `created:`, `scope:` fields
+   - Mark items to skip based on pillar selection:
+     - If security not in pillars: set security item `status: skipped`
+     - If cost not in pillars: set cost item `status: skipped`
+   - Update `depends_on` for requirements-lock to include only active pillars
 
 4. **Update STATE.md**:
    ```
@@ -769,6 +864,37 @@ After TEA completes (last pillar), PM runs synthesis gate before routing to dev.
 - If security: `3-security.md`
 - If cost: `4-cost.md`
 - Always: `5-test-plan.md`, `5-requirements-lock.md`, `6-dev-output.md`, `7-qa-output.md`
+
+### Work Item Completion
+
+When an agent completes and returns to PM:
+
+1. **Update sprint-status.yaml:**
+   - Find the work item by `agent` and `output` fields
+   - Set `status: done`
+   - Set `completed_at: {iso-timestamp}`
+   - Update `updated: {iso-timestamp}` at file level
+
+2. **Find next item:**
+   - Use findResumePosition() logic
+   - Route to next pending item with satisfied deps
+
+3. **Example completion update:**
+
+```yaml
+# Before analyst completes scope
+- id: scope
+  agent: analyst
+  output: 0-scope.md
+  status: in-progress
+
+# After analyst completes scope
+- id: scope
+  agent: analyst
+  output: 0-scope.md
+  status: done
+  completed_at: 2026-02-05T10:30:00Z
+```
 
 ### Work Type Defaults (Starting Point)
 
