@@ -58,7 +58,7 @@ changed_files:                      # Files to analyze (relative paths)
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
-| `capability_filter` | string | Yes | Capability to filter for: `review-capable` (code review skills), `report-capable` (executive reporting, health checks) |
+| `capability_filter` | string | Yes | Capability to filter for: `review-capable` (code review skills), `report-capable` (executive reporting, health checks), `security-capable` (security-focused skills) |
 | `scope` | string | Yes | Scope level: `trivial`, `small`, `medium`, `large`, `complex` |
 | `pillars` | string[] | No | Selected pillars: `security`, `testing`, `cost`, etc. (empty list if none) |
 | `changed_files` | string[] | Yes | List of file paths to analyze for trigger matching |
@@ -168,6 +168,8 @@ Read `agents.json` at project root to find registered skills.
 ```
 - `code-review-excellence`: Process (source = "skill", no underscore prefix)
 - `_disabled_skill`: Skip (underscore prefix = disabled)
+
+**Capability checking:** skill-detector checks capability in both agents.json (for performance) and SKILL.md frontmatter (for completeness). agents.json entries with capability flags enable fast filtering without reading SKILL.md files.
 
 ### Internal Expertise (source: "internal")
 
@@ -443,9 +445,27 @@ Parse returned markdown:
 - Use Detail for context in review execution
 ```
 
-### Future: PM Report Generation
+### PM Security Review Integration
 
-PM could spawn skill-detector to find report-capable skills:
+PM spawns skill-detector to find security-capable skills for on-demand security review:
+
+```markdown
+Task: skill-detector
+
+<detection_context>
+capability_filter: security-capable
+scope: {scope_from_0-scope.md}
+pillars: []
+changed_files: {files_from_dev_output}
+</detection_context>
+```
+
+Returns matched skills: app-security, database-security (if triggers match).
+PM then spawns matched skills to perform security-focused code review.
+
+### PM Report Generation
+
+PM spawns skill-detector to find report-capable skills:
 
 ```markdown
 Task: skill-detector

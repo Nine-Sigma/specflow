@@ -157,6 +157,7 @@
       "toolInstall: object - Install commands for each tool {tool: 'command'}",
       "review-capable: boolean - If true, skill can be used by sf-review",
       "report-capable: boolean - If true, skill can generate executive reports (used by PM for report triggers)",
+      "security-capable: boolean - If true, skill provides security-focused analysis (used by PM for security review)",
       "scope-minimum: string - Minimum scope level to trigger (trivial|small|medium|large|complex)"
     ],
     "invoking": [
