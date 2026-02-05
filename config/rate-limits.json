@@ -1,0 +1,20 @@
+{
+  "defaults": {
+    "limit": 100,
+    "window": 60
+  },
+  "endpoints": {
+    "/api/search": {
+      "limit": 20,
+      "window": 60
+    },
+    "/api/expensive": {
+      "limit": 5,
+      "window": 300
+    }
+  },
+  "bypass": {
+    "roles": ["admin"]
+  },
+  "trustedProxies": []
+}

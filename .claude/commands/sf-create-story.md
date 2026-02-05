@@ -1,0 +1,1 @@
+../../slash-commands/sf-create-story.md

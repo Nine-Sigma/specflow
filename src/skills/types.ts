@@ -8,9 +8,16 @@
 /**
  * Parsed skill specification from name@owner/repo syntax.
  *
+ * Formats supported:
+ *   name@owner/repo           - Standard (path: skills/{name})
+ *   name@owner/repo:path      - Custom path (path: path/{name})
+ *   name@owner/repo#ref       - With git ref
+ *   name@owner/repo:path#ref  - Custom path with ref
+ *
  * Examples:
  *   pptx@anthropics/skills -> { name: 'pptx', owner: 'anthropics', repo: 'skills', path: 'skills/pptx', ref: 'main' }
  *   my-skill@org/repo#v2.0 -> { name: 'my-skill', owner: 'org', repo: 'repo', path: 'skills/my-skill', ref: 'v2.0' }
+ *   code-review@wshobson/agents:plugins/developer-essentials/skills -> { ..., path: 'plugins/developer-essentials/skills/code-review' }
  */
 export interface SkillSpec {
   /** Skill name (e.g., "pptx") */

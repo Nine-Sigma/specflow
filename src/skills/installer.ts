@@ -13,7 +13,13 @@ import type { SkillSpec } from './types.js';
 /**
  * Parse skill specification string into structured SkillSpec.
  *
- * @param spec - Skill spec in format: name@owner/repo or name@owner/repo#ref
+ * Supports two path formats:
+ * - Standard: name@owner/repo → path: skills/{name}
+ * - Custom:   name@owner/repo:custom/path → path: custom/path/{name}
+ *
+ * Both formats support #ref suffix for git ref (branch, tag, commit).
+ *
+ * @param spec - Skill spec in format: name@owner/repo[:path][#ref]
  * @returns Parsed SkillSpec with defaults applied
  * @throws Error if spec format is invalid
  *
@@ -23,37 +29,62 @@ import type { SkillSpec } from './types.js';
  *
  * parseSkillSpec('my-skill@org/repo#v1.0')
  * // { name: 'my-skill', owner: 'org', repo: 'repo', path: 'skills/my-skill', ref: 'v1.0' }
+ *
+ * parseSkillSpec('code-review@wshobson/agents:plugins/developer-essentials/skills')
+ * // { name: 'code-review', ..., path: 'plugins/developer-essentials/skills/code-review', ref: 'main' }
  */
 export function parseSkillSpec(spec: string): SkillSpec {
-  // Format: name@owner/repo or name@owner/repo#ref
+  // Format: name@owner/repo[:path][#ref]
   const atIndex = spec.indexOf('@');
   if (atIndex === -1) {
     throw new Error(
-      `Invalid skill spec: "${spec}". Expected format: name@owner/repo or name@owner/repo#ref`
+      `Invalid skill spec: "${spec}". Expected format: name@owner/repo[:path][#ref]`
     );
   }
 
   const name = spec.slice(0, atIndex);
-  const source = spec.slice(atIndex + 1);
+  let source = spec.slice(atIndex + 1);
 
   if (!name) {
     throw new Error(`Invalid skill spec: "${spec}". Skill name is required before @`);
   }
 
-  // Parse source: owner/repo or owner/repo#ref
+  // Extract #ref first (appears at the end)
   const hashIndex = source.indexOf('#');
-  const repoPath = hashIndex === -1 ? source : source.slice(0, hashIndex);
-  const ref = hashIndex === -1 ? 'main' : source.slice(hashIndex + 1);
+  let ref = 'main';
+  if (hashIndex !== -1) {
+    ref = source.slice(hashIndex + 1);
+    source = source.slice(0, hashIndex);
+    if (ref === '') {
+      throw new Error(
+        `Invalid skill spec: "${spec}". Ref cannot be empty when # is used`
+      );
+    }
+  }
 
-  const slashIndex = repoPath.indexOf('/');
+  // Extract :path if present (custom path within repo)
+  const colonIndex = source.indexOf(':');
+  let customPath: string | null = null;
+  if (colonIndex !== -1) {
+    customPath = source.slice(colonIndex + 1);
+    source = source.slice(0, colonIndex);
+    if (customPath === '') {
+      throw new Error(
+        `Invalid skill spec: "${spec}". Path cannot be empty when : is used`
+      );
+    }
+  }
+
+  // Parse owner/repo
+  const slashIndex = source.indexOf('/');
   if (slashIndex === -1) {
     throw new Error(
       `Invalid skill spec: "${spec}". Expected owner/repo format after @`
     );
   }
 
-  const owner = repoPath.slice(0, slashIndex);
-  const repo = repoPath.slice(slashIndex + 1);
+  const owner = source.slice(0, slashIndex);
+  const repo = source.slice(slashIndex + 1);
 
   if (!owner || !repo) {
     throw new Error(
@@ -61,17 +92,15 @@ export function parseSkillSpec(spec: string): SkillSpec {
     );
   }
 
-  if (ref === '') {
-    throw new Error(
-      `Invalid skill spec: "${spec}". Ref cannot be empty when # is used`
-    );
-  }
+  // Build final path: custom path or default 'skills' directory
+  const basePath = customPath || 'skills';
+  const path = `${basePath}/${name}`;
 
   return {
     name,
     owner,
     repo,
-    path: `skills/${name}`,
+    path,
     ref,
   };
 }

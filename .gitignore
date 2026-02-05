@@ -1,5 +1,7 @@
 # SpecFlow planning docs (local only)
 .planning/
+.specflow/
+bmad_src/
 
 # TypeScript build output
 dist/

@@ -12,7 +12,7 @@ Pillars are NOT mandatory based on type - they're contextual. Start with default
 
 Add security pillar when work involves:
 - Authentication or authorization
-- User data handling (PII, passwords, tokens)
+- User data handling (PII, passwords, tokens, PHI)
 - Payment processing
 - API endpoints (especially public-facing)
 - File uploads or downloads

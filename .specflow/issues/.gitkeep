@@ -1,2 +1,1 @@
-# Marker file to ensure issues directory exists in git
-# Issue cache files are stored here during sync operations
+# Tracker sync state (runtime)

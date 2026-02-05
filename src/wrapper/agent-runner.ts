@@ -5,11 +5,13 @@ import {
   type AgentResult,
   type AgentRegistry,
 } from './agent-registry.js';
-import { invokeBmadAgent } from './bmad-agents.js';
-import { executeRalphLoop } from './ralph-executor.js';
 import { invokeSpecflowUtility } from './specflow-utils.js';
 import { invokeCustomAgent } from './custom-agents.js';
 import { invokeSkill } from '../skills/runner.js';
+
+// Note: BMAD and Ralph agents are invoked via Claude Code slash commands,
+// not via this TypeScript layer. The prompt-based orchestration in sf-*.md
+// files handles agent routing. This file only handles utility commands.
 
 // Merged registry (defaults + custom)
 let agents: AgentRegistry = { ...defaultAgents };
@@ -72,9 +74,13 @@ export async function runAgent(name: string, context: AgentContext = {}): Promis
 
   switch (agent.source) {
     case 'bmad':
-      return invokeBmadAgent(agent.invoke, context);
     case 'ralph':
-      return executeRalphLoop(agent.invoke, context);
+      // BMAD and Ralph agents are invoked via Claude Code slash commands.
+      // The sf-*.md files handle prompt-based orchestration.
+      return {
+        success: true,
+        output: `Agent "${name}" is invoked via Claude Code slash command: ${agent.invoke}\nUse the /sf-* commands for SpecFlow orchestration.`,
+      };
     case 'specflow':
       return invokeSpecflowUtility(agent.invoke, context);
     case 'custom':
