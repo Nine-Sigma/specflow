@@ -1925,6 +1925,225 @@ If scope_level == 'small':
 | small | Route to /sf:dev |
 | medium+ | Generate epics -> Create first story -> Route to /sf:dev-story |
 
+### After Story Completion
+
+When dev returns after completing a story:
+
+<story_completion_routing>
+**Step 1: Read Completion Status**
+
+Check sprint-status.yaml:
+```yaml
+stories:
+  - id: 1-1-auth-setup
+    status: done
+    completed_at: {timestamp}
+```
+
+**Step 2: Read Implementation Learnings**
+
+From PROGRESS.md, extract:
+- Implementation notes
+- Challenges encountered
+- Deviations from plan
+- Suggested adjustments for future stories
+
+**Step 3: Determine Next Action**
+
+```
+all_stories_done = all(s.status == 'done' for s in sprint.stories)
+planned_stories = count where status != 'skipped'
+completed_stories = count where status == 'done'
+
+if all_stories_done:
+  # All planned stories complete
+  Route to QA: /sf:qa
+
+elif planned_stories == completed_stories:
+  # Need to create next story
+  Create next story (informed by learnings)
+  Route to /sf:dev-story {next-id}
+
+else:
+  # More planned stories exist
+  next_story = findResumePosition(sprint)
+  Route to /sf:dev-story {next_story.id}
+```
+
+**Step 4: Create Next Story (Incremental)**
+
+When creating next story:
+1. Read 5.5-epics.md for next planned story
+2. Read previous story's Dev Notes for learnings
+3. Adjust acceptance criteria if learnings suggest changes
+4. Create story file from template
+5. Add to sprint-status.yaml
+6. Route to /sf:dev-story
+
+**Example Learning Integration:**
+
+```markdown
+# Previous Story Notes:
+"Used zod instead of regex for validation - more robust"
+
+# Next Story Adjustment:
+"AC-03: Use zod schema for form validation (consistent with 1-1 approach)"
+```
+
+</story_completion_routing>
+
+### QA Ticket Generation
+
+<!-- Requirements: WRK-23, WRK-24, WRK-25 -->
+
+After ALL dev stories complete, PM generates QA tickets:
+
+<qa_ticket_generation>
+**Trigger:**
+
+When `all(s.status == 'done' for s in sprint.stories)`:
+1. Generate QA tickets based on scope
+2. Add to sprint-status.yaml
+3. Route to /sf:qa
+
+**Scope-Based QA Tickets (WRK-24):**
+
+| Scope | QA Tickets |
+|-------|------------|
+| trivial | None (no sprint-status) |
+| small | None (standard QA suite) |
+| medium | Basic: unit, e2e |
+| large | Full: unit, integration, e2e, security |
+| complex | Full + performance, accessibility |
+
+**QA Ticket Format:**
+
+```yaml
+qa_tickets:
+  - id: qa-unit
+    type: unit
+    status: pending
+    validates: [1-1-auth-setup, 1-2-login-flow]
+    test_count: 0  # Updated after QA runs
+
+  - id: qa-integration
+    type: integration
+    status: pending
+    validates: [1-1-auth-setup, 1-2-login-flow]
+
+  - id: qa-e2e
+    type: e2e
+    status: pending
+    validates: [1-1-auth-setup, 1-2-login-flow]
+
+  - id: qa-security
+    type: security
+    status: pending
+    validates: [1-1-auth-setup, 1-2-login-flow]
+    # Only for large+ scope with security pillar
+```
+
+**Story Validation Mapping (WRK-25):**
+
+Each QA ticket MUST specify which stories it validates:
+
+```yaml
+validates: [story-id-1, story-id-2, ...]
+```
+
+This enables:
+- Coverage tracking (all stories must be validated)
+- Traceability (test failures link to stories)
+- Incremental validation (could run ticket after each story)
+
+**Generation Logic:**
+
+```
+def generate_qa_tickets(sprint, scope):
+  tickets = []
+
+  if scope in ['trivial', 'small']:
+    return []  # No explicit tickets
+
+  story_ids = [s.id for s in sprint.stories if s.status == 'done']
+
+  # Medium+ gets unit and e2e
+  tickets.append({
+    'id': 'qa-unit',
+    'type': 'unit',
+    'status': 'pending',
+    'validates': story_ids
+  })
+  tickets.append({
+    'id': 'qa-e2e',
+    'type': 'e2e',
+    'status': 'pending',
+    'validates': story_ids
+  })
+
+  # Large+ gets integration
+  if scope in ['large', 'complex']:
+    tickets.append({
+      'id': 'qa-integration',
+      'type': 'integration',
+      'status': 'pending',
+      'validates': story_ids
+    })
+
+  # Large+ with security pillar gets security tests
+  if scope in ['large', 'complex'] and 'security' in sprint.pillars:
+    tickets.append({
+      'id': 'qa-security',
+      'type': 'security',
+      'status': 'pending',
+      'validates': story_ids
+    })
+
+  # Complex gets performance/accessibility
+  if scope == 'complex':
+    tickets.append({
+      'id': 'qa-performance',
+      'type': 'performance',
+      'status': 'pending',
+      'validates': story_ids
+    })
+    tickets.append({
+      'id': 'qa-accessibility',
+      'type': 'accessibility',
+      'status': 'pending',
+      'validates': story_ids
+    })
+
+  return tickets
+```
+
+**Update Sprint Status:**
+
+After generating tickets:
+```yaml
+# Update sprint-status.yaml
+qa_tickets:
+  - id: qa-unit
+    type: unit
+    status: pending
+    validates: [1-1-auth-setup, 1-2-login-flow, 1-3-password-reset]
+  - id: qa-e2e
+    type: e2e
+    status: pending
+    validates: [1-1-auth-setup, 1-2-login-flow, 1-3-password-reset]
+```
+
+**Route to QA:**
+
+After tickets added:
+```
+Route to /sf:qa with context:
+- sprint-status.yaml location
+- First pending QA ticket
+- Total ticket count
+```
+</qa_ticket_generation>
+
 ### TEA-Driven Routing (Post-Synthesis)
 
 After synthesis gate approval, PM reads TEA's `recommended_flow` to determine the execution path.
