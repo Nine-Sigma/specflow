@@ -10,9 +10,12 @@ triggers:
     - "*.prisma"
     - "prisma/**/*"
     - "migrations/**/*"
+    - "alembic/**/*"
+    - "alembic.ini"
     - "db/**/*"
     - "database/**/*"
     - "schema/**/*"
+    - "models/**/*"
   patterns:
     - "SELECT.*FROM"
     - "INSERT.*INTO"
@@ -25,6 +28,20 @@ triggers:
     - "typeorm"
     - "knex"
     - "mongoose"
+    - "sqlalchemy"
+    - "SQLAlchemy"
+    - "from sqlalchemy"
+    - "Session\\("
+    - "sessionmaker"
+    - "create_engine"
+    - "declarative_base"
+    - "Column\\("
+    - "relationship\\("
+    - "alembic"
+    - "op\\.create_table"
+    - "op\\.drop_table"
+    - "op\\.add_column"
+    - "op\\.execute"
     - "db\\.query"
     - "connection.*string"
     - "DATABASE_URL"
@@ -38,8 +55,8 @@ Database-specific security analysis for SQL injection prevention, ORM safety, cr
 
 Use this skill for projects with:
 - Direct SQL queries (raw SQL, stored procedures)
-- ORM usage (Prisma, Sequelize, TypeORM, Knex, Mongoose)
-- Database migrations
+- ORM usage (Prisma, Sequelize, TypeORM, Knex, Mongoose, SQLAlchemy)
+- Database migrations (Prisma, Alembic, Sequelize, TypeORM)
 - Database configuration files
 - Connection string management
 

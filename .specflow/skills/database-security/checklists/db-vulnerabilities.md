@@ -47,10 +47,11 @@ ORMs provide safety but can be bypassed. Verify ORM usage follows security best 
 
 | Check | What to Look For | Severity |
 |-------|------------------|----------|
-| Raw query usage | `.raw()`, `.$queryRaw()`, `.$executeRaw()` | MAJOR |
+| Raw query usage | `.raw()`, `.$queryRaw()`, `.$executeRaw()`, `text()` | MAJOR |
 | Mass assignment | `update(req.body)` without allow-list | CRITICAL |
 | N+1 query exposure | Loop with individual queries | MAJOR |
 | Unsafe where clauses | User input in where objects | MAJOR |
+| SQLAlchemy text() without params | `text(f"...")` or string concat | CRITICAL |
 
 ### Anti-patterns
 
@@ -72,6 +73,28 @@ const users = await prisma.user.findMany();
 for (const user of users) {
   const orders = await prisma.order.findMany({ where: { userId: user.id } });
 }
+```
+
+```python
+# BAD: SQLAlchemy text() with f-string - SQL injection
+from sqlalchemy import text
+result = session.execute(text(f"SELECT * FROM users WHERE email = '{email}'"))
+
+# BAD: SQLAlchemy string concatenation
+query = "SELECT * FROM users WHERE id = " + str(user_id)
+result = session.execute(text(query))
+
+# BAD: SQLAlchemy filter with string format
+session.query(User).filter(text("email = '%s'" % email))
+
+# BAD: Mass assignment in SQLAlchemy
+user = User(**request.json)  # User could set is_admin, role, etc.
+session.add(user)
+
+# BAD: N+1 in SQLAlchemy - lazy loading in loop
+users = session.query(User).all()
+for user in users:
+    print(user.orders)  # Triggers separate query per user
 ```
 
 ### Correct Patterns
@@ -100,6 +123,33 @@ await sequelize.query('SELECT * FROM users WHERE id = $1', {
 const users = await prisma.user.findMany({
   include: { orders: true }
 });
+```
+
+```python
+# GOOD: SQLAlchemy text() with bound parameters
+from sqlalchemy import text
+result = session.execute(
+    text("SELECT * FROM users WHERE email = :email"),
+    {"email": email}
+)
+
+# GOOD: SQLAlchemy ORM query (auto-parameterized)
+user = session.query(User).filter(User.email == email).first()
+
+# GOOD: SQLAlchemy filter_by (auto-parameterized)
+user = session.query(User).filter_by(email=email).first()
+
+# GOOD: Explicit field allowlist for SQLAlchemy
+allowed_fields = {'name', 'email'}
+user_data = {k: v for k, v in request.json.items() if k in allowed_fields}
+user = User(**user_data)
+session.add(user)
+
+# GOOD: Eager loading in SQLAlchemy - joinedload
+from sqlalchemy.orm import joinedload
+users = session.query(User).options(joinedload(User.orders)).all()
+for user in users:
+    print(user.orders)  # No additional queries
 ```
 
 ## 3. Credential Management
@@ -290,7 +340,7 @@ GRANT SELECT, INSERT, UPDATE ON users TO app_user;
 
 ## 6. Migration Security
 
-Database migrations should not introduce security regressions.
+Database migrations should not introduce security regressions. Applies to all migration tools: Prisma, Alembic, Sequelize, TypeORM.
 
 | Check | What to Look For | Severity |
 |-------|------------------|----------|
@@ -298,6 +348,42 @@ Database migrations should not introduce security regressions.
 | Removing indexes | DROP INDEX on security-relevant columns | MINOR |
 | Adding nullable sensitive columns | Nullable without default | MINOR |
 | Changing column types unsafely | Reducing precision, truncation | MAJOR |
+| Alembic op.execute with user data | Raw SQL in migrations | CRITICAL |
+
+### Alembic Migration Anti-patterns
+
+```python
+# BAD: Raw SQL with string formatting in Alembic
+def upgrade():
+    op.execute(f"UPDATE users SET role = '{role}'")  # Injection risk
+
+# BAD: Dropping constraints without replacement
+def upgrade():
+    op.drop_constraint('users_email_key', 'users')  # Removes uniqueness
+
+# BAD: Removing audit columns
+def upgrade():
+    op.drop_column('users', 'created_at')
+    op.drop_column('users', 'updated_at')
+```
+
+### Alembic Migration Correct Patterns
+
+```python
+# GOOD: Static SQL in Alembic migrations (no user input)
+def upgrade():
+    op.execute("UPDATE users SET role = 'user' WHERE role IS NULL")
+
+# GOOD: Replacing constraint with new one
+def upgrade():
+    op.drop_constraint('users_email_key', 'users')
+    op.create_unique_constraint('users_email_unique', 'users', ['email'])
+
+# GOOD: Preserving audit columns
+def upgrade():
+    op.add_column('users', sa.Column('name', sa.String(255)))
+    # created_at, updated_at remain untouched
+```
 
 ### Migration Review Checklist
 
@@ -308,6 +394,7 @@ Database migrations should not introduce security regressions.
 - [ ] Audit columns preserved through migrations
 - [ ] Row-level security policies maintained
 - [ ] Foreign key constraints preserved
+- [ ] Alembic op.execute uses static SQL only (no user input)
 
 ## Quick Reference
 
@@ -329,3 +416,7 @@ Database migrations should not introduce security regressions.
 | Raw query | `\.\$?queryRaw\|\.raw\(` | MAJOR |
 | SSL disabled | `ssl.*false\|sslmode.*disable` | MAJOR |
 | No parameterization | `query\s*\(\s*[`'"].*\+` | CRITICAL |
+| SQLAlchemy text() f-string | `text\(f['"]\|text\([^)]*%` | CRITICAL |
+| SQLAlchemy string concat | `execute\(.*\+\|execute\(text\(.*\+` | CRITICAL |
+| Alembic raw SQL with vars | `op\.execute\(f['"]\|op\.execute\(.*%` | CRITICAL |
+| SQLAlchemy lazy N+1 | `\.all\(\).*for.*in.*:` | MAJOR |
