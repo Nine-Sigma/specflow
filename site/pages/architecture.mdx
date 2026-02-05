@@ -16,6 +16,7 @@ flowchart TD
     PM --> TEA[TEA]
     PM --> Dev[Dev]
     PM --> QA[QA]
+    PM --> Review[Review]
 
     Analyst --> PM
     Architect --> PM
@@ -24,6 +25,7 @@ flowchart TD
     TEA --> PM
     Dev --> PM
     QA --> PM
+    Review --> PM
 ```
 
 Every agent returns to PM after completing their work. PM reviews the output, decides what comes next, and routes accordingly. This pattern enables:
@@ -74,7 +76,9 @@ flowchart TD
     TEA --> Lock[PM: Lock]
     Lock --> Dev[Dev]
     Dev --> QA[QA]
-    QA --> Complete[Complete]
+    QA --> Review[Review]
+    Review -->|Findings| Dev
+    Review -->|Clean| Complete[Complete]
 ```
 
 ## Agent Communication
@@ -99,6 +103,7 @@ Each agent reads specific files and writes specific outputs:
 | TEA | All prior outputs | `5-test-plan.md` |
 | Dev | All prior outputs | `6-dev-output.md` |
 | QA | Test plan, dev output | `7-qa-output.md` |
+| Review | Dev output, spec, scope | `8-review-output.md` |
 
 ### State Management
 
@@ -227,8 +232,66 @@ sequenceDiagram
     PM->>QA: Route for verification
     QA->>QA: Execute tests
     QA->>PM: Return 7-qa-output.md
-    PM->>User: Feature complete
 ```
+
+### Stage 8: Multi-Lens Review
+
+After Dev and QA complete, Review runs parallel skill-based analysis:
+
+```mermaid
+sequenceDiagram
+    PM->>Review: Route for review
+    Review->>Review: Detect relevant skills
+    par Parallel Skills
+        Review->>CodeReview: Code quality
+        Review->>Security: OWASP vulnerabilities
+        Review->>Slop: AI pattern detection
+        Review->>Integration: Breaking changes
+    end
+    Review->>Review: Consolidate findings
+    alt Has findings
+        Review->>Dev: Route fixes
+        Dev->>Review: Re-verify
+    end
+    Review->>PM: Return 8-review-output.md
+```
+
+Review spawns skills based on file patterns and scope:
+
+| Scope | Skills Run |
+|-------|------------|
+| small | code-review-excellence |
+| medium | + slop-detection, integration-review |
+| large | + app-security, database-security |
+| complex | + semantic-drift, full security suite |
+
+#### Security Review
+
+For medium+ scope or when auth/payment code is detected, security skills analyze for:
+
+- OWASP Top 10 vulnerabilities
+- SQL injection, XSS, CSRF
+- Authentication and session issues
+- Secrets and credential exposure
+
+#### Slop Detection
+
+Detects common AI-generated anti-patterns:
+
+- Unnecessary abstractions
+- Over-engineered solutions
+- Redundant error handling
+- Framework reimplementations
+
+#### Fix Loop
+
+Review runs up to 3 iterations:
+
+1. **v1**: Full review, findings documented
+2. **v2**: Verify fixes, focused re-review
+3. **v3**: Final check or escalate to PM
+
+CRITICAL findings that persist after iteration 2 escalate to PM for user decision.
 
 ## Drift Detection
 
@@ -247,10 +310,10 @@ SpecFlow scales its process to feature complexity:
 | Scope | Agents Involved | Documents Produced |
 |-------|-----------------|-------------------|
 | trivial | PM, Analyst, Dev | 2-3 |
-| small | PM, Analyst, Architect, TEA, Dev, QA | 6-7 |
-| medium | All agents | 8-9 |
-| large | All agents | 10+ |
-| complex | All agents + research | 12+ |
+| small | PM, Analyst, Architect, TEA, Dev, QA, Review | 7-8 |
+| medium | All agents | 9-10 |
+| large | All agents | 11+ |
+| complex | All agents + research | 13+ |
 
 Small features should not suffer enterprise process. Complex features should not skip critical analysis. SpecFlow calibrates automatically.
 
@@ -273,7 +336,8 @@ SpecFlow architecture ensures:
 1. **Central orchestration**: PM controls all routing
 2. **File-based state**: Persistent, auditable, resumable
 3. **Proportional ceremony**: Scale process to scope
-4. **Drift detection**: Catch deviations early
-5. **Extensibility**: Add skills without core changes
+4. **Multi-lens review**: Security, slop, and integration checks
+5. **Drift detection**: Catch deviations early
+6. **Extensibility**: Add skills without core changes
 
 The architecture serves one goal: ship quality software with confidence.
