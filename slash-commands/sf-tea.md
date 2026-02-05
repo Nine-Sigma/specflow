@@ -184,7 +184,8 @@ depends_on: ["0-scope.md", "1-spec.md", "2-architecture.md", "3-security.md", "4
 status: draft
 scope_level: {from 0-scope.md}
 test_count: {actual count}
-recommended_flow: {qa-first | dev-only}
+recommended_flow: {qa-first | dev-first}
+rationale: "{1-2 sentence explanation of why this flow}"
 test_levels:
   - unit
   - integration  # if qa-first
@@ -200,16 +201,99 @@ test_directory: {detected path or "TBD"}
 
 {2-3 sentence summary of test strategy}
 
-## Flow Recommendation
+## Recommended Flow Decision
 
-**recommended_flow:** {qa-first | dev-only}
+**recommended_flow:** {qa-first | dev-first}
 
-**Determination:**
-- If test_levels includes integration/e2e/api: **qa-first** (QA writes these tests before Dev implements)
-- If test_levels is unit-only: **dev-only** (Dev does internal TDD)
-- If scope is trivial: **dev-only**
+TEA determines whether QA should write behavioral tests BEFORE Dev implements:
 
-**Rationale:** {1-2 sentences explaining the choice}
+### qa-first recommended when:
+- Feature is behavior-heavy (user flows, E2E scenarios)
+- AC describe "user can X" (observable behavior)
+- Integration tests are primary test level
+- Feature is replacing existing functionality (regression risk)
+- Scope is medium+ and has E2E test specifications
+
+### dev-first (default) recommended when:
+- Feature is implementation-heavy (algorithms, data structures)
+- AC describe internal behavior ("uses X algorithm")
+- Unit tests are primary test level
+- Greenfield feature with no existing contracts
+- Small scope with simple behavior
+
+### Decision Logic
+
+```python
+def recommend_flow(test_plan, scope, acs):
+    qa_first_signals = 0
+
+    # Check test level distribution
+    behavioral_tests = count(test_plan.e2e_tests) + count(test_plan.integration_tests) + count(test_plan.api_tests)
+    unit_tests = count(test_plan.unit_tests)
+    if behavioral_tests > unit_tests:
+        qa_first_signals += 1
+
+    # Check AC patterns
+    user_facing_acs = count_acs_matching(acs, r"user can|user sees|user receives|should display|should return")
+    if user_facing_acs > len(acs) * 0.5:
+        qa_first_signals += 1
+
+    # Check scope
+    if scope in ["medium", "large", "complex"]:
+        qa_first_signals += 1
+
+    # Check for regression risk
+    if feature.replaces_existing or feature.modifies_public_api:
+        qa_first_signals += 1
+
+    if qa_first_signals >= 2:
+        return "qa-first"
+    else:
+        return "dev-first"
+```
+
+### Rationale Generation
+
+Always include rationale explaining the decision:
+
+**qa-first rationale examples:**
+- "Feature is behavior-heavy (5 E2E specs), medium scope, user-facing ACs"
+- "Replacing existing login flow - regression tests needed before implementation"
+- "API contract tests (8) exceed unit tests (3), behavioral focus"
+
+**dev-first rationale examples:**
+- "Algorithm-focused feature, unit tests primary (12 vs 2 integration)"
+- "Greenfield utility module, no external contracts to validate"
+- "Small scope with internal implementation focus"
+
+### Output in Test Plan
+
+```yaml
+---
+recommended_flow: qa-first
+rationale: "Feature is behavior-heavy (5 E2E specs), medium scope, user-facing ACs"
+---
+
+# Test Plan
+
+...
+
+## Recommended Flow
+
+**Flow:** qa-first (write E2E tests before Dev implements)
+
+**Rationale:**
+- 5 E2E test specifications (vs 3 unit tests)
+- 80% of ACs are user-facing behaviors
+- Medium scope with integration complexity
+
+**For PM:**
+1. Route to QA TDD_MODE after requirements-lock
+2. QA writes failing E2E/integration tests
+3. Route to Dev with failing tests as contract
+4. Dev implements to make tests pass
+5. QA verifies all tests pass
+```
 
 ## Test Directory Detection
 
