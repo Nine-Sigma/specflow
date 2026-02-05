@@ -349,14 +349,14 @@ Review spawns skills based on file patterns and scope:
 
 | Scope | Skills Run |
 |-------|------------|
-| small | code-review-excellence |
+| small | code-review-excellence, app-security |
 | medium | + slop-detection, integration-review |
-| large | + app-security, database-security |
-| complex | + semantic-drift, full security suite |
+| large | + database-security |
+| complex | + semantic-drift |
 
 #### Security Review
 
-For medium+ scope or when auth/payment code is detected, security skills analyze for:
+Security skills run on every review loop, analyzing for:
 
 - OWASP Top 10 vulnerabilities
 - SQL injection, XSS, CSRF
