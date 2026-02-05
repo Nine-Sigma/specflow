@@ -1828,6 +1828,103 @@ Update STATE.md after approval:
 
 </synthesis_gate>
 
+### Story Generation Protocol
+
+<!-- Requirements: WRK-11, WRK-12, WRK-13, WRK-14, WRK-15, WRK-18 -->
+
+After user approves 5-requirements-lock.md (for scope >= medium):
+
+<story_generation>
+**Step 1: Generate Epic Breakdown (WRK-11)**
+
+Invoke `/sf:create-epics` to generate `5.5-epics.md`:
+- Reads 5-requirements-lock.md for FRs, TCs, SCs
+- Groups related requirements into epics
+- Creates FR coverage matrix
+- Outputs to `.specflow/features/{slug}/5.5-epics.md`
+
+**Step 2: Create First Story (WRK-12, WRK-18)**
+
+After epics generated, create ONLY the first story:
+- Copy template from `.specflow/templates/story.md`
+- Fill in from Epic 1, Story 1
+- Write to `.specflow/features/{slug}/stories/1-1-{slug}.md`
+- Update sprint-status.yaml to add story
+
+**Incremental Story Generation (WRK-18):**
+
+Stories are created ONE AT A TIME, not all at once:
+
+```
+After requirements-lock approved:
+  1. Generate epic breakdown (5.5-epics.md)
+  2. Create first story of first epic
+  3. Route to dev for implementation
+
+After each story completes:
+  1. PM reads learnings from dev output
+  2. PM creates NEXT story (informed by learnings)
+  3. Route to dev for implementation
+
+Repeat until all stories complete.
+```
+
+Rationale:
+- Later stories benefit from implementation learnings
+- Reduces rework from upstream assumptions
+- Allows scope adjustment based on actual velocity
+
+**Story ID Format (WRK-15):**
+
+`{epic}-{story}-{slug}`
+
+Examples:
+- `1-1-auth-setup` (Epic 1, Story 1, auth-setup feature)
+- `1-2-login-flow` (Epic 1, Story 2, login-flow feature)
+- `2-1-data-model` (Epic 2, Story 1, data-model feature)
+
+**Add Story to Sprint Status (WRK-14):**
+
+After creating each story file:
+
+```yaml
+# Add to stories section in sprint-status.yaml
+stories:
+  - id: 1-1-auth-setup
+    epic: 1
+    story: 1
+    title: "User Authentication Setup"
+    file: stories/1-1-auth-setup.md
+    status: pending
+    parallel_safe: false
+    depends_on: []
+```
+
+**Scope-Based Story Count:**
+
+| Scope | Typical Stories | Notes |
+|-------|-----------------|-------|
+| small | 0 | Direct dev, no stories |
+| medium | 2-5 | Focused feature |
+| large | 5-15 | Major feature |
+| complex | 15+ | System overhaul |
+
+**Skip for Small Scope:**
+
+If scope_level == 'small':
+- Skip story generation entirely
+- Route directly to dev after requirements-lock
+- Dev works from requirements-lock without story breakdown
+</story_generation>
+
+**Post-Synthesis Routing:**
+
+| Scope | After requirements-lock approval |
+|-------|----------------------------------|
+| trivial | N/A (no synthesis) |
+| small | Route to /sf:dev |
+| medium+ | Generate epics -> Create first story -> Route to /sf:dev-story |
+
 ### TEA-Driven Routing (Post-Synthesis)
 
 After synthesis gate approval, PM reads TEA's `recommended_flow` to determine the execution path.
