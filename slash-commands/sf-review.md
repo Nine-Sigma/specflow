@@ -32,6 +32,13 @@ If invoked with `--skills skill1,skill2`:
 
 Important: When --skills is provided, do NOT spawn skill-detector. The detection is completely bypassed.
 
+**Common security targeting:**
+- `--skills app-security` - OWASP vulnerabilities in auth, API, secrets
+- `--skills database-security` - SQL injection, ORM safety, credentials
+- `--skills app-security,database-security` - Full security suite
+
+Note: Security skills have `security-capable: true` capability. PM can discover them via skill-detector with `capability_filter: security-capable`.
+
 **Step 3: Detect Relevant Skills** (only if --skills not provided)
 
 <detection>

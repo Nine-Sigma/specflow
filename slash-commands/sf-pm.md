@@ -1234,6 +1234,29 @@ This bypasses detection and runs ONLY the specified skills.
    /sf:review --skills e2e-testing-patterns
    ```
 
+**Security Review Scenarios:**
+
+4. **On-demand security check:** PM requests security review
+   ```
+   /sf:review --skills app-security
+   ```
+
+5. **Full security suite:** Both app and database security
+   ```
+   /sf:review --skills app-security,database-security
+   ```
+
+6. **Security after hotfix:** Verify security fixes applied correctly
+   ```
+   /sf:review --skills app-security --verify-fixes
+   ```
+
+**Security skill capabilities:**
+- `app-security` - OWASP Top 10 code-level vulnerabilities (auth, injection, XSS, secrets)
+- `database-security` - SQL injection, ORM safety, credential management
+
+Note: Security skills have `security-capable: true` capability. PM can discover them via skill-detector with `capability_filter: security-capable`.
+
 **Targeted review output:**
 - Writes to next version (8-review-output-v{N+1}.md)
 - Only includes findings from specified skills
