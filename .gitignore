@@ -3,6 +3,13 @@
 .specflow/
 .specs/
 bmad_src/
+openspec/
+.codex/
+.cursor/
+.claude/
+.github/prompts/
+.github/skills/
+
 
 # TypeScript build output
 dist/
