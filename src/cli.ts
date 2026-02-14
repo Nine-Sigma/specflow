@@ -111,4 +111,15 @@ program
     }
   });
 
+// MCP server command
+program
+  .command('serve')
+  .description('Start SpecFlow MCP server')
+  .option('-p, --port <port>', 'HTTP/SSE port (default: stdio)')
+  .action(async (options) => {
+    const { startServer } = await import('./mcp/server.js');
+    const port = options.port ? parseInt(options.port, 10) : undefined;
+    await startServer({ port });
+  });
+
 program.parse();

@@ -8,7 +8,7 @@
  *   npx specflow install ./app  # Install to specific directory
  *   npx specflow uninstall      # Remove SpecFlow commands
  */
-import { copyFile, mkdir, readdir, unlink, stat, cp, readFile, writeFile } from 'fs/promises';
+import { copyFile, mkdir, readdir, unlink, stat, cp, readFile, writeFile, rm } from 'fs/promises';
 import { createInterface } from 'readline';
 import { dirname, join, resolve, normalize, isAbsolute } from 'path';
 import { fileURLToPath } from 'url';
@@ -523,12 +523,140 @@ async function injectAstGrepSection(targetDir: string): Promise<void> {
 }
 
 /**
+ * SpecFlow section delimiter for copilot-instructions.md
+ */
+const SPECFLOW_SECTION_START = '<!-- SPECFLOW:START -->';
+const SPECFLOW_SECTION_END = '<!-- SPECFLOW:END -->';
+
+const SPECFLOW_COPILOT_INSTRUCTIONS = `${SPECFLOW_SECTION_START}
+## SpecFlow
+
+This project uses SpecFlow for PM-orchestrated feature development.
+
+### MCP Server
+The SpecFlow MCP server provides context, state management, and validation tools.
+It starts automatically when agents invoke \`specflow_context\`, \`specflow_state\`, or \`specflow_validate\`.
+
+### Workflow
+Use the PM agent (\`sf-pm\`) to orchestrate features. The PM routes work to specialized agents:
+analyst, architect, security, cost, ux, tea, dev, qa, review.
+
+### Direct Agent Use
+You can also invoke agents directly (e.g., \`sf-security\`) — they will call the MCP server
+for their persona, expertise, and feature artifacts.
+${SPECFLOW_SECTION_END}`;
+
+/**
+ * Create/merge MCP config file.
+ * Adds specflow server entry, preserves existing entries.
+ */
+async function createMcpConfig(
+  targetDir: string,
+  filename: string,
+  serverKey: string,
+): Promise<void> {
+  const configPath = join(targetDir, filename); // nosemgrep: path-join-resolve-traversal
+  let config: Record<string, unknown> = {};
+
+  try {
+    const content = await readFile(configPath, 'utf8');
+    config = JSON.parse(content);
+  } catch {
+    // File doesn't exist or isn't valid JSON
+  }
+
+  const serversKey = serverKey;
+  if (!config[serversKey]) {
+    config[serversKey] = {};
+  }
+
+  const servers = config[serversKey] as Record<string, unknown>;
+  servers['specflow'] = {
+    command: 'npx',
+    args: ['specflow', 'serve'],
+  };
+
+  // Ensure directory exists
+  const dir = dirname(configPath);
+  await mkdir(dir, { recursive: true });
+
+  await writeFile(configPath, JSON.stringify(config, null, 2) + '\n');
+}
+
+/**
+ * Generate agent prompt files for a platform.
+ */
+async function generateAgentPrompts(
+  targetDir: string,
+  platform: 'claude' | 'copilot',
+): Promise<number> {
+  const { generateClaudeCodePM, generateCopilotPM, generateClaudeCodeAgent, generateCopilotAgent, AGENT_NAMES } =
+    await import('./mcp/prompts.js');
+
+  const dir = platform === 'claude'
+    ? join(targetDir, '.claude', 'commands') // nosemgrep: path-join-resolve-traversal
+    : join(targetDir, '.github', 'agents'); // nosemgrep: path-join-resolve-traversal
+
+  await mkdir(dir, { recursive: true });
+
+  // Generate PM prompt
+  const pmContent = platform === 'claude' ? generateClaudeCodePM() : generateCopilotPM();
+  await writeFile(join(dir, 'sf-pm.md'), pmContent); // nosemgrep: path-join-resolve-traversal
+
+  // Generate thin agent prompts
+  for (const agent of AGENT_NAMES) {
+    const content = platform === 'claude'
+      ? generateClaudeCodeAgent(agent)
+      : generateCopilotAgent(agent);
+    await writeFile(join(dir, `sf-${agent}.md`), content); // nosemgrep: path-join-resolve-traversal
+  }
+
+  return AGENT_NAMES.length + 1; // +1 for PM
+}
+
+/**
+ * Create/update copilot-instructions.md with SpecFlow section.
+ */
+async function updateCopilotInstructions(targetDir: string): Promise<void> {
+  const filePath = join(targetDir, '.github', 'copilot-instructions.md');
+  await mkdir(join(targetDir, '.github'), { recursive: true });
+
+  let content = '';
+  try {
+    content = await readFile(filePath, 'utf8');
+  } catch {
+    // File doesn't exist
+  }
+
+  // Check for existing SpecFlow section
+  const startIdx = content.indexOf(SPECFLOW_SECTION_START);
+  const endIdx = content.indexOf(SPECFLOW_SECTION_END);
+
+  if (startIdx !== -1 && endIdx !== -1) {
+    // Replace existing section
+    content = content.slice(0, startIdx) + SPECFLOW_COPILOT_INSTRUCTIONS + content.slice(endIdx + SPECFLOW_SECTION_END.length);
+  } else {
+    // Append new section
+    if (content.length > 0 && !content.endsWith('\n')) {
+      content += '\n';
+    }
+    content += '\n' + SPECFLOW_COPILOT_INSTRUCTIONS + '\n';
+  }
+
+  await writeFile(filePath, content);
+}
+
+/**
  * Initialize SpecFlow in a project directory.
  *
  * Creates:
  * - .specflow/ (runtime workspace - created programmatically)
  * - .specflow-lib/ (methodology library - copied from package)
  * - .claude/commands/ (slash commands - copied from package)
+ * - .mcp.json (Claude Code MCP config)
+ * - .vscode/mcp.json (Copilot MCP config)
+ * - .github/agents/ (Copilot agent files)
+ * - .github/copilot-instructions.md
  *
  * @param targetDir - Directory to initialize (defaults to cwd)
  * @param options - { force: boolean } to skip confirmation prompt
@@ -699,14 +827,41 @@ export async function init(
     await injectAstGrepSection(safeTargetDir);
   }
 
-  // 9. Display summary
+  // 9. Generate MCP configs
+  console.log('');
+  console.log(pc.bold('Setting up MCP server:\n'));
+
+  await createMcpConfig(safeTargetDir, '.mcp.json', 'mcpServers');
+  console.log(`  ${pc.green('+')} .mcp.json (Claude Code)`);
+
+  await createMcpConfig(safeTargetDir, join('.vscode', 'mcp.json'), 'servers');
+  console.log(`  ${pc.green('+')} .vscode/mcp.json (Copilot)`);
+
+  // 10. Generate agent prompts for both platforms
+  console.log('');
+  console.log(pc.bold('Generating agent prompts:\n'));
+
+  const claudeCount = await generateAgentPrompts(safeTargetDir, 'claude');
+  console.log(`  ${pc.green('+')} .claude/commands/sf-*.md (${claudeCount} files)`);
+
+  const copilotCount = await generateAgentPrompts(safeTargetDir, 'copilot');
+  console.log(`  ${pc.green('+')} .github/agents/sf-*.md (${copilotCount} files)`);
+
+  // 11. Update copilot-instructions.md
+  await updateCopilotInstructions(safeTargetDir);
+  console.log(`  ${pc.green('+')} .github/copilot-instructions.md`);
+
+  // 12. Display summary
   console.log('');
   console.log(pc.bold(pc.green('SpecFlow initialized successfully!\n')));
 
   console.log(pc.bold('Created:'));
   console.log(`  ${pc.cyan('.specflow/')}           ${pc.dim('Runtime workspace')}`);
   console.log(`  ${pc.cyan('.specflow-lib/')}       ${pc.dim('Methodology library')}`);
-  console.log(`  ${pc.cyan('.claude/commands/')}    ${pc.dim('Slash commands')}`);
+  console.log(`  ${pc.cyan('.claude/commands/')}    ${pc.dim('Slash commands + MCP agents')}`);
+  console.log(`  ${pc.cyan('.github/agents/')}      ${pc.dim('Copilot agents')}`);
+  console.log(`  ${pc.cyan('.mcp.json')}            ${pc.dim('Claude Code MCP config')}`);
+  console.log(`  ${pc.cyan('.vscode/mcp.json')}     ${pc.dim('Copilot MCP config')}`);
   if (templateAgents) {
     console.log(`  ${pc.cyan('agents.json')}          ${pc.dim('Agent registry (with bundled skills)')}`);
   }
@@ -862,6 +1017,7 @@ function showHelp(): void {
   console.log(`  ${pc.green('install')}     Copy /sf:* commands only (use init for full setup)`);
   console.log(`  ${pc.red('uninstall')}   Remove /sf:* commands from .claude/commands/`);
   console.log(`  ${pc.blue('link')}        Symlink commands for development`);
+  console.log(`  ${pc.cyan('serve')}       Start MCP context engine (stdio or --port <n>)`);
   console.log('');
   console.log('Options:');
   console.log(`  ${pc.dim('-f, --force')}            Skip confirmation prompts`);
@@ -893,6 +1049,14 @@ switch (command) {
   case 'link':
     link(targetDir);
     break;
+  case 'serve': {
+    const portIndex = process.argv.indexOf('--port');
+    const port = portIndex !== -1 ? parseInt(process.argv[portIndex + 1], 10) : undefined;
+    import('./mcp/server.js').then(({ startServer }) => {
+      startServer({ port });
+    });
+    break;
+  }
   case '--help':
   case '-h':
     showHelp();

@@ -1,0 +1,180 @@
+import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
+import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
+import { SSEServerTransport } from '@modelcontextprotocol/sdk/server/sse.js';
+import { z } from 'zod';
+import { resolveProjectRoot } from './root.js';
+import { assembleContext } from './context.js';
+import { handleState } from './state.js';
+import { validateArtifact } from './validate.js';
+import { VALID_PHASES } from './types.js';
+
+/**
+ * Start the SpecFlow MCP server.
+ * stdio transport by default; --port enables HTTP/SSE.
+ */
+export async function startServer(options: { port?: number } = {}): Promise<McpServer> {
+  const server = new McpServer(
+    {
+      name: 'specflow',
+      version: '1.0.0',
+    },
+    {
+      capabilities: {
+        tools: {},
+      },
+    },
+  );
+
+  // Resolve project root once at startup
+  let projectRoot: string | null = null;
+
+  async function getProjectRoot(): Promise<string> {
+    if (!projectRoot) {
+      projectRoot = await resolveProjectRoot();
+    }
+    if (!projectRoot) {
+      throw new Error('No SpecFlow project found. Run `npx specflow init` to initialize.');
+    }
+    return projectRoot;
+  }
+
+  // Helper to get active feature from state
+  async function getActiveFeature(root: string): Promise<string | null> {
+    const state = await handleState('read', undefined, root);
+    return (state.feature as string) || null;
+  }
+
+  async function getScope(root: string): Promise<string | null> {
+    const state = await handleState('read', undefined, root);
+    return (state.scope as string) || null;
+  }
+
+  // --- Tool: specflow_context ---
+  server.tool(
+    'specflow_context',
+    'Get scoped context (persona, expertise, artifacts) for a workflow phase',
+    {
+      phase: z.string().describe(`Workflow phase name (${[...VALID_PHASES].join(', ')})`),
+    },
+    async ({ phase }) => {
+      const root = await getProjectRoot();
+      const activeFeature = await getActiveFeature(root);
+      const scope = await getScope(root);
+      const result = await assembleContext(phase, root, activeFeature, scope);
+
+      if ('error' in result) {
+        return {
+          content: [{ type: 'text' as const, text: JSON.stringify(result) }],
+          isError: true,
+        };
+      }
+
+      return {
+        content: [{ type: 'text' as const, text: JSON.stringify(result) }],
+      };
+    },
+  );
+
+  // --- Tool: specflow_state ---
+  server.tool(
+    'specflow_state',
+    'Read/write workflow state and sprint-status',
+    {
+      action: z.enum(['read', 'start', 'update', 'complete', 'resume', 'stories', 'waves', 'next-wave'])
+        .describe('State action to perform'),
+      data: z.record(z.unknown()).optional()
+        .describe('Data payload for the action (required for start, update, complete, stories)'),
+    },
+    async ({ action, data }) => {
+      const root = await getProjectRoot();
+      const result = await handleState(action, data, root);
+
+      if ('error' in result && result.error) {
+        return {
+          content: [{ type: 'text' as const, text: JSON.stringify(result) }],
+          isError: true,
+        };
+      }
+
+      return {
+        content: [{ type: 'text' as const, text: JSON.stringify(result) }],
+      };
+    },
+  );
+
+  // --- Tool: specflow_validate ---
+  server.tool(
+    'specflow_validate',
+    'Validate phase output artifact (existence, quality, requirement coverage)',
+    {
+      phase: z.string().describe(`Workflow phase to validate`),
+    },
+    async ({ phase }) => {
+      const root = await getProjectRoot();
+      const activeFeature = await getActiveFeature(root);
+      const result = await validateArtifact(phase, root, activeFeature);
+
+      if ('error' in result) {
+        return {
+          content: [{ type: 'text' as const, text: JSON.stringify(result) }],
+          isError: true,
+        };
+      }
+
+      return {
+        content: [{ type: 'text' as const, text: JSON.stringify(result) }],
+      };
+    },
+  );
+
+  // Start transport
+  if (options.port) {
+    // HTTP/SSE transport
+    const http = await import('http');
+    const httpServer = http.createServer();
+
+    const transports = new Map<string, SSEServerTransport>();
+
+    httpServer.on('request', async (req, res) => {
+      const url = new URL(req.url || '/', `http://localhost:${options.port}`);
+
+      if (url.pathname === '/sse') {
+        const transport = new SSEServerTransport('/messages', res);
+        transports.set(transport.sessionId, transport);
+        await server.connect(transport);
+      } else if (url.pathname === '/messages') {
+        const sessionId = url.searchParams.get('sessionId');
+        const transport = sessionId ? transports.get(sessionId) : undefined;
+        if (transport) {
+          await transport.handlePostMessage(req, res);
+        } else {
+          res.writeHead(400);
+          res.end('Invalid session');
+        }
+      } else {
+        res.writeHead(404);
+        res.end('Not found');
+      }
+    });
+
+    await new Promise<void>((resolve, reject) => {
+      httpServer.on('error', (err: NodeJS.ErrnoException) => {
+        if (err.code === 'EADDRINUSE') {
+          console.error(`Error: Port ${options.port} is already in use`);
+          process.exit(1);
+        }
+        reject(err);
+      });
+      httpServer.listen(options.port, () => {
+        console.error(`SpecFlow MCP server listening on port ${options.port}`);
+        resolve();
+      });
+    });
+  } else {
+    // stdio transport (default)
+    const transport = new StdioServerTransport();
+    await server.connect(transport);
+  }
+
+  return server;
+}
