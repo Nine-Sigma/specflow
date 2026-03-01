@@ -28,8 +28,6 @@ describe('Agent Runner Integration', () => {
       expect(agents).toContain('create-story');
       expect(agents).toContain('dev-story');
       expect(agents).toContain('code-review');
-      // Ralph
-      expect(agents).toContain('implement');
       // SpecFlow utilities
       expect(agents).toContain('issue');
       expect(agents).toContain('pr');
@@ -60,46 +58,40 @@ describe('Agent Runner Integration', () => {
       expect(agent?.invoke).toBe('/cloud-cost');
     });
 
-    it('returns agent definition for Ralph', () => {
-      const agent = getAgent('implement');
-      expect(agent).toBeDefined();
-      expect(agent?.source).toBe('ralph');
-    });
-
     it('returns undefined for unknown agent', () => {
       expect(getAgent('nonexistent')).toBeUndefined();
     });
   });
 
   describe('runAgent', () => {
-    it('handles BMAD agent', async () => {
+    it('handles BMAD agent via slash command delegation', async () => {
       const result = await runAgent('analyst', {});
       expect(result.success).toBe(true);
-      expect(result.output).toContain('BMAD agent');
+      expect(result.output).toContain('invoked via Claude Code slash command');
       expect(result.output).toContain('/analyst');
     });
 
     it('handles security agent (BMAD cloud-security)', async () => {
       const result = await runAgent('security', {});
       expect(result.success).toBe(true);
-      expect(result.output).toContain('BMAD agent');
+      expect(result.output).toContain('invoked via Claude Code slash command');
       expect(result.output).toContain('/cloud-security');
     });
 
     it('handles cost agent (BMAD cloud-cost)', async () => {
       const result = await runAgent('cost', {});
       expect(result.success).toBe(true);
-      expect(result.output).toContain('BMAD agent');
+      expect(result.output).toContain('invoked via Claude Code slash command');
       expect(result.output).toContain('/cloud-cost');
     });
 
-    it('injects SpecFlow context when provided', async () => {
+    it('delegates BMAD agents without processing specflowContext', async () => {
+      // BMAD agents are invoked via slash commands, context is handled by sf-*.md wrappers
       const result = await runAgent('security', {
         specflowContext: 'Output STRIDE table in SpecFlow format',
       });
       expect(result.success).toBe(true);
-      expect(result.output).toContain('SpecFlow Context');
-      expect(result.output).toContain('Output STRIDE table in SpecFlow format');
+      expect(result.output).toContain('invoked via Claude Code slash command');
     });
 
     it('returns error for unknown agent', async () => {
@@ -109,25 +101,5 @@ describe('Agent Runner Integration', () => {
       expect(result.error).toContain('nonexistent');
     });
 
-    it('handles Ralph agent with missing script gracefully', async () => {
-      // Test with a cwd that doesn't have ralph/ralph.sh
-      const result = await runAgent('implement', {
-        cwd: '/tmp',
-        options: { maxIterations: 1 },
-      });
-      // Should fail gracefully when script not found
-      expect(result.success).toBe(false);
-      expect(result.error).toContain('Ralph script not found');
-    });
-
-    it('handles Ralph agent when script exists', async () => {
-      // When running from project root, ralph/ralph.sh exists
-      const result = await runAgent('implement', {
-        options: { maxIterations: 1 },
-      });
-      // Script runs and exits with setup message
-      expect(result.success).toBe(true);
-      expect(result.output).toContain('Ralph');
-    });
   });
 });

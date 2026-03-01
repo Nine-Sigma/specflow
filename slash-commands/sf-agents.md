@@ -13,7 +13,6 @@ Show all available SpecFlow agents.
 | Source | Description | Examples |
 |--------|-------------|----------|
 | bmad | BMAD method agents | analyst, pm, architect, dev, qa |
-| ralph | TDD implementation loop | implement |
 | specflow | SpecFlow pillar agents | security, cost |
 | custom | User-defined agents | From agents.json |
 
@@ -30,7 +29,6 @@ Show all available SpecFlow agents.
 | tea | bmad | Test architect |
 | security | specflow | Security analysis (Jordan) |
 | cost | specflow | Cost estimation (Taylor) |
-| implement | ralph | TDD loop |
 
 ### Full Planning Path Agents
 | Agent | Source | Purpose |

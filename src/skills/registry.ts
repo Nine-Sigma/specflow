@@ -130,7 +130,7 @@ export async function registerSkill(skillDir: string): Promise<string> {
   // Load agents.json
   const agentsJson = await loadAgentsJson();
 
-  // Check for name collision with default agents (bmad, ralph, specflow)
+  // Check for name collision with default agents (bmad, specflow)
   const defaultAgent = defaultAgents[skillName];
   if (defaultAgent) {
     throw new Error(

@@ -2,11 +2,10 @@ import { z } from 'zod';
 
 // Agent source types
 // - bmad: BMAD method agents (via slash commands)
-// - ralph: Ralph TDD loop (via ralph.sh)
-// - specflow: SpecFlow utilities (tracker operations)
+//- specflow: SpecFlow utilities (tracker operations)
 // - custom: User-defined agents (npx or local prompts)
 // - skill: External skills (SKILL.md entry point)
-export const AgentSourceSchema = z.enum(['bmad', 'ralph', 'specflow', 'custom', 'skill']);
+export const AgentSourceSchema = z.enum(['bmad', 'specflow', 'custom', 'skill']);
 export type AgentSource = z.infer<typeof AgentSourceSchema>;
 
 // Agent definition
@@ -69,9 +68,6 @@ export const defaultAgents: AgentRegistry = {
   'create-story': { source: 'bmad', invoke: '/create-story', description: 'Create story details' },
   'dev-story': { source: 'bmad', invoke: '/dev-story', description: 'Develop a story' },
   'code-review': { source: 'bmad', invoke: '/code-review', description: 'Review code changes' },
-
-  // Ralph
-  implement: { source: 'ralph', invoke: 'ralph/ralph.sh', description: 'TDD implementation loop' },
 
   // Tracker Operations (SpecFlow utilities)
   issue: { source: 'specflow', invoke: 'src/trackers/index.ts', description: 'GitHub issue management' },

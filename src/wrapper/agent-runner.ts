@@ -9,7 +9,7 @@ import { invokeSpecflowUtility } from './specflow-utils.js';
 import { invokeCustomAgent } from './custom-agents.js';
 import { invokeSkill } from '../skills/runner.js';
 
-// Note: BMAD and Ralph agents are invoked via Claude Code slash commands,
+// Note: BMAD agents are invoked via Claude Code slash commands,
 // not via this TypeScript layer. The prompt-based orchestration in sf-*.md
 // files handles agent routing. This file only handles utility commands.
 
@@ -63,8 +63,7 @@ export async function runAgent(name: string, context: AgentContext = {}): Promis
 
   const sourceColors: Record<string, (s: string) => string> = {
     bmad: pc.blue,
-    ralph: pc.magenta,
-    specflow: pc.cyan,
+specflow: pc.cyan,
     custom: pc.yellow,
     skill: pc.green,
   };
@@ -74,8 +73,7 @@ export async function runAgent(name: string, context: AgentContext = {}): Promis
 
   switch (agent.source) {
     case 'bmad':
-    case 'ralph':
-      // BMAD and Ralph agents are invoked via Claude Code slash commands.
+      // BMAD agents are invoked via Claude Code slash commands.
       // The sf-*.md files handle prompt-based orchestration.
       return {
         success: true,
