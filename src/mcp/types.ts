@@ -114,6 +114,79 @@ export const PHASE_OUTPUT_MAP: Record<string, string> = {
   complete: '',
 };
 
+/**
+ * Phase-to-methodology mapping.
+ * Lists methodology file paths (relative to .specflow-lib/methodology/) for phases
+ * that need domain framework files (separate from agent expertise).
+ */
+export const PHASE_METHODOLOGY_MAP: Record<string, string[]> = {
+  security: ['stride-framework.md'],
+  cost: ['cost-methodology.md'],
+  ux: [
+    'ux-accessibility.md',
+    'ux-component-strategy.md',
+    'ux-consistency-patterns.md',
+    'ux-core-experience.md',
+    'ux-design-systems.md',
+    'ux-discovery.md',
+    'ux-emotional-design.md',
+    'ux-user-journeys.md',
+    'ux-visual-foundation.md',
+  ],
+  brainstorm: ['brainstorming-techniques.md'],
+};
+
+/**
+ * Phase-to-skill-capability mapping.
+ * Maps workflow phases to the capability flags used to discover matching skills.
+ */
+export const PHASE_SKILL_CAPABILITIES: Record<string, string[]> = {
+  review: ['review-capable'],
+  security: ['security-capable'],
+};
+
+/** Scope ordering for scope comparison */
+export const SCOPE_ORDER = ['trivial', 'small', 'medium', 'large', 'complex'] as const;
+
+/** Maximum total skills payload size (chars) */
+export const SKILLS_TOTAL_CAP = 50_000;
+
+/**
+ * UX methodology files loaded per scope tier.
+ * Matches SpecFlow's proportional ceremony model.
+ */
+export const UX_SCOPE_TIERS: Record<string, string[]> = {
+  small: ['ux-core-experience.md', 'ux-visual-foundation.md'],
+  medium: [
+    'ux-core-experience.md',
+    'ux-visual-foundation.md',
+    'ux-user-journeys.md',
+    'ux-component-strategy.md',
+  ],
+  large: [
+    'ux-accessibility.md',
+    'ux-component-strategy.md',
+    'ux-consistency-patterns.md',
+    'ux-core-experience.md',
+    'ux-design-systems.md',
+    'ux-discovery.md',
+    'ux-emotional-design.md',
+    'ux-user-journeys.md',
+    'ux-visual-foundation.md',
+  ],
+  complex: [
+    'ux-accessibility.md',
+    'ux-component-strategy.md',
+    'ux-consistency-patterns.md',
+    'ux-core-experience.md',
+    'ux-design-systems.md',
+    'ux-discovery.md',
+    'ux-emotional-design.md',
+    'ux-user-journeys.md',
+    'ux-visual-foundation.md',
+  ],
+};
+
 /** Phases that should run requirement-ID coverage checks */
 export const REQUIREMENT_COVERAGE_PHASES = new Set([
   'dev-story',
@@ -163,6 +236,8 @@ export interface WorkflowState {
 export interface ContextResponse {
   persona: string;
   expertise: string[];
+  methodology: string[];
+  skills: Array<{ name: string; content: string }>;
   artifacts: Record<string, string>;
   output_path: string;
   scope: string | null;

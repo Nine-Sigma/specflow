@@ -18,6 +18,7 @@ export const AGENT_NAMES = [
   'dev-story',
   'qa',
   'review',
+  'brainstorm',
 ] as const;
 
 /** Phase names corresponding to each agent */
@@ -32,6 +33,7 @@ const AGENT_PHASE_MAP: Record<string, string> = {
   'dev-story': 'dev-story',
   qa: 'qa-verify',
   review: 'review',
+  brainstorm: 'brainstorm',
 };
 
 /** MCP tools available to agents */

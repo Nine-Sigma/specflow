@@ -25,12 +25,14 @@
     "code-review-excellence": {
       "source": "skill",
       "invoke": "/Users/deanb/dev/ai/specflow/.specflow/skills/code-review-excellence",
-      "description": "Master effective code review practices to provide constructive feedback, catch bugs early, and foster knowledge sharing while maintaining team morale. Use when reviewing pull requests, establishing review standards, or mentoring developers."
+      "description": "Master effective code review practices to provide constructive feedback, catch bugs early, and foster knowledge sharing while maintaining team morale. Use when reviewing pull requests, establishing review standards, or mentoring developers.",
+      "review-capable": true
     },
     "e2e-testing-patterns": {
       "source": "skill",
       "invoke": "/Users/deanb/dev/ai/specflow/.specflow/skills/e2e-testing-patterns",
-      "description": "Master end-to-end testing with Playwright and Cypress to build reliable test suites that catch bugs, improve confidence, and enable fast deployment. Use when implementing E2E tests, debugging flaky tests, or establishing testing standards."
+      "description": "Master end-to-end testing with Playwright and Cypress to build reliable test suites that catch bugs, improve confidence, and enable fast deployment. Use when implementing E2E tests, debugging flaky tests, or establishing testing standards.",
+      "review-capable": true
     },
     "sql-optimization-patterns": {
       "source": "skill",
@@ -50,7 +52,8 @@
     "integration-review": {
       "source": "skill",
       "invoke": ".specflow/skills/integration-review",
-      "description": "Detect breaking changes, circular imports, and integration issues in modified code. Use when reviewing PRs that modify exported functions, types, or module boundaries."
+      "description": "Detect breaking changes, circular imports, and integration issues in modified code. Use when reviewing PRs that modify exported functions, types, or module boundaries.",
+      "review-capable": true
     },
     "test-execution": {
       "source": "skill",

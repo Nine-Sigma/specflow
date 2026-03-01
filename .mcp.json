@@ -10,6 +10,10 @@
       "env": {
         "GITHUB_PERSONAL_ACCESS_TOKEN": ""
       }
+    },
+    "axon": {
+      "command": "axon",
+      "args": ["serve", "--watch"]
     }
   }
 }

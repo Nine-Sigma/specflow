@@ -9,6 +9,10 @@ SpecFlow is a **PM-orchestrated, BMAD-powered** AI development methodology. The 
 User → PM (orchestrator) → Agents (automated) → PM (review) → User (big decisions only)
 ```
 
+---
+Always use Axon MCP for impact analysis, finding dead code, symbol context, and code navigation instead of searching for files manually. This will ensure you are working with the most up-to-date code and dependencies.
+---
+
 ## Key Concepts
 
 ### PM as Brain

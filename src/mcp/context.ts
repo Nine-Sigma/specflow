@@ -1,12 +1,17 @@
 import { readFile, readdir, stat } from 'fs/promises';
-import { join } from 'path';
+import { join, isAbsolute } from 'path';
 import {
   PHASE_PERSONA_MAP,
   PHASE_EXPERTISE_MAP,
+  PHASE_METHODOLOGY_MAP,
   PHASE_ARTIFACTS_MAP,
   PHASE_OUTPUT_MAP,
+  PHASE_SKILL_CAPABILITIES,
   VALID_PHASES,
   ARTIFACT_TRUNCATION_THRESHOLD,
+  SKILLS_TOTAL_CAP,
+  SCOPE_ORDER,
+  UX_SCOPE_TIERS,
   sanitizeSlug,
   type ContextResponse,
 } from './types.js';
@@ -65,6 +70,22 @@ export async function assembleContext(
     }
   }
 
+  // Load methodology
+  const methodology: string[] = [];
+  const methodologyFiles = getMethodologyFiles(phase, scope);
+  for (const file of methodologyFiles) {
+    const fullPath = join(projectRoot, '.specflow-lib', 'methodology', file); // nosemgrep: path-join-resolve-traversal
+    const content = await loadFileContent(fullPath);
+    if (content) {
+      methodology.push(content);
+    } else {
+      warnings.push({
+        type: 'methodology_missing',
+        message: `Methodology file "${file}" not found at ${fullPath}`,
+      });
+    }
+  }
+
   // Load artifacts
   const artifactNames = PHASE_ARTIFACTS_MAP[phase] || [];
   const artifacts: Record<string, string> = {};
@@ -86,6 +107,46 @@ export async function assembleContext(
     }
   }
 
+  // Load skills
+  const agents = await loadAgentsJson(projectRoot);
+  const matchedSkills = discoverPhaseSkills(agents, phase, scope);
+  const skills: Array<{ name: string; content: string }> = [];
+  let totalSkillSize = 0;
+
+  for (const [name, entry] of matchedSkills) {
+    if (totalSkillSize >= SKILLS_TOTAL_CAP) {
+      warnings.push({
+        type: 'skills_cap_reached',
+        message: `Skills total cap (${SKILLS_TOTAL_CAP} chars) reached, skipping remaining skills`,
+      });
+      break;
+    }
+
+    const invokePath = entry.invoke as string;
+    const content = await loadSkillContent(invokePath, projectRoot);
+    if (content === null) {
+      warnings.push({
+        type: 'skill_missing',
+        message: `SKILL.md not found for skill "${name}" at ${invokePath}`,
+      });
+      continue;
+    }
+
+    let skillContent = content;
+    if (skillContent.length > ARTIFACT_TRUNCATION_THRESHOLD) {
+      skillContent = skillContent.slice(0, ARTIFACT_TRUNCATION_THRESHOLD);
+      truncated = true;
+    }
+
+    if (totalSkillSize + skillContent.length > SKILLS_TOTAL_CAP) {
+      skillContent = skillContent.slice(0, SKILLS_TOTAL_CAP - totalSkillSize);
+      truncated = true;
+    }
+
+    totalSkillSize += skillContent.length;
+    skills.push({ name, content: skillContent });
+  }
+
   // Resolve output path
   const outputFile = PHASE_OUTPUT_MAP[phase] || '';
   const output_path = outputFile
@@ -95,6 +156,8 @@ export async function assembleContext(
   const response: ContextResponse = {
     persona: persona || '',
     expertise,
+    methodology,
+    skills,
     artifacts,
     output_path,
     scope,
@@ -155,4 +218,106 @@ async function loadDirectoryMarkdown(dirPath: string): Promise<string[]> {
   } catch {
     return [];
   }
+}
+
+/**
+ * Determine which methodology files to load for a phase,
+ * applying scope-gated UX tiers when applicable.
+ */
+export function getMethodologyFiles(phase: string, scope: string | null): string[] {
+  const files = PHASE_METHODOLOGY_MAP[phase];
+  if (!files) return [];
+
+  // UX phase uses scope-gated tiers
+  if (phase === 'ux') {
+    if (scope && scope in UX_SCOPE_TIERS) {
+      return UX_SCOPE_TIERS[scope];
+    }
+    // null scope or trivial → load all (safe default)
+    return files;
+  }
+
+  return files;
+}
+
+/**
+ * Load and parse agents.json from the project root.
+ * Returns the agents object, or an empty object if file is missing.
+ */
+export async function loadAgentsJson(
+  projectRoot: string,
+): Promise<Record<string, Record<string, unknown>>> {
+  try {
+    const content = await readFile(join(projectRoot, 'agents.json'), 'utf8'); // nosemgrep: path-join-resolve-traversal
+    const parsed = JSON.parse(content);
+    return (parsed.agents as Record<string, Record<string, unknown>>) || {};
+  } catch {
+    return {};
+  }
+}
+
+/**
+ * Discover skills that match a phase's capability requirements.
+ * Filters agents.json entries by: source === "skill", not underscore-prefixed,
+ * matching capability flag, and scope meets minimum.
+ */
+export function discoverPhaseSkills(
+  agents: Record<string, Record<string, unknown>>,
+  phase: string,
+  scope: string | null,
+): Array<[string, Record<string, unknown>]> {
+  const requiredCaps = PHASE_SKILL_CAPABILITIES[phase];
+  if (!requiredCaps || requiredCaps.length === 0) return [];
+
+  const scopeIndex = scope ? SCOPE_ORDER.indexOf(scope as typeof SCOPE_ORDER[number]) : -1;
+
+  return Object.entries(agents).filter(([name, entry]) => {
+    // Skip disabled (underscore-prefixed) entries
+    if (name.startsWith('_')) return false;
+
+    // Must be a skill
+    if (entry.source !== 'skill') return false;
+
+    // Must have at least one matching capability flag
+    const hasCapability = requiredCaps.some(cap => entry[cap] === true);
+    if (!hasCapability) return false;
+
+    // Check scope-minimum
+    const scopeMin = entry['scope-minimum'] as string | undefined;
+    if (scopeMin && scope) {
+      const minIndex = SCOPE_ORDER.indexOf(scopeMin as typeof SCOPE_ORDER[number]);
+      if (minIndex > scopeIndex) return false;
+    }
+
+    return true;
+  });
+}
+
+/**
+ * Load a skill's SKILL.md content, stripping frontmatter.
+ * Resolves paths relative to project root or uses absolute paths directly.
+ */
+export async function loadSkillContent(
+  skillPath: string,
+  projectRoot: string,
+): Promise<string | null> {
+  const resolvedDir = isAbsolute(skillPath)
+    ? skillPath
+    : join(projectRoot, skillPath); // nosemgrep: path-join-resolve-traversal
+  const skillFile = join(resolvedDir, 'SKILL.md'); // nosemgrep: path-join-resolve-traversal
+
+  const content = await loadFileContent(skillFile);
+  if (content === null) return null;
+
+  return stripFrontmatter(content);
+}
+
+/**
+ * Strip YAML frontmatter from markdown content.
+ */
+function stripFrontmatter(content: string): string {
+  if (!content.startsWith('---')) return content;
+  const endIndex = content.indexOf('---', 3);
+  if (endIndex === -1) return content;
+  return content.slice(endIndex + 3).replace(/^\n+/, '');
 }
