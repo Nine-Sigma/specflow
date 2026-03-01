@@ -592,6 +592,7 @@ async function generateAgentPrompts(
 ): Promise<number> {
   const { generateClaudeCodePM, generateCopilotPM, generateClaudeCodeAgent, generateCopilotAgent, AGENT_NAMES } =
     await import('./mcp/prompts.js');
+  const { lstat } = await import('fs/promises');
 
   const dir = platform === 'claude'
     ? join(targetDir, '.claude', 'commands') // nosemgrep: path-join-resolve-traversal
@@ -599,16 +600,29 @@ async function generateAgentPrompts(
 
   await mkdir(dir, { recursive: true });
 
+  // Helper to remove existing file/symlink before writing
+  const safeWrite = async (filePath: string, content: string) => {
+    try {
+      const s = await lstat(filePath);
+      if (s.isSymbolicLink()) {
+        await unlink(filePath);
+      }
+    } catch {
+      // File doesn't exist, continue
+    }
+    await writeFile(filePath, content);
+  };
+
   // Generate PM prompt
   const pmContent = platform === 'claude' ? generateClaudeCodePM() : generateCopilotPM();
-  await writeFile(join(dir, 'sf-pm.md'), pmContent); // nosemgrep: path-join-resolve-traversal
+  await safeWrite(join(dir, 'sf-pm.md'), pmContent); // nosemgrep: path-join-resolve-traversal
 
   // Generate thin agent prompts
   for (const agent of AGENT_NAMES) {
     const content = platform === 'claude'
       ? generateClaudeCodeAgent(agent)
       : generateCopilotAgent(agent);
-    await writeFile(join(dir, `sf-${agent}.md`), content); // nosemgrep: path-join-resolve-traversal
+    await safeWrite(join(dir, `sf-${agent}.md`), content); // nosemgrep: path-join-resolve-traversal
   }
 
   return AGENT_NAMES.length + 1; // +1 for PM
@@ -707,8 +721,6 @@ export async function init(
   // Verify package has required directories
   // nosemgrep: path-join-resolve-traversal
   const specflowLibSrc = join(packageRoot, '.specflow-lib');
-  // nosemgrep: path-join-resolve-traversal
-  const slashCommandsSrc = join(packageRoot, 'slash-commands');
 
   try {
     await stat(specflowLibSrc);
@@ -767,23 +779,9 @@ export async function init(
     throw error;
   }
 
-  // .claude/commands/ - copied from package (reuse existing pattern)
+  // .claude/commands/ - thin prompts generated later by generateAgentPrompts()
   // nosemgrep: path-join-resolve-traversal
-  const claudeDir = join(safeTargetDir, '.claude', 'commands');
-  // nosemgrep: path-join-resolve-traversal
-  await mkdir(join(safeTargetDir, '.claude'), { recursive: true });
-  try {
-    await cp(slashCommandsSrc, claudeDir, { recursive: true, force: true });
-    console.log(`  ${pc.green('+')} .claude/commands/`);
-  } catch (err) {
-    const error = err as NodeJS.ErrnoException;
-    if (error.code === 'EACCES') {
-      console.error(pc.red(`Error: Permission denied creating .claude/commands/`));
-      console.error(pc.dim('Check directory permissions or try with elevated access.'));
-      process.exit(1);
-    }
-    throw error;
-  }
+  await mkdir(join(safeTargetDir, '.claude', 'commands'), { recursive: true });
 
   // 4. Update .gitignore
   try {
