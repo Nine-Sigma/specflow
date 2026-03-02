@@ -8,6 +8,7 @@ import { handleState } from './state.js';
 import { validateArtifact } from './validate.js';
 import { VALID_PHASES } from './types.js';
 import { handleCodebase, handleImpact } from './intel/index.js';
+import { executeWave } from './wave-executor.js';
 
 /**
  * Start the SpecFlow MCP server.
@@ -168,6 +169,35 @@ export async function startServer(options: { port?: number } = {}): Promise<McpS
     async ({ symbol, depth }) => {
       const root = await getProjectRoot();
       const result = await handleImpact(symbol, depth, root);
+
+      if ('error' in result) {
+        return {
+          content: [{ type: 'text' as const, text: JSON.stringify(result) }],
+          isError: true,
+        };
+      }
+
+      return {
+        content: [{ type: 'text' as const, text: JSON.stringify(result) }],
+      };
+    },
+  );
+
+  // --- Tool: specflow_execute_wave ---
+  server.tool(
+    'specflow_execute_wave',
+    'Execute a wave of parallel CLI agents (dev stories, QA tickets, or pillar agents) with git worktree isolation',
+    {
+      type: z.enum(['dev', 'qa', 'pillars', 'cleanup']).describe('Wave type: dev (story wave), qa (verification wave), pillars (security/cost/ux), cleanup (remove orphaned worktrees)'),
+      cli: z.string().optional().describe('CLI override (claude or copilot). Auto-detected if omitted'),
+      timeout_ms: z.number().optional().default(600000).describe('Per-process timeout in milliseconds (default: 600000 = 10 min)'),
+      max_concurrent: z.number().optional().default(5).describe('Maximum concurrent processes (default: 5)'),
+    },
+    async (params) => {
+      const root = await getProjectRoot();
+      const activeFeature = await getActiveFeature(root);
+      const scope = await getScope(root);
+      const result = await executeWave(params, root, activeFeature, scope);
 
       if ('error' in result) {
         return {

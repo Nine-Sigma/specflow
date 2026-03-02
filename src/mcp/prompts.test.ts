@@ -47,6 +47,32 @@ describe('PM prompt generation', () => {
     expect(generateClaudeCodePM()).not.toContain('{{SPAWN');
     expect(generateCopilotPM()).not.toContain('{{SPAWN');
   });
+
+  it('Claude PM prompt contains specflow_execute_wave for dev/qa/pillars', () => {
+    const prompt = generateClaudeCodePM();
+    expect(prompt).toContain('specflow_execute_wave({ type: "dev" })');
+    expect(prompt).toContain('specflow_execute_wave({ type: "qa" })');
+    expect(prompt).toContain('specflow_execute_wave({ type: "pillars" })');
+  });
+
+  it('Claude PM prompt retains Task() fallback after wave references', () => {
+    const prompt = generateClaudeCodePM();
+    expect(prompt).toContain('Task(');
+    expect(prompt).toContain('fall back to');
+  });
+
+  it('Copilot PM prompt contains specflow_execute_wave for dev/qa/pillars', () => {
+    const prompt = generateCopilotPM();
+    expect(prompt).toContain('specflow_execute_wave({ type: "dev" })');
+    expect(prompt).toContain('specflow_execute_wave({ type: "qa" })');
+    expect(prompt).toContain('specflow_execute_wave({ type: "pillars" })');
+  });
+
+  it('Copilot PM prompt retains runSubagent() fallback after wave references', () => {
+    const prompt = generateCopilotPM();
+    expect(prompt).toContain('runSubagent(');
+    expect(prompt).toContain('fall back to');
+  });
 });
 
 describe('thin agent prompt generation', () => {

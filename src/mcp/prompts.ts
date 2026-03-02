@@ -213,20 +213,30 @@ function replaceSpawnPlaceholders(prompt: string, platform: 'claude' | 'copilot'
 ${spawn('<agent>', '<phase>', 'Execute <phase> phase')}
 \`\`\``);
 
-  result = result.replace('{{SPAWN:parallel_pillars}}', `Spawn pillar agents in parallel:
+  const fallbackLabel = platform === 'claude'
+    ? 'If specflow_execute_wave is not available, fall back to spawning multiple Task() calls in a single message:'
+    : 'If specflow_execute_wave is not available, fall back to spawning multiple runSubagent() calls:';
+
+  result = result.replace('{{SPAWN:parallel_pillars}}', `Call \`specflow_execute_wave({ type: "pillars" })\` to execute all applicable pillar agents deterministically in parallel.
+
+${fallbackLabel}
 \`\`\`
 ${spawn('security', 'security', 'Security analysis')}
 ${spawn('cost', 'cost', 'Cost analysis')}
 ${spawn('ux', 'ux', 'UX design')}
 \`\`\``);
 
-  result = result.replace('{{SPAWN:dev_wave}}', `Spawn all stories in the wave:
+  result = result.replace('{{SPAWN:dev_wave}}', `Call \`specflow_execute_wave({ type: "dev" })\` to execute all stories in the wave deterministically in parallel with git worktree isolation.
+
+${fallbackLabel}
 \`\`\`
 // For each story from next-wave:
 ${spawn('dev-story', 'dev-story', 'Implement story <id>')}
 \`\`\``);
 
-  result = result.replace('{{SPAWN:qa_wave}}', `Spawn QA tickets:
+  result = result.replace('{{SPAWN:qa_wave}}', `Call \`specflow_execute_wave({ type: "qa" })\` to execute all QA tickets deterministically in parallel.
+
+${fallbackLabel}
 \`\`\`
 ${spawn('qa', 'qa-verify', 'Verify story <id>')}
 \`\`\``);
@@ -277,7 +287,8 @@ export function extractRoutingLogic(prompt: string): string {
   // Normalize spawn syntax differences — match entire call on the line
   body = body
     .replace(/^.*Task\(.*\).*$/gm, '{{SPAWN_LINE}}')
-    .replace(/^.*runSubagent\(.*\).*$/gm, '{{SPAWN_LINE}}');
+    .replace(/^.*runSubagent\(.*\).*$/gm, '{{SPAWN_LINE}}')
+    .replace(/If specflow_execute_wave is not available, fall back to spawning multiple .* calls.*:/gm, '{{FALLBACK_LABEL}}');
 
   return body;
 }
