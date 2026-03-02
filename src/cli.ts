@@ -1,4 +1,13 @@
 #!/usr/bin/env node
+
+// Preflight: ensure Node.js >= 20
+const [nodeMajor] = process.versions.node.split('.').map(Number);
+if (nodeMajor < 20) {
+  console.error(`SpecFlow requires Node.js >= 20 (found ${process.version})`);
+  console.error('Install via: https://nodejs.org or use nvm/fnm');
+  process.exit(1);
+}
+
 import { Command } from 'commander';
 import pc from 'picocolors';
 import { runAgent, loadCustomAgents, listAgents, getAgent } from './wrapper/agent-runner.js';

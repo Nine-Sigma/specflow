@@ -1,0 +1,14 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "strict": true,
+    "paths": {
+      "@utils/*": ["./src/utils/*"],
+      "@services/*": ["./src/services/*"]
+    },
+    "baseUrl": "."
+  },
+  "include": ["src/"]
+}

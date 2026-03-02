@@ -12,24 +12,29 @@
     "dist",
     "src/mcp",
     "slash-commands",
-    "ralph",
-    "agents",
+"agents",
     ".specflow-lib",
     "templates"
   ],
   "scripts": {
-    "build": "esbuild src/cli.ts --bundle --platform=node --outfile=dist/cli.js --format=esm --external:@modelcontextprotocol/sdk --banner:js='import { createRequire } from \"module\"; const require = createRequire(import.meta.url);' && esbuild src/installer.ts --bundle --platform=node --outfile=dist/installer.js --format=esm --external:picocolors --external:@modelcontextprotocol/sdk",
+    "build": "esbuild src/cli.ts --bundle --platform=node --outfile=dist/cli.js --format=esm --external:@modelcontextprotocol/sdk --external:web-tree-sitter --external:@vscode/tree-sitter-wasm --external:ignore --banner:js='import { createRequire } from \"module\"; const require = createRequire(import.meta.url);' && esbuild src/installer.ts --bundle --platform=node --outfile=dist/installer.js --format=esm --external:picocolors --external:@modelcontextprotocol/sdk",
     "dev": "tsx src/cli.ts",
     "test": "vitest run",
+    "test:e2e": "vitest run --config vitest.e2e.config.ts",
+    "test:all": "vitest run && vitest run --config vitest.e2e.config.ts",
     "test:watch": "vitest",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "lint:frontmatter": "node scripts/lint-frontmatter.mjs"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "1.26.0",
     "@types/picomatch": "^4.0.2",
     "commander": "^12.0.0",
+    "ignore": "^7.0.5",
     "picocolors": "^1.1.0",
     "picomatch": "^4.0.3",
+    "@vscode/tree-sitter-wasm": "^0.3.0",
+    "web-tree-sitter": "^0.26.6",
     "yaml": "^2.8.2",
     "zod": "^3.22.0"
   },

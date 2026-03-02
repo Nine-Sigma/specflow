@@ -41,6 +41,8 @@ const AGENT_TOOLS = [
   'specflow_context',
   'specflow_state',
   'specflow_validate',
+  'specflow_codebase',
+  'specflow_impact',
 ];
 
 const COPILOT_EDITOR_TOOLS = [
@@ -143,7 +145,7 @@ Only engage the user for:
 
 ## State Commands
 
-- \`specflow_state("start", { feature: "slug", description: "..." })\` — new feature
+- \`specflow_state("start_or_resume", { feature: "slug", description: "..." })\` — start or resume feature
 - \`specflow_state("update", { phase, agent, scope, pillars })\` — transition
 - \`specflow_state("complete", { phase: "..." })\` — mark phase done
 - \`specflow_state("resume")\` — session recovery
@@ -184,6 +186,8 @@ tools:
   - specflow_context
   - specflow_state
   - specflow_validate
+  - specflow_codebase
+  - specflow_impact
   - editFiles
   - fetchWebpage
 agents:

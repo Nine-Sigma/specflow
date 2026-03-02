@@ -33,6 +33,20 @@ Additional commands for specialized workflows:
 | `/sf:docs` | Technical documentation |
 | `/sf:review` | Dynamic code review orchestrator |
 
+## MCP Tool Calls (No Slash Command)
+
+SpecFlow also exposes MCP tools directly. These are the runtime interfaces used by PM and agents behind slash commands.
+
+| Tool | Purpose | Typical Call |
+|------|---------|--------------|
+| `specflow_state` | Workflow/session state transitions and recovery | `specflow_state("resume")` |
+| `specflow_context` | Phase-scoped persona/expertise/artifact assembly | `specflow_context("architect")` |
+| `specflow_validate` | Artifact validation checks for a phase | `specflow_validate("dev-story")` |
+| `specflow_codebase` | Code intelligence queries (scan/symbols/patterns/dependencies) | `specflow_codebase("symbols", { path: "src/" })` |
+| `specflow_impact` | Blast-radius analysis for symbol changes | `specflow_impact("handleState", 2)` |
+
+Use direct tool calls when testing orchestration behavior, IDE MCP integration, or non-slash automation paths.
+
 ## Command Details
 
 ### /sf:pm - PM Orchestrator
@@ -169,6 +183,8 @@ Amelia implements features according to requirements lock.
 - **Fix Mode**: Address review findings
 - **Drift Fix**: Correct drift issues
 
+**Phase naming note:** the MCP workflow phase is `dev-story` (not `dev`), even when using `/sf:dev` in chat UIs.
+
 **Output:** `6-dev-output.md` with implementation summary.
 
 ---
@@ -303,6 +319,20 @@ Implements a single story from the sprint.
 | `/sf:issue` | GitHub issue management |
 | `/sf:pr` | Pull request management |
 | `/sf:scrum` | Scrum ticket management |
+
+## PMO Reporting via PM
+
+Reporting is routed through `/sf:pm` using report-capable skills.
+
+Examples:
+
+```bash
+/sf:pm "generate an executive status report for this feature"
+/sf:pm "run a project health check"
+/sf:pm "create a RAID/risk report"
+```
+
+See [PMO Reporting Skills](/reporting-skills) for output files and skill behavior.
 
 ## Planning Commands
 

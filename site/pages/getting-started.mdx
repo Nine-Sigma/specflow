@@ -39,8 +39,23 @@ This creates directories in your project:
 | `.specflow/` | Runtime workspace where features are tracked |
 | `.specflow-lib/` | Methodology library (read-only reference) |
 | `.claude/commands/` | Slash commands for invoking agents |
+| `.mcp.json` | MCP server registration for direct tool calls |
 
 The init process detects your project type (Node.js, Python, Go, etc.) and configures the workspace accordingly.
+
+### Optional: Direct MCP Workflow
+
+If you are testing orchestration directly (instead of using slash commands), the MCP loop is:
+
+```text
+specflow_state("resume")
+specflow_state("start", { feature: "my-feature", description: "..." })
+specflow_context("triage")
+...write output artifact...
+specflow_validate("triage")
+```
+
+See [MCP Tools](/mcp-tools) for full reference.
 
 ## Your First Feature
 

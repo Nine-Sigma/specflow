@@ -1,7 +1,7 @@
 import { readFile, writeFile, mkdir, readdir } from 'fs/promises';
 import { join, dirname } from 'path';
 import { parse as parseYaml, stringify as stringifyYaml } from 'yaml';
-import { sanitizeSlug, type WorkflowState } from './types.js';
+import { sanitizeSlug, PHASE_PREREQUISITES, type WorkflowState } from './types.js';
 
 /** Sprint status story entry */
 interface StoryEntry {
@@ -55,6 +55,8 @@ export async function handleState(
       return completePhase(data, projectRoot);
     case 'resume':
       return resumeState(projectRoot);
+    case 'start_or_resume':
+      return startOrResume(data, projectRoot);
     case 'stories':
       return handleStories(data, projectRoot);
     case 'waves':
@@ -62,7 +64,7 @@ export async function handleState(
     case 'next-wave':
       return handleNextWave(projectRoot);
     default:
-      return { error: `Unknown action: "${action}". Valid actions: read, start, update, complete, resume, stories, waves, next-wave` };
+      return { error: `Unknown action: "${action}". Valid actions: read, start, start_or_resume, update, complete, resume, stories, waves, next-wave` };
   }
 }
 
@@ -127,6 +129,53 @@ async function startFeature(
 }
 
 /**
+ * Start a new feature or resume an existing one.
+ * Eliminates the friction of needing to know whether a feature already exists.
+ */
+async function startOrResume(
+  data: Record<string, unknown> | undefined,
+  projectRoot: string,
+): Promise<StateResult> {
+  if (!data?.feature || typeof data.feature !== 'string') {
+    return { error: 'Missing required field: feature' };
+  }
+
+  const slug = sanitizeSlug(data.feature);
+  const featureDir = join(projectRoot, '.specflow', 'features', slug); // nosemgrep: path-join-resolve-traversal
+  const statePath = join(featureDir, 'workflow-state.json'); // nosemgrep: path-join-resolve-traversal
+
+  // Check if feature already exists
+  try {
+    const existing = await readFile(statePath, 'utf8');
+    const state = JSON.parse(existing) as WorkflowState;
+    return { ...stateToResult(state), action_taken: 'resumed' };
+  } catch {
+    // Feature doesn't exist, create it
+  }
+
+  const description = (data.description as string) || '';
+  const now = new Date().toISOString();
+  const state: WorkflowState = {
+    feature: slug,
+    description,
+    phase: 'triage',
+    last_agent: null,
+    scope: null,
+    pillars: [],
+    completed_phases: [],
+    last_completed_at: null,
+    created_at: now,
+    updated_at: now,
+  };
+
+  await mkdir(featureDir, { recursive: true });
+  await writeStateFile(statePath, state);
+  await updateGlobalState(projectRoot, state);
+
+  return { ...stateToResult(state), action_taken: 'started' };
+}
+
+/**
  * Update workflow state fields (partial update).
  */
 async function updateState(
@@ -141,9 +190,38 @@ async function updateState(
 
     const statePath = getStatePath(projectRoot, state.feature);
 
+    // Check phase prerequisites before applying changes
+    const warnings: Array<{ type: string; phase: string; message: string }> = [];
+    if (data.phase !== undefined) {
+      const prereqs = PHASE_PREREQUISITES[data.phase as string];
+      if (prereqs) {
+        const missing: string[] = [];
+        for (const prereq of prereqs) {
+          if (!state.completed_phases.includes(prereq)) {
+            missing.push(prereq);
+            warnings.push({
+              type: 'prerequisite_missing',
+              phase: prereq,
+              message: `Phase "${prereq}" has not been completed before entering "${data.phase}"`,
+            });
+          }
+        }
+
+        // Strict mode: block transition when prerequisites are missing
+        if (data.strict === true && missing.length > 0) {
+          return {
+            error: 'prerequisite_missing',
+            missing,
+            message: `Cannot enter phase "${data.phase}" — missing prerequisites: ${missing.join(', ')}`,
+          };
+        }
+      }
+    }
+
     // Apply partial updates
     if (data.phase !== undefined) state.phase = data.phase as string;
-    if (data.agent !== undefined) state.last_agent = data.agent as string;
+    const agentValue = data.agent !== undefined ? data.agent : data.last_agent;
+    if (agentValue !== undefined) state.last_agent = agentValue as string;
     if (data.scope !== undefined) state.scope = data.scope as string;
     if (data.pillars !== undefined) state.pillars = data.pillars as string[];
     state.updated_at = new Date().toISOString();
@@ -151,7 +229,11 @@ async function updateState(
     await writeStateFile(statePath, state);
     await updateGlobalState(projectRoot, state);
 
-    return stateToResult(state);
+    const result = stateToResult(state);
+    if (warnings.length > 0) {
+      result.warnings = warnings;
+    }
+    return result;
   });
 }
 
@@ -207,15 +289,9 @@ async function resumeState(projectRoot: string): Promise<StateResult> {
   }
 
   return {
-    feature: state.feature,
-    description: state.description,
-    completed_phases: state.completed_phases,
-    current_phase: state.phase,
-    scope: state.scope,
-    pillars: state.pillars,
+    ...stateToResult(state),
+    current_phase: state.phase,  // deprecated alias for backward compatibility
     sprint_status: sprintStatus,
-    last_completed_at: state.last_completed_at,
-    created_at: state.created_at,
   };
 }
 

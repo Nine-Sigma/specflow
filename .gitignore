@@ -9,7 +9,15 @@ openspec/
 .claude/
 .github/prompts/
 .github/skills/
+.axon/
 
+memory/
+test-results/
+
+
+# E2E test results (per-run metrics)
+test-results/*
+!test-results/baseline.json
 
 # TypeScript build output
 dist/

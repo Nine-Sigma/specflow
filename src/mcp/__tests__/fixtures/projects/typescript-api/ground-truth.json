@@ -1,0 +1,30 @@
+{
+  "symbols": [
+    { "name": "formatDate", "kind": "function", "file": "src/utils/format.ts", "exported": true },
+    { "name": "formatCurrency", "kind": "function", "file": "src/utils/format.ts", "exported": true },
+    { "name": "OrderService", "kind": "class", "file": "src/services/order-service.ts", "exported": true },
+    { "name": "OrderService.createOrder", "kind": "method", "file": "src/services/order-service.ts" },
+    { "name": "OrderService.getOrderSummary", "kind": "method", "file": "src/services/order-service.ts" },
+    { "name": "OrderService.listOrders", "kind": "method", "file": "src/services/order-service.ts" },
+    { "name": "UserService", "kind": "class", "file": "src/services/user-service.ts", "exported": true },
+    { "name": "UserService.createUser", "kind": "method", "file": "src/services/user-service.ts" },
+    { "name": "UserService.findById", "kind": "method", "file": "src/services/user-service.ts" },
+    { "name": "UserService.findByEmail", "kind": "method", "file": "src/services/user-service.ts" },
+    { "name": "handleCreateOrder", "kind": "function", "file": "src/controller.ts", "exported": true },
+    { "name": "handleGetOrder", "kind": "function", "file": "src/controller.ts", "exported": true },
+    { "name": "handleRegister", "kind": "function", "file": "src/controller.ts", "exported": true }
+  ],
+  "callEdges": [
+    { "caller": "handleCreateOrder", "callee": "UserService.findById" },
+    { "caller": "handleCreateOrder", "callee": "OrderService.createOrder" },
+    { "caller": "handleGetOrder", "callee": "OrderService.getOrderSummary" },
+    { "caller": "handleRegister", "callee": "UserService.createUser" },
+    { "caller": "OrderService.getOrderSummary", "callee": "formatCurrency" },
+    { "caller": "OrderService.getOrderSummary", "callee": "formatDate" }
+  ],
+  "imports": {
+    "src/controller.ts": ["./services/order-service.js", "./services/user-service.js"],
+    "src/services/order-service.ts": ["../utils/format.js"],
+    "src/index.ts": ["./controller.js", "./services/order-service.js", "./services/user-service.js", "./utils/format.js"]
+  }
+}

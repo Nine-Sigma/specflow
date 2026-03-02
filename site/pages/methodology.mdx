@@ -17,6 +17,48 @@ Each pillar uses specific frameworks:
 | Testing | TEA + Gherkin | Test specification |
 | Cost | FinOps | Cloud cost analysis |
 
+## Context Assembly Engine
+
+SpecFlow phases run on a context assembly engine that returns only what a phase needs:
+
+- Persona (communication style + role constraints)
+- Expertise files (scope-tiered where configured)
+- Methodology references (for phases like `security`, `cost`, `ux`, `brainstorm`)
+- Required feature artifacts from prior phases
+- Output path for the next artifact
+- Optional codebase enrichment payload
+
+### Scope-tiered expertise behavior
+
+Context depth increases with scope to avoid overloading small/trivial work:
+
+| Phase | Trivial | Small | Medium+ |
+|-------|---------|-------|---------|
+| Analyst | Minimal | Requirements-focused | Full requirements + codebase constraints |
+| Architect | Minimal | Validation checklist | Full architecture + code intelligence |
+| TEA | Minimal | Focused test spec | Full testing + code intelligence |
+| QA phases | Minimal | Minimal | Full testing expertise |
+
+This is the core mechanism behind proportional ceremony.
+
+## Code Intelligence Pipeline
+
+SpecFlow uses tree-sitter indexing and call graph analysis to enrich phase context and enable direct queries.
+
+### Tooling
+
+- `specflow_codebase` for scan/symbol/dependency/pattern actions
+- `specflow_impact` for blast radius and call-chain depth
+
+### Automatic enrichment
+
+Selected phases receive `codebase` fields in `specflow_context` responses:
+
+- `codebase-analysis`: stack scan, symbol summaries, pattern hints
+- `architect`, `tea`, `dev-story`, checkpoints: impact summaries derived from referenced artifacts
+
+If enrichment is unavailable, context still returns with warnings instead of failing hard.
+
 ## STRIDE Threat Modeling
 
 STRIDE is a mnemonic for six threat categories. Security analyst Jordan applies STRIDE to every architecture review:

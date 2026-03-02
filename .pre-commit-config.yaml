@@ -19,10 +19,21 @@ repos:
         language: system
         stages: ["pre-commit", "pre-push"]
 
-  # Layer 3: Semgrep - SAST code scanning for security issues
+  # Layer 3: YAML frontmatter lint for docs
+  - repo: local
+    hooks:
+      - id: lint-frontmatter
+        name: Lint MDX frontmatter (YAML)
+        entry: node scripts/lint-frontmatter.mjs
+        language: system
+        files: '^site/.*\.mdx$'
+        pass_filenames: true
+
+  # Layer 4: Semgrep - SAST code scanning for security issues
   - repo: https://github.com/semgrep/pre-commit
     rev: 'v1.149.0'
     hooks:
       - id: semgrep
         name: SAST scan (Semgrep)
         args: ['--config', 'auto', '--error', '--skip-unknown-extensions']
+        exclude: '^(src/mcp/__tests__|src/mcp/intel/|src/mcp/.*\.test\.ts|scripts/.*\.test\.ts)'

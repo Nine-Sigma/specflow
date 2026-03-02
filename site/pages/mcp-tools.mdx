@@ -1,0 +1,96 @@
+---
+description: "Reference for SpecFlow MCP tools: specflow_context, specflow_state, specflow_validate, specflow_codebase, and specflow_impact."
+---
+
+# MCP Tools
+
+SpecFlow exposes orchestration as MCP tools. PM and agents use these tools internally, and you can call them directly for integration tests and advanced automation.
+
+## Available Tools
+
+| Tool | Purpose |
+|------|---------|
+| `specflow_context` | Build phase-scoped context (persona, expertise, methodology, artifacts, output path) |
+| `specflow_state` | Read/update workflow state, phase transitions, stories, and wave status |
+| `specflow_validate` | Validate phase output artifacts for existence and content quality |
+| `specflow_codebase` | Query project structure (scan, symbols, dependencies, patterns, reindex, warmup) |
+| `specflow_impact` | Analyze blast radius of changing a symbol |
+
+## `specflow_state`
+
+Use `specflow_state` for session lifecycle and phase tracking.
+
+### Common actions
+
+- `resume`: recover current workflow snapshot
+- `start`: create a workflow for a new feature slug
+- `update`: change phase/agent/scope/pillars
+- `complete`: mark a phase done (idempotent)
+- `stories`: read/update story status from `sprint-status.yaml`
+- `waves` and `next-wave`: inspect execution waves and ready stories
+
+### Example sequence
+
+```text
+specflow_state("resume")
+specflow_state("start", { feature: "docs-site-update", description: "..." })
+specflow_state("update", { phase: "analyst", agent: "analyst" })
+specflow_state("complete", { phase: "analyst" })
+```
+
+## `specflow_context`
+
+`specflow_context("<phase>")` returns context for a specific workflow phase.
+
+Response fields include:
+
+- `persona`
+- `expertise`
+- `methodology`
+- `skills` (when capability-matched)
+- `artifacts` from prior phases
+- `output_path`
+- `scope`
+- Optional `codebase` enrichment and warnings
+
+## `specflow_validate`
+
+`specflow_validate("<phase>")` validates the expected output artifact for that phase.
+
+Checks include:
+
+- Artifact exists
+- Content quality threshold (scope-aware)
+- Requirement coverage for review-sensitive phases (`dev-story`, `qa-verify`, `review`)
+
+## `specflow_codebase`
+
+Direct code intelligence query tool.
+
+| Action | Output |
+|--------|--------|
+| `scan` | Tech stack and project summary |
+| `symbols` | Symbol list by file/path/kind filters |
+| `dependencies` | Import/dependency chain for a symbol |
+| `patterns` | Pattern detections (routes/services/components/etc.) |
+| `reindex` | Force rebuild of index |
+| `warmup` | Prime index cache |
+
+## `specflow_impact`
+
+Impact analysis tool for change planning:
+
+```text
+specflow_impact("handleState", 2)
+```
+
+Returns symbol matches, affected files, and depth-tiered caller relationships for blast-radius review.
+
+## Where It Fits
+
+Slash commands remain the easiest interface for normal usage. MCP tools are the canonical runtime layer and are ideal for:
+
+- IDE MCP integrations
+- automated orchestration testing
+- deterministic workflow replay
+- debugging context/state behavior

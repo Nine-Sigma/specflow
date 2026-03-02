@@ -7,6 +7,7 @@ import { assembleContext } from './context.js';
 import { handleState } from './state.js';
 import { validateArtifact } from './validate.js';
 import { VALID_PHASES } from './types.js';
+import { handleCodebase, handleImpact } from './intel/index.js';
 
 /**
  * Start the SpecFlow MCP server.
@@ -55,12 +56,13 @@ export async function startServer(options: { port?: number } = {}): Promise<McpS
     'Get scoped context (persona, expertise, artifacts) for a workflow phase',
     {
       phase: z.string().describe(`Workflow phase name (${[...VALID_PHASES].join(', ')})`),
+      strict: z.boolean().optional().describe('When true, missing required artifacts return an error instead of a warning'),
     },
-    async ({ phase }) => {
+    async ({ phase, strict }) => {
       const root = await getProjectRoot();
       const activeFeature = await getActiveFeature(root);
       const scope = await getScope(root);
-      const result = await assembleContext(phase, root, activeFeature, scope);
+      const result = await assembleContext(phase, root, activeFeature, scope, strict ? { strict } : undefined);
 
       if ('error' in result) {
         return {
@@ -80,7 +82,7 @@ export async function startServer(options: { port?: number } = {}): Promise<McpS
     'specflow_state',
     'Read/write workflow state and sprint-status',
     {
-      action: z.enum(['read', 'start', 'update', 'complete', 'resume', 'stories', 'waves', 'next-wave'])
+      action: z.enum(['read', 'start', 'start_or_resume', 'update', 'complete', 'resume', 'stories', 'waves', 'next-wave'])
         .describe('State action to perform'),
       data: z.record(z.unknown()).optional()
         .describe('Data payload for the action (required for start, update, complete, stories)'),
@@ -112,7 +114,60 @@ export async function startServer(options: { port?: number } = {}): Promise<McpS
     async ({ phase }) => {
       const root = await getProjectRoot();
       const activeFeature = await getActiveFeature(root);
-      const result = await validateArtifact(phase, root, activeFeature);
+      const scope = await getScope(root);
+      const result = await validateArtifact(phase, root, activeFeature, scope);
+
+      if ('error' in result) {
+        return {
+          content: [{ type: 'text' as const, text: JSON.stringify(result) }],
+          isError: true,
+        };
+      }
+
+      return {
+        content: [{ type: 'text' as const, text: JSON.stringify(result) }],
+      };
+    },
+  );
+
+  // --- Tool: specflow_codebase ---
+  server.tool(
+    'specflow_codebase',
+    'Query codebase structure: scan project, list symbols, trace dependencies, detect patterns',
+    {
+      action: z.enum(['scan', 'symbols', 'dependencies', 'patterns', 'reindex', 'warmup'])
+        .describe('Query action to perform'),
+      params: z.record(z.unknown()).optional()
+        .describe('Action-specific parameters (e.g., { path: "src/", kind: "function" } for symbols)'),
+    },
+    async ({ action, params }) => {
+      const root = await getProjectRoot();
+      const result = await handleCodebase(action, params, root);
+
+      if ('error' in result) {
+        return {
+          content: [{ type: 'text' as const, text: JSON.stringify(result) }],
+          isError: true,
+        };
+      }
+
+      return {
+        content: [{ type: 'text' as const, text: JSON.stringify(result) }],
+      };
+    },
+  );
+
+  // --- Tool: specflow_impact ---
+  server.tool(
+    'specflow_impact',
+    'Analyze blast radius: find all code affected by changing a symbol',
+    {
+      symbol: z.string().describe('Symbol name or partial match (e.g. "OrderService.createOrder" or "createOrder")'),
+      depth: z.number().optional().default(2).describe('How many levels of callers to traverse (default: 2)'),
+    },
+    async ({ symbol, depth }) => {
+      const root = await getProjectRoot();
+      const result = await handleImpact(symbol, depth, root);
 
       if ('error' in result) {
         return {

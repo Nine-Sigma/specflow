@@ -6,15 +6,19 @@ import {
   PHASE_METHODOLOGY_MAP,
   PHASE_ARTIFACTS_MAP,
   PHASE_OUTPUT_MAP,
+  PHASE_SECONDARY_OUTPUTS,
+  PHASE_REQUIRED_ARTIFACTS,
   PHASE_SKILL_CAPABILITIES,
   VALID_PHASES,
   ARTIFACT_TRUNCATION_THRESHOLD,
   SKILLS_TOTAL_CAP,
   SCOPE_ORDER,
   UX_SCOPE_TIERS,
+  EXPERTISE_TIER_MAPS,
   sanitizeSlug,
   type ContextResponse,
 } from './types.js';
+import { enrichContext } from './intel/index.js';
 
 /**
  * Assemble scoped context for a given phase.
@@ -27,7 +31,8 @@ export async function assembleContext(
   projectRoot: string,
   activeFeature: string | null,
   scope: string | null,
-): Promise<ContextResponse | { error: string; available_features?: string[] }> {
+  options?: { strict?: boolean },
+): Promise<ContextResponse | { error: string; available_features?: string[]; missing?: string[] }> {
   // Validate phase
   if (!VALID_PHASES.has(phase)) {
     return {
@@ -55,8 +60,8 @@ export async function assembleContext(
     join(projectRoot, '.specflow-lib', 'personas', personaFile), // nosemgrep: path-join-resolve-traversal
   );
 
-  // Load expertise
-  const expertisePaths = PHASE_EXPERTISE_MAP[phase] || [];
+  // Load expertise (scope-tiered when applicable)
+  const expertisePaths = getExpertiseFiles(phase, scope);
   const expertise: string[] = [];
   for (const path of expertisePaths) {
     const fullPath = join(projectRoot, '.specflow-lib', 'expertise', path); // nosemgrep: path-join-resolve-traversal
@@ -107,6 +112,20 @@ export async function assembleContext(
     }
   }
 
+  // Strict mode: check required artifacts
+  if (options?.strict) {
+    const requiredArtifacts = PHASE_REQUIRED_ARTIFACTS[phase];
+    if (requiredArtifacts) {
+      const missing = requiredArtifacts.filter(name => !artifacts[name]);
+      if (missing.length > 0) {
+        return {
+          error: 'required_artifact_missing',
+          missing,
+        };
+      }
+    }
+  }
+
   // Load skills
   const agents = await loadAgentsJson(projectRoot);
   const matchedSkills = discoverPhaseSkills(agents, phase, scope);
@@ -147,11 +166,34 @@ export async function assembleContext(
     skills.push({ name, content: skillContent });
   }
 
+  // Enrich with codebase intelligence
+  let codebaseData: ContextResponse['codebase'] | undefined;
+  let codebaseTruncated = false;
+
+  try {
+    const enrichResult = await enrichContext(phase, artifacts, projectRoot);
+    if (enrichResult) {
+      codebaseData = enrichResult.context;
+      codebaseTruncated = enrichResult.truncated;
+      if (enrichResult.warnings) {
+        warnings.push(...enrichResult.warnings);
+      }
+    }
+  } catch (err) {
+    warnings.push({
+      type: 'codebase_unavailable',
+      message: `Code intelligence unavailable: ${(err as Error).message}`,
+    });
+  }
+
   // Resolve output path
   const outputFile = PHASE_OUTPUT_MAP[phase] || '';
   const output_path = outputFile
     ? `.specflow/features/${activeFeature}/${outputFile}`
     : '';
+
+  // Resolve secondary outputs
+  const secondaryOutputs = PHASE_SECONDARY_OUTPUTS[phase];
 
   const response: ContextResponse = {
     persona: persona || '',
@@ -163,6 +205,12 @@ export async function assembleContext(
     scope,
   };
 
+  if (secondaryOutputs && secondaryOutputs.length > 0) {
+    response.secondary_outputs = secondaryOutputs;
+  }
+
+  if (codebaseData) response.codebase = codebaseData;
+  if (codebaseTruncated) response.codebase_truncated = true;
   if (warnings.length > 0) response.warnings = warnings;
   if (truncated) response.truncated = true;
 
@@ -221,6 +269,20 @@ async function loadDirectoryMarkdown(dirPath: string): Promise<string[]> {
 }
 
 /**
+ * Determine which expertise files to load for a phase,
+ * applying scope-tiered gating when a tier map exists.
+ * Falls back to PHASE_EXPERTISE_MAP for non-tiered phases or null scope.
+ */
+export function getExpertiseFiles(phase: string, scope: string | null): string[] {
+  const tierMap = EXPERTISE_TIER_MAPS[phase];
+  if (tierMap && scope && scope in tierMap) {
+    return tierMap[scope];
+  }
+  // Fallback: null scope or no tier map → use default
+  return PHASE_EXPERTISE_MAP[phase] || [];
+}
+
+/**
  * Determine which methodology files to load for a phase,
  * applying scope-gated UX tiers when applicable.
  */
@@ -233,7 +295,7 @@ export function getMethodologyFiles(phase: string, scope: string | null): string
     if (scope && scope in UX_SCOPE_TIERS) {
       return UX_SCOPE_TIERS[scope];
     }
-    // null scope or trivial → load all (safe default)
+    // null scope → load all (safe default)
     return files;
   }
 

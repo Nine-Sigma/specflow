@@ -1,0 +1,26 @@
+{
+  "symbols": [
+    { "name": "User", "kind": "class", "file": "app/models/user.py", "exported": true },
+    { "name": "User.__init__", "kind": "method", "file": "app/models/user.py" },
+    { "name": "User.to_dict", "kind": "method", "file": "app/models/user.py" },
+    { "name": "validate_email", "kind": "function", "file": "app/models/user.py", "exported": true },
+    { "name": "create_user", "kind": "function", "file": "app/service.py", "exported": true },
+    { "name": "get_user", "kind": "function", "file": "app/service.py", "exported": true },
+    { "name": "list_users", "kind": "function", "file": "app/service.py", "exported": true },
+    { "name": "handle_create_user", "kind": "function", "file": "app/routes.py", "exported": true },
+    { "name": "handle_get_user", "kind": "function", "file": "app/routes.py", "exported": true },
+    { "name": "handle_list_users", "kind": "function", "file": "app/routes.py", "exported": true }
+  ],
+  "callEdges": [
+    { "caller": "handle_create_user", "callee": "create_user" },
+    { "caller": "handle_get_user", "callee": "get_user" },
+    { "caller": "handle_list_users", "callee": "list_users" },
+    { "caller": "create_user", "callee": "validate_email" },
+    { "caller": "handle_create_user", "callee": "User.to_dict" },
+    { "caller": "handle_get_user", "callee": "User.to_dict" }
+  ],
+  "imports": {
+    "app/service.py": [".models.user"],
+    "app/routes.py": [".service"]
+  }
+}

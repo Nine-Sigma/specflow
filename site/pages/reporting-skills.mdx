@@ -1,0 +1,57 @@
+---
+description: PMO reporting skills in SpecFlow for executive status, project health checks, risk logs, and presentation generation.
+---
+
+# PMO Reporting Skills
+
+SpecFlow includes PMO-oriented skills that turn feature artifacts into decision-ready outputs.
+
+## Built-In Reporting Skills
+
+| Skill | Purpose | Typical Output |
+|-------|---------|----------------|
+| `executive-reporting` | Leadership status summary | `9-exec-report.md` |
+| `project-health-check` | Multi-dimension delivery health | `9-health-check.md` |
+| `risk-management` | RAID log and risk posture | `9-risk-report.md` |
+| `pptx` (optional install) | Presentation generation | `{slug}.pptx` |
+
+## How PM Uses Them
+
+PM detects reporting intent from prompts such as:
+
+- "status report"
+- "exec summary"
+- "health check"
+- "risk assessment"
+- "build a deck"
+
+When triggered, PM routes to matching report-capable skills and synthesizes outputs from existing feature artifacts (scope, architecture, security findings, review results, and progress logs).
+
+## Output Location
+
+Report artifacts are written in the active feature directory:
+
+```text
+.specflow/features/<feature-slug>/9-exec-report.md
+.specflow/features/<feature-slug>/9-health-check.md
+.specflow/features/<feature-slug>/9-risk-report.md
+```
+
+For slide output, the generated `.pptx` is placed in the same feature directory.
+
+## Installing `pptx`
+
+`pptx` is optional and can be installed from the skill registry.
+
+```bash
+sf skill install pptx@anthropics/skills
+```
+
+Optional local tools for visual QA:
+
+- LibreOffice
+- Poppler
+
+## Why This Matters
+
+PMO skills keep strategic reporting tied directly to delivery evidence, reducing manual status translation and improving consistency between engineering execution and stakeholder communication.

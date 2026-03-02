@@ -39,6 +39,8 @@ describe('PM prompt generation', () => {
     expect(prompt).toContain('- specflow_context');
     expect(prompt).toContain('- specflow_state');
     expect(prompt).toContain('- specflow_validate');
+    expect(prompt).toContain('- specflow_codebase');
+    expect(prompt).toContain('- specflow_impact');
   });
 
   it('PM prompts have no remaining placeholders', () => {
@@ -63,6 +65,12 @@ describe('thin agent prompt generation', () => {
     expect(prompt).toContain('specflow_context');
   });
 
+  it('Copilot agent frontmatter includes code intelligence tools', () => {
+    const prompt = generateCopilotAgent('architect');
+    expect(prompt).toContain('- specflow_codebase');
+    expect(prompt).toContain('- specflow_impact');
+  });
+
   it('agent body is identical across platforms', () => {
     for (const agent of AGENT_NAMES) {
       const claudeBody = generateClaudeCodeAgent(agent);
@@ -82,6 +90,20 @@ describe('thin agent prompt generation', () => {
       const copilot = generateCopilotAgent(agent);
       expect(copilot).toContain(`name: sf-${agent}`);
     }
+  });
+});
+
+describe('PM prompt: start_or_resume', () => {
+  it('Claude Code PM uses start_or_resume instead of start', () => {
+    const prompt = generateClaudeCodePM();
+    expect(prompt).toContain('start_or_resume');
+    expect(prompt).not.toMatch(/specflow_state\("start",/);
+  });
+
+  it('Copilot PM uses start_or_resume instead of start', () => {
+    const prompt = generateCopilotPM();
+    expect(prompt).toContain('start_or_resume');
+    expect(prompt).not.toMatch(/specflow_state\("start",/);
   });
 });
 

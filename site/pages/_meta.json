@@ -2,7 +2,10 @@
   "index": "Introduction",
   "getting-started": "Getting Started",
   "commands": "Commands",
+  "mcp-tools": "MCP Tools",
+  "context-engine": "Context Engine",
   "architecture": "Architecture",
   "methodology": "Methodology",
+  "reporting-skills": "PMO Reporting Skills",
   "agents": "Agents"
 }

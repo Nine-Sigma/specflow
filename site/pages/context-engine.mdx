@@ -1,0 +1,76 @@
+---
+description: How SpecFlow assembles context per phase with scope-tiered expertise, artifacts, and code intelligence enrichment.
+---
+
+# Context Engine
+
+The context engine powers `specflow_context("<phase>")`. It assembles just enough information for each phase to act autonomously without loading the entire project every time.
+
+## Assembly Inputs
+
+For each request, SpecFlow combines:
+
+1. Active feature and scope from workflow state
+2. Phase-specific persona
+3. Phase-specific expertise and methodology files
+4. Required prior artifacts for that phase
+5. Optional capability-matched skills
+6. Optional codebase intelligence enrichment
+
+## Scope-Tiered Context
+
+SpecFlow scales context depth by scope to preserve momentum for small work and rigor for larger work.
+
+| Scope | Context Behavior |
+|-------|------------------|
+| trivial | Minimal expertise, lightweight outputs |
+| small | Focused expertise for active phase only |
+| medium | Full phase expertise + security/testing gates |
+| large/complex | Full context + deeper analysis and wave execution |
+
+This tiering is especially visible in `analyst`, `architect`, `tea`, and QA phases.
+
+## Artifact Loading Rules
+
+Each phase has a fixed artifact contract. Example:
+
+- `scope` reads `0-triage.md`
+- `analyst` reads `0-triage.md` + `0-scope.md`
+- `architect` reads `1-spec.md` + `1.5-codebase-constraints.md`
+- `dev-story` reads `5-requirements-lock.md`, `2-architecture.md`, and `1-spec.md`
+
+Missing artifacts generate warnings in context responses to surface orchestration drift early.
+
+## Code Intelligence Enrichment
+
+When configured for a phase, context responses include a `codebase` block.
+
+Typical enrichments:
+
+- stack/pattern scan for `codebase-analysis`
+- impact summaries for design and implementation phases
+- optional auto-reindex at drift checkpoints
+
+If enrichment cannot run, context still returns with warning metadata instead of hard-failing the phase.
+
+## Execution Model Link
+
+The context engine works with state management to support sprint waves:
+
+- `specflow_state("waves")` shows precomputed wave assignments
+- `specflow_state("next-wave")` returns ready stories with dependencies satisfied
+- each spawned story gets fresh phase context from `specflow_context`
+
+This enables dependency-aware parallel execution while preserving phase-specific constraints.
+
+## Practical Pattern
+
+```text
+specflow_state("resume")
+specflow_context("analyst")
+...write 1-spec.md...
+specflow_validate("analyst")
+specflow_state("complete", { phase: "analyst" })
+```
+
+The same loop repeats per phase, making orchestration deterministic and recoverable.

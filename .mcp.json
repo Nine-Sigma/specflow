@@ -14,6 +14,10 @@
     "axon": {
       "command": "axon",
       "args": ["serve", "--watch"]
+    },
+    "specflow": {
+      "command": "npx",
+      "args": ["tsx", "src/cli.ts", "serve"]
     }
   }
 }

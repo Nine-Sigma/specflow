@@ -82,6 +82,25 @@ flowchart LR
 
 **Flow**: Request → Analyst → Architect → Security → Cost → TEA → Lock → Dev → QA → Review → Ship
 
+## MCP Orchestration Loop
+
+SpecFlow orchestration is backed by MCP tools rather than hidden in prompt-only logic.
+
+### Core loop
+
+1. `specflow_state("resume")` checks for active work.
+2. `specflow_state("start", { feature, description })` initializes a new workflow.
+3. `specflow_context("<phase>")` assembles persona, expertise, artifacts, and optional code intelligence.
+4. Agent writes phase artifact to the provided `output_path`.
+5. `specflow_validate("<phase>")` validates artifact quality and coverage.
+6. `specflow_state("complete", { phase })` marks completion and supports recovery.
+
+### Execution support tools
+
+- `specflow_codebase` supports scan/symbol/dependency/pattern queries for architecture and implementation phases.
+- `specflow_impact` computes caller blast radius for change planning and drift checks.
+- `specflow_state("waves")` and `specflow_state("next-wave")` drive dependency-aware story execution.
+
 ## Agent Communication
 
 Agents communicate through files, not direct calls. This design choice enables:
@@ -390,6 +409,13 @@ PM runs drift checkpoints after Dev and QA complete. Drift occurs when:
 - Implementation misses requirements
 - Implementation adds undocumented features
 - Test coverage gaps exist
+
+Checkpoint phases in the workflow model:
+
+- `checkpoint-dev` writes `drift/checkpoint-dev.md`
+- `drift-fix-dev` handles development-side correction
+- `checkpoint-qa` writes `drift/checkpoint-qa.md`
+- `drift-fix-qa` handles QA-side correction
 
 When drift is detected, PM creates correction files and re-routes to the appropriate agent.
 

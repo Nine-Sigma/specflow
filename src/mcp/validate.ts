@@ -5,6 +5,7 @@ import {
   VALID_PHASES,
   REQUIREMENT_COVERAGE_PHASES,
   MIN_CONTENT_LENGTH,
+  SCOPE_CONTENT_THRESHOLDS,
   sanitizeSlug,
   type ValidationResponse,
 } from './types.js';
@@ -17,6 +18,7 @@ export async function validateArtifact(
   phase: string,
   projectRoot: string,
   activeFeature: string | null,
+  scope?: string | null,
 ): Promise<ValidationResponse | { error: string }> {
   if (!VALID_PHASES.has(phase)) {
     return { error: `Unknown phase: "${phase}"` };
@@ -51,15 +53,16 @@ export async function validateArtifact(
     };
   }
 
-  // Check 2: Content quality
+  // Check 2: Content quality (scope-aware threshold)
   const content = await readFile(artifactPath, 'utf8');
   const nonHeaderContent = extractNonHeaderContent(content);
-  const contentQuality = nonHeaderContent.length >= MIN_CONTENT_LENGTH;
+  const minLength = (scope && SCOPE_CONTENT_THRESHOLDS[scope]) || MIN_CONTENT_LENGTH;
+  const contentQuality = nonHeaderContent.length >= minLength;
 
   if (!contentQuality) {
     findings.push({
       type: 'low_quality',
-      message: `Artifact has insufficient non-header content (${nonHeaderContent.length} chars, minimum ${MIN_CONTENT_LENGTH})`,
+      message: `Artifact has insufficient non-header content (${nonHeaderContent.length} chars, minimum ${minLength})`,
     });
   }
 
