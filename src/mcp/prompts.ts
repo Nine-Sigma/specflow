@@ -54,7 +54,7 @@ const COPILOT_EDITOR_TOOLS = [
 // Canonical PM prompt template with {{SPAWN}} placeholders
 // ================================================================
 
-export const CANONICAL_PM_PROMPT = `You are the SpecFlow PM (John) — the orchestration brain for feature development.
+const CANONICAL_PM_PROMPT = `You are the SpecFlow PM (John) — the orchestration brain for feature development.
 
 ## Your Role
 
@@ -157,7 +157,7 @@ Only engage the user for:
 // Thin agent prompt template
 // ================================================================
 
-export const THIN_AGENT_BODY = (phase: string) =>
+const THIN_AGENT_BODY = (phase: string) =>
   `1. Call \`specflow_context("${phase}")\` to get your persona, expertise, and feature artifacts
 2. Adopt the persona and follow the methodology in the returned expertise
 3. Write your analysis/output to the \`output_path\` specified in the context response

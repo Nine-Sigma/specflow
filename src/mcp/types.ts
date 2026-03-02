@@ -191,63 +191,45 @@ export const UX_SCOPE_TIERS: Record<string, string[]> = {
 };
 
 /**
- * Analyst expertise files loaded per scope tier.
- * Trivial: no expertise. Small: requirements only. Medium+: full expertise.
- */
-export const ANALYST_EXPERTISE_TIERS: Record<string, string[]> = {
-  trivial: [],
-  small: ['requirements/'],
-  medium: ['requirements/', 'synthesis/codebase-analysis.md'],
-  large: ['requirements/', 'synthesis/codebase-analysis.md'],
-  complex: ['requirements/', 'synthesis/codebase-analysis.md'],
-};
-
-/**
- * TEA expertise files loaded per scope tier.
- * Trivial: none. Small: test specification only. Medium+: full testing + code intel.
- */
-export const TEA_EXPERTISE_TIERS: Record<string, string[]> = {
-  trivial: [],
-  small: ['testing/test-specification.md'],
-  medium: ['testing/', 'code-intelligence.md'],
-  large: ['testing/', 'code-intelligence.md'],
-  complex: ['testing/', 'code-intelligence.md'],
-};
-
-/**
- * Architect expertise files loaded per scope tier.
- * Trivial: none. Small: validation checklist only. Medium+: full architecture + code intel.
- */
-export const ARCHITECT_EXPERTISE_TIERS: Record<string, string[]> = {
-  trivial: [],
-  small: ['architecture/validation-checklist.md'],
-  medium: ['architecture/', 'code-intelligence.md'],
-  large: ['architecture/', 'code-intelligence.md'],
-  complex: ['architecture/', 'code-intelligence.md'],
-};
-
-/**
- * QA expertise files loaded per scope tier.
- * Trivial/small: none (dev-only path). Medium+: full testing directory.
- */
-export const QA_EXPERTISE_TIERS: Record<string, string[]> = {
-  trivial: [],
-  small: [],
-  medium: ['testing/'],
-  large: ['testing/'],
-  complex: ['testing/'],
-};
-
-/**
  * Lookup mapping phase names to their scope-tier expertise maps.
  * Phases not in this map use PHASE_EXPERTISE_MAP directly.
  */
 export const EXPERTISE_TIER_MAPS: Record<string, Record<string, string[]>> = {
-  analyst: ANALYST_EXPERTISE_TIERS,
-  tea: TEA_EXPERTISE_TIERS,
-  architect: ARCHITECT_EXPERTISE_TIERS,
-  'qa-tdd': QA_EXPERTISE_TIERS,
-  'qa-verify': QA_EXPERTISE_TIERS,
+  analyst: {
+    trivial: [],
+    small: ['requirements/'],
+    medium: ['requirements/', 'synthesis/codebase-analysis.md'],
+    large: ['requirements/', 'synthesis/codebase-analysis.md'],
+    complex: ['requirements/', 'synthesis/codebase-analysis.md'],
+  },
+  tea: {
+    trivial: [],
+    small: ['testing/test-specification.md'],
+    medium: ['testing/', 'code-intelligence.md'],
+    large: ['testing/', 'code-intelligence.md'],
+    complex: ['testing/', 'code-intelligence.md'],
+  },
+  architect: {
+    trivial: [],
+    small: ['architecture/validation-checklist.md'],
+    medium: ['architecture/', 'code-intelligence.md'],
+    large: ['architecture/', 'code-intelligence.md'],
+    complex: ['architecture/', 'code-intelligence.md'],
+  },
+  'qa-tdd': {
+    trivial: [],
+    small: [],
+    medium: ['testing/'],
+    large: ['testing/'],
+    complex: ['testing/'],
+  },
+  'qa-verify': {
+    trivial: [],
+    small: [],
+    medium: ['testing/'],
+    large: ['testing/'],
+    complex: ['testing/'],
+  },
 };
 
 /**
